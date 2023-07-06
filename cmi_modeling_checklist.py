@@ -21,11 +21,14 @@ Forked from
  Atsantiago Updates
  Updates by Alexander T. Santiago - github.com/atsantiago
 
- 2.0 - 2023-06-26
+ 2.0 - 2023-07-06
  Updated to fit NMSU courses for a general modeling checklist for students. This should work for most assignments.
-
+ Changed wording to fit CMI course.
+ Removed Checklist Item 10 - RS Cast Lighting
+ 
  
 """
+
 import maya.cmds as cmds
 import maya.mel as mel
 import copy
@@ -62,7 +65,7 @@ exception_color = 0.2, 0.2, 0.2
 # Checklist Items - Item Number [Name, Expected Value]
 checklist_items = { #0 Removed
                     1 : ["Scene Units", "cm"],
-                    2 : ["Output Resolution", ["1280","720"] ], # Modified
+                    2 : ["Render Output Resolution", ["1280","720"] ], # Modified
                     3 : ["Total Texture Count", [40, 50] ],
                     4 : ["File Paths", ["sourceimages"] ], # Modified
                     #5 Removed 
@@ -70,7 +73,7 @@ checklist_items = { #0 Removed
                     7 : ["Total Triangle Count", [1800000, 2000000] ],
                     8 : ["Total Poly Object Count", [90, 100] ],
                     #9 Removed
-                   #10 : Removed - ["RS Shadow Casting Lights", [3, 4]],
+                   #10 Removed: Need to Replace with general casting lights ["RS Shadow Casting Lights", [3, 4]],
                    #11 Removed
                    12 : ["Default Object Names", 0],
                    13 : ["Objects Assigned to lambert1", 0],
@@ -96,8 +99,8 @@ checklist_settings = { "is_settings_visible" : False,
 
 
 # Build GUI - Main Function ==================================================================================
-def build_gui_gt_m1_kitchen_checklist():
-    window_name = "build_gui_gt_m1_kitchen_checklist"
+def build_gui_ats_cmi_modeling_checklist():
+    window_name = "build_gui_ats_cmi_modeling_checklist"
     if cmds.window(window_name, exists=True):
         cmds.deleteUI(window_name, window=True)
 
@@ -115,7 +118,7 @@ def build_gui_gt_m1_kitchen_checklist():
 
     cmds.text(" ", bgc=[.4,.4,.4])
     cmds.text(script_name, bgc=[.4,.4,.4],  fn="boldLabelFont", align="left")
-    cmds.button( l ="Help", bgc=(.4, .4, .4), c=lambda x:build_gui_help_gt_m1_kitchen_checklist())
+    cmds.button( l ="Help", bgc=(.4, .4, .4), c=lambda x:build_gui_help_ats_cmi_modeling_checklist())
     cmds.separator(h=10, style='none', p=main_column) # Empty Space
     cmds.rowColumnLayout(nc=1, cw=[(1, 300)], cs=[(1,10)], p=main_column) # For the separator
     cmds.separator(h=8)
@@ -202,7 +205,7 @@ def checklist_refresh():
     check_total_triangle_count()
     check_total_poly_object_count()
     #Removed
-    check_rs_shadow_casting_light_count()
+    #Removed - Initial:check_rs_shadow_casting_light_count()
     #Removed
     check_default_object_names()
     check_objects_assigned_to_lambert1()
@@ -238,7 +241,7 @@ def checklist_generate_report():
     report_strings.append(check_total_triangle_count())
     report_strings.append(check_total_poly_object_count())
     #Removed
-    report_strings.append(check_rs_shadow_casting_light_count())
+    #Removed - Initial: report_strings.append(check_rs_shadow_casting_light_count())
     #Removed
     report_strings.append(check_default_object_names())
     report_strings.append(check_objects_assigned_to_lambert1())
@@ -264,8 +267,8 @@ def checklist_generate_report():
 
     
 # Creates Help GUI
-def build_gui_help_gt_m1_kitchen_checklist():
-    window_name = "build_gui_help_gt_m1_kitchen_checklist"
+def build_gui_help_ats_cmi_modeling_checklist():
+    window_name = "build_gui_help_ats_cmi_modeling_checklist"
     if cmds.window(window_name, exists=True):
         cmds.deleteUI(window_name, window=True)
 
@@ -286,7 +289,7 @@ def build_gui_help_gt_m1_kitchen_checklist():
     cmds.rowColumnLayout(nc=1, cw=[(1, 300)], cs=[(1,10)], p="main_column")
     cmds.text(l='This script performs a series of checks to detect common', align="left")
     cmds.text(l='issues that are often accidently ignored/unnoticed for', align="left")
-    cmds.text(l='the kitchen assignment in Modeling 1 - Term 1.', align="left")
+    cmds.text(l='the FDMA 2530: Intro to Modeling.', align="left")
     # Checklist Status =============
     cmds.separator(h=15, style='none') # Empty Space
     cmds.text(l='Checklist Status:', align="left", fn="boldLabelFont") 
@@ -328,7 +331,7 @@ def build_gui_help_gt_m1_kitchen_checklist():
  
     cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(1)[0] +': returns error if not matching: "' + str(checklist_items.get(1)[1]) + '".\n\n')
 
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(2)[0] +': returns error if none of the values match:\n    ' + str(checklist_items.get(2)[1])+ '. For more information check the guidelines for\n    this assignment. It expects your height or width to match\n    the expected value, so force the image to not be too small\n    or too big.\n\n')
+    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(2)[0] +': returns error if none of the values match:\n    ' + str(checklist_items.get(2)[1])+ '. For more information check the guidelines for\n    this assignment. It expects your height or width to match\n    the expected value, so check your render settings are set to \n HD720. \n\n')
 
     cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(3)[0] +': error if more than ' + str(checklist_items.get(3)[1][1]) +  '\n     warning if more than ' + str(checklist_items.get(3)[1][0])+ '.\n\n')
 
@@ -340,7 +343,6 @@ def build_gui_help_gt_m1_kitchen_checklist():
 
     cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(8)[0] +': error if more than ' + str(checklist_items.get(8)[1][1])  + '\n     warning if more than ' + str(checklist_items.get(8)[1][0]) + '\n\n')   
 
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(10)[0] +': error if more than ' + str(checklist_items.get(10)[1][1]) + '\n     warning if more than ' + str(checklist_items.get(10)[1][0]) + '.' + '\n\n')
 
     cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(12)[0] +': error if using default names.' + '\n  warning if containing default names.\n    Examples of default names:\n      "pCube1" = Error\n      "pointLight1" = Error\n      "nurbsPlane1" = Error\n      "my_pCube" = Warning\n\n')  
 
@@ -358,7 +360,7 @@ def build_gui_help_gt_m1_kitchen_checklist():
    
     cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(20)[0] +': error if incorrect color space found.' + '\n     It only checks common nodes for Redshift and Arnold\n     Generally "sRGB" -> float3(color), and "Raw" -> float(value).\n\n')
     
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='\n\n\n\n            Guidelines: (Same as Moodle)\n\n - Part 1 Render Submission:\n\n1. You going to render out two sets of images. One with surfaced only, the other with wireframe over shading.\n\n2. Renders should be (720HD) Renders\n\n3. Use the same Angles for Surfaced and wireframe renders. (best to key your camera in different areas)\n\n4. Render out a Hi Quality image using the render Camera we set up during the beginning of the term\n\n5. Render out 3 more additional angles of your set, focusing on some of the detail and assets you built the term.\n\n6. Composite your reference image and render camera images together, one for modeling, and one for surfacing.\n\n7. Name should be (class#, name, course name, Project, image number.jpeg)  example (3D134_JohnSmith_Modeling_KitchenSet.01.jpg)\n\n8. Repeat this process for the other images.\n\n9. Comp relative reference together with the additional renders.  \n\n10. Use the available asset image templates to organize your images. (Recommended 2K)\n\n')
+    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='\n\n\n\n            Guidelines: (Same as Canvas)\n\n - Part 1 Render Submission:\n\n1. You going to render out two sets of images. One with surfaced only, the other with wireframe over shading.\n\n2. Renders should be (720HD) Renders\n\n3. Use the same Angles for Surfaced and wireframe renders. (best to key your camera in different areas)\n\n4. Render out a Hi Quality image using the render Camera we set up during the beginning of the term\n\n5. Render out 3 more additional angles of your set, focusing on some of the detail and assets you built the term.\n\n6. Composite your reference image and render camera images together, one for modeling, and one for surfacing.\n\n7. Name should be (class#, name, course name, Project, image number.jpeg)  example (3D134_JohnSmith_Modeling_KitchenSet.01.jpg)\n\n8. Repeat this process for the other images.\n\n9. Comp relative reference together with the additional renders.  \n\n10. Use the available asset image templates to organize your images. (Recommended 2K)\n\n')
     
     cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='\n\n - Part 2 Project Clean up and Archiving:\n\n1. Use the file path editor (windows-general-file path editor) to make sure all your textures are located in you current project.\n\n2.Clean up the most recent scene.  (delete history, freeze transforms, delete empty group nodes)\n\n3.Clean up the Hypershade library (in the Hypershade Edit-Delete unused nodes.)\n\n4.Make sure display layers are used correctly (do they contain the right Pieces of geo in them, and do they make sense.)\n\n5.Archive your scene. (this will make a zip file containing your scene and textures)\n\n\nPlease visit Moodle for more information on your Guidelines. There you\'ll find step by step what to do.')
     
@@ -373,11 +375,11 @@ def build_gui_help_gt_m1_kitchen_checklist():
     # Footer =============
     cmds.separator(h=15, style='none') # Empty Space
     cmds.rowColumnLayout(nc=2, cw=[(1, 140),(2, 140)], cs=[(1,10),(2, 0)], p="main_column")
-    cmds.text('Guilherme Trevisan  ')
-    cmds.text(l='<a href="mailto:trevisangmw@gmail.com">TrevisanGMW@gmail.com</a>', hl=True, highlightColor=[1,1,1])
+    cmds.text('Alexander T. Santiago  ')
+    cmds.text(l='<a href="mailto:asanti89@nmsu.edu">asanti89@nmsu.edu</a>', hl=True, highlightColor=[1,1,1])
     cmds.rowColumnLayout(nc=2, cw=[(1, 140),(2, 140)], cs=[(1,10),(2, 0)], p="main_column")
     cmds.separator(h=15, style='none') # Empty Space
-    cmds.text(l='<a href="https://github.com/TrevisanGMW">Github</a>', hl=True, highlightColor=[1,1,1])
+    cmds.text(l='<a href="https://github.com/atsantiago">Github</a>', hl=True, highlightColor=[1,1,1])
     cmds.separator(h=7, style='none') # Empty Space
     
     
@@ -1750,4 +1752,4 @@ def export_report_to_txt(list):
 
 
 #Build GUI
-build_gui_gt_m1_kitchen_checklist()
+build_gui_ats_cmi_modeling_checklist()
