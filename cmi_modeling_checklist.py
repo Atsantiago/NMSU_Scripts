@@ -118,7 +118,7 @@ def build_gui_ats_cmi_modeling_checklist():
 
     cmds.text(" ", bgc=[.4,.4,.4])
     cmds.text(script_name, bgc=[0.4,0.4,0.4],  fn="boldLabelFont", align="left")
-    cmds.button( l ="Help", bgc=(0, 0.5, 0), c=lambda x:build_gui_help_ats_cmi_modeling_checklist())
+    cmds.button( l ="Help", bgc=(0.4, 0.4, 0.4), c=lambda x:build_gui_help_ats_cmi_modeling_checklist())
     cmds.separator(h=10, style='none', p=main_column) # Empty Space
     cmds.rowColumnLayout(nc=1, cw=[(1, 300)], cs=[(1,10)], p=main_column) # For the separator
     cmds.separator(h=8)
