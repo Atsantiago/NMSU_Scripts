@@ -1,9 +1,7 @@
 """
-Forked from 
+The UI and a majority of the code used for this script was repourposed from a previous script from: 
  @Guilherme Trevisan - TrevisanGMW@gmail.com - 2020-07-25 - github.com/TrevisanGMW
  https://github.com/TrevisanGMW/maya-scripts/blob/master/vancouver_film_school/vfs_m1_kitchen_checklist.py
-
- This script is a modified version of the script "GT VFS Kitchen Cheklist."
 
  Initial Updates (Trevisan)
  1.1 - 2020-08-09
