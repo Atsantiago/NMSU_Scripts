@@ -1,94 +1,132 @@
 """
 Created by Alexander T. Santiago - github.com/atsantiago
-This script should update the shelf FDMA_2530. 
+This script should update the shelf FDMA_2530.
 """
 import os
-import shutil
+import sys
 import urllib.request
+import tempfile
 import maya.cmds as cmds
-import platform
-import ctypes
-from PySide2 import QtWidgets, QtGui, QtCore
+import maya.mel as mel
+from PySide2 import QtWidgets
+import shutil
 
 # Update the following variables with your GitHub information:
 repository_url = "https://github.com/Atsantiago/NMSU_Scripts"
-script_path = "shelf_FDMA_2530.mel"
+updated_script_path = "shelf_FDMA_2530.mel"
+
+# Check the Maya Python version
+if sys.version_info.major == 2:
+    # Python 2
+    exec_function = execfile
+else:
+    # Python 3
+    exec_function = exec
+
+# Create a temporary directory to download the script
+temp_dir = tempfile.mkdtemp()
 
 # Download the updated shelf script from GitHub
-script_url = f"{repository_url}/raw/master/{script_path}"
+updated_script_url = f"{repository_url}/raw/master/{updated_script_path}"
+updated_script_file = os.path.join(temp_dir, os.path.basename(updated_script_path))
 
-# Determine the active version of Maya
-maya_version = cmds.about(version=True)
+urllib.request.urlretrieve(updated_script_url, updated_script_file)
 
-# Determine the location of the default Downloads folder based on the operating system
-system = platform.system()
-if system == "Windows":
-    default_downloads_folder = os.path.join(os.path.expanduser("~"), "Downloads")
-elif system == "Darwin":  # macOS
-    default_downloads_folder = os.path.join(os.path.expanduser("~"), "Downloads")
-else:  # Linux
-    default_downloads_folder = os.path.join(os.path.expanduser("~"), "Downloads")
+# Prompt the user to locate the current shelf MEL file or cancel the update
+msg_box = QtWidgets.QMessageBox()
+msg_box.setWindowTitle("Shelf Update")
+msg_box.setText("To update the shelf script, please locate the current shelf script file or cancel the update.")
+msg_box.setStandardButtons(QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
+msg_box.setDefaultButton(QtWidgets.QMessageBox.Ok)
+msg_box.setEscapeButton(QtWidgets.QMessageBox.Cancel)
+ret = msg_box.exec_()
 
-temp_script_file = os.path.join(default_downloads_folder, "temp_script.mel")
-
-urllib.request.urlretrieve(script_url, temp_script_file)
-
-# Determine the location of the existing shelf script in Maya based on the active version
-if system == "Windows":
-    mel_folder = os.path.join(os.environ["USERPROFILE"], "Documents", "maya", maya_version, "prefs", "shelves")
-elif system == "Darwin":  # macOS
-    mel_folder = os.path.join(os.path.expanduser("~"), "Library", "Preferences", "Autodesk", "maya", maya_version, "prefs", "shelves")
-else:  # Linux
-    mel_folder = os.path.join(os.path.expanduser("~"), "maya", maya_version, "prefs", "shelves")
-
-existing_script_path = os.path.join(mel_folder, "shelf_FDMA_2530.mel")
-
-# Check if the existing shelf script file exists
-if not os.path.exists(existing_script_path):
-    # Prompt the user to select the file's location
-    msg_box = QtWidgets.QMessageBox()
-    msg_box.setIcon(QtWidgets.QMessageBox.Warning)
-    msg_box.setWindowTitle("Shelf Script Location")
-    msg_box.setText("The existing shelf script file was not found. Please select its location.")
-    msg_box.setStandardButtons(QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
-    msg_box.setDefaultButton(QtWidgets.QMessageBox.Ok)
-    ret = msg_box.exec_()
-    
-    if ret == QtWidgets.QMessageBox.Ok:
-        # Open a file dialog to select the file's location
+if ret == QtWidgets.QMessageBox.Ok:
+    while True:
+        # Prompt the user to locate the current shelf MEL file
         dialog = QtWidgets.QFileDialog()
+        dialog.setWindowTitle("Select Current Shelf MEL File")
+        dialog.setDirectory(cmds.internalVar(userShelfDir=True))
+        dialog.setNameFilter("Shelf MEL Files (*.mel)")
         dialog.setFileMode(QtWidgets.QFileDialog.ExistingFile)
-        dialog.setWindowTitle("Select Shelf Script File")
-        dialog.setDirectory(mel_folder)
         if dialog.exec_():
-            existing_script_path = dialog.selectedFiles()[0]
-    else:
-        cmds.confirmDialog(title="Shelf Update", message="Shelf update canceled.", button=["OK"], defaultButton="OK")
-        exit()
-
-# Print the existing script path
-print(existing_script_path)
-
-# Compare the existing and updated script versions
-is_updated = False
-
-with open(temp_script_file, "r") as updated_file, open(existing_script_path, "r") as existing_file:
-    updated_contents = updated_file.read()
-    existing_contents = existing_file.read()
-
-if updated_contents != existing_contents:
-    is_updated = True
-    # Replace the existing shelf script with the updated one
-    shutil.move(temp_script_file, existing_script_path)
-    # Modify the permissions of the new shelf script file
-    os.chmod(existing_script_path, 0o755)
-
-# Remove the temporary file
-os.remove(temp_script_file)
-
-# Display a pop-up dialogue indicating if the shelf is up to date
-if is_updated:
-    cmds.confirmDialog(title="Shelf Update", message="Shelf has been updated.", button=["OK"], defaultButton="OK")
+            selected_files = dialog.selectedFiles()
+            if selected_files:
+                current_script_file = selected_files[0]
+                selected_shelf_name = os.path.splitext(os.path.basename(current_script_file))[0]
+                if selected_shelf_name == "shelf_FDMA_2530":
+                    break
+                else:
+                    confirm_msg_box = QtWidgets.QMessageBox()
+                    confirm_msg_box.setWindowTitle("Shelf Verification")
+                    confirm_msg_box.setText("The selected shelf script does not match the expected shelf script name (shelf_FDMA_2530).\n\nPlease verify the selection or cancel the update.")
+                    confirm_msg_box.setStandardButtons(QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
+                    confirm_msg_box.setDefaultButton(QtWidgets.QMessageBox.Ok)
+                    confirm_msg_box.setEscapeButton(QtWidgets.QMessageBox.Cancel)
+                    confirm_ret = confirm_msg_box.exec_()
+                    if confirm_ret == QtWidgets.QMessageBox.Cancel:
+                        print("Shelf update operation cancelled.")
+                        sys.exit(0)  # Exit the script if operation is cancelled
+            else:
+                print("Shelf update operation cancelled.")
+                sys.exit(0)  # Exit the script if operation is cancelled
+        else:
+            print("Shelf update operation cancelled.")
+            sys.exit(0)  # Exit the script if operation is cancelled
 else:
-    cmds.confirmDialog(title="Shelf Update", message="Shelf is up to date.", button=["OK"], defaultButton="OK")
-    
+    print("Shelf update operation cancelled.")
+    sys.exit(0)  # Exit the script if operation is cancelled
+
+# Compare the downloaded script with the current shelf MEL file
+with open(updated_script_file, "r") as updated_file, open(current_script_file, "r") as current_file:
+    updated_contents = updated_file.read()
+    current_contents = current_file.read()
+
+if updated_contents != current_contents:
+    # Create a backup of the existing shelf
+    backup_file = current_script_file + ".bak"
+    shutil.copy(current_script_file, backup_file)
+
+    # Overwrite the current shelf MEL file with the downloaded script
+    shutil.copy(updated_script_file, current_script_file)
+    print("Shelf updated successfully!")
+    QtWidgets.QMessageBox.information(None, "Shelf Update", "Shelf updated successfully!")
+else:
+    print("Shelf is up to date.")
+    QtWidgets.QMessageBox.information(None, "Shelf Update", "Shelf is up to date.")
+
+# Reload the shelf
+shelf_name = "FDMA_2530"  # Specify the name of the shelf to update
+
+# Check if the shelf exists
+if cmds.shelfLayout(shelf_name, exists=True):
+    cmds.deleteUI(shelf_name, layout=True)
+
+# Load the updated shelf into Maya
+updated_shelf_path = current_script_file.replace("\\", "/")
+mel.eval(f'loadNewShelf "{updated_shelf_path}"')
+
+# Check if the shelf was successfully reloaded
+if cmds.shelfLayout(shelf_name, exists=True):
+    print("Shelf reloaded successfully!")
+else:
+    if os.path.isfile(backup_file):
+        # Restore the backup
+        backup_file_without_extension = backup_file[:-4]
+        shutil.copy(backup_file, current_script_file)
+        print("An error occurred during the update. Shelf restored from backup.")
+        # Load the original shelf from the backup
+        mel.eval(f'source "{backup_file_without_extension}"')
+        if cmds.shelfLayout(shelf_name, exists=True):
+            print("Original shelf restored successfully!")
+        else:
+            print("Failed to restore the original shelf.")
+    else:
+        print("An error occurred during the update. Unable to restore the shelf.")
+
+# Remove the backup file
+if os.path.isfile(backup_file):
+    os.remove(backup_file)
+
+# Remove the temporary directory
+shutil.rmtree(temp_dir)
