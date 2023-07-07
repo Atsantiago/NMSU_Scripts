@@ -95,11 +95,7 @@ global proc shelf_FDMA_2530 () {
         -sourceType "python" 
         -commandRepeatable 1
         -flat 1
-    ;
--sourceType "python" 
-        -commandRepeatable 1
-        -flat 1
-    ;
+        ;
     shelfButton
         -enableCommandRepeat 1
         -flexibleWidthType 3
@@ -137,5 +133,3 @@ global proc shelf_FDMA_2530 () {
     ;
 
 } 
-
-
