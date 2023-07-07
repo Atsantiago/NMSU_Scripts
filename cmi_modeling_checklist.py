@@ -181,8 +181,7 @@ def build_gui_ats_cmi_modeling_checklist():
     cmds.text(l='1. Is it clean?\n2.Does it have a flow and have a good structure?\n3. Does it follow the guidelines we learned? Does it make sense?\n4. Do you have any ngons? Are triangles causing artifacting?\n', align="left")
     cmds.separator(h=7, style='none') # Empty Space
     cmds.text(l="Project", fn="boldLabelFont", align="left")
-    cmds.text(l="1.Have you addressed all the notes from feedback?", fn="boldLabelFont", align="left")
-    cmds.text(l='2. Is the project organized?\n3. Have you named everything correctly?\n4. Can another person open my project and easily\n   navigate through it?', align="left")
+    cmds.text(l='1.Have you addressed all the notes from feedback?\n2. Is the project organized?\n3. Have you named everything correctly?\n4. Can another person open my project and easily\n   navigate through it?\n', align="left")
 
     # Disclaimer ================================================
     cmds.separator(h=7, style='none') # Empty Space
