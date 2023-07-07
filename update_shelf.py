@@ -1,11 +1,14 @@
 """
-This script should update the shelf FDMA_2530
+Created by Alexander T. Santiago - github.com/atsantiago
+This script should update the shelf FDMA_2530. 
 """
 import os
 import shutil
 import urllib.request
 import maya.cmds as cmds
 import platform
+import ctypes
+from PySide2 import QtWidgets, QtGui, QtCore
 
 # Update the following variables with your GitHub information:
 repository_url = "https://github.com/Atsantiago/NMSU_Scripts"
@@ -42,9 +45,26 @@ existing_script_path = os.path.join(mel_folder, "shelf_FDMA_2530.mel")
 
 # Check if the existing shelf script file exists
 if not os.path.exists(existing_script_path):
-    # Create an empty file
-    with open(existing_script_path, "w") as file:
-        pass
+    # Prompt the user to select the file's location
+    msg_box = QtWidgets.QMessageBox()
+    msg_box.setIcon(QtWidgets.QMessageBox.Warning)
+    msg_box.setWindowTitle("Shelf Script Location")
+    msg_box.setText("The existing shelf script file was not found. Please select its location.")
+    msg_box.setStandardButtons(QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
+    msg_box.setDefaultButton(QtWidgets.QMessageBox.Ok)
+    ret = msg_box.exec_()
+    
+    if ret == QtWidgets.QMessageBox.Ok:
+        # Open a file dialog to select the file's location
+        dialog = QtWidgets.QFileDialog()
+        dialog.setFileMode(QtWidgets.QFileDialog.ExistingFile)
+        dialog.setWindowTitle("Select Shelf Script File")
+        dialog.setDirectory(mel_folder)
+        if dialog.exec_():
+            existing_script_path = dialog.selectedFiles()[0]
+    else:
+        cmds.confirmDialog(title="Shelf Update", message="Shelf update canceled.", button=["OK"], defaultButton="OK")
+        exit()
 
 # Print the existing script path
 print(existing_script_path)
@@ -62,12 +82,13 @@ if updated_contents != existing_contents:
     shutil.move(temp_script_file, existing_script_path)
     # Modify the permissions of the new shelf script file
     os.chmod(existing_script_path, 0o755)
-else:
-    # Remove the temporary file
-    os.remove(temp_script_file)
+
+# Remove the temporary file
+os.remove(temp_script_file)
 
 # Display a pop-up dialogue indicating if the shelf is up to date
 if is_updated:
     cmds.confirmDialog(title="Shelf Update", message="Shelf has been updated.", button=["OK"], defaultButton="OK")
 else:
     cmds.confirmDialog(title="Shelf Update", message="Shelf is up to date.", button=["OK"], defaultButton="OK")
+    
