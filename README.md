@@ -1,6 +1,6 @@
 # NMSU Scripts
 Scripts created by Alexander T. Santiago to help improve classes at the Creative Media Institute at New Mexico State University. 
 
-Modeling Shelf
-Rendering Checklist
-Update Shelf
+<h2>Modeling Shelf</h2> <br>
+<p>Rendering Checklist</p>
+<p>Update Shelf</p>
