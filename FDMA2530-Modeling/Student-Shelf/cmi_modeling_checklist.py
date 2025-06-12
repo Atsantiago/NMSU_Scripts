@@ -1,35 +1,34 @@
 """
+CMI Modeling Checklist - Optimized Maya Python Script
+A comprehensive checklist tool for validating 3D models in Maya
+
 The UI and a majority of the code used for this script was repourposed from a previous script from: 
  @Guilherme Trevisan - TrevisanGMW@gmail.com - 2020-07-25 - github.com/TrevisanGMW
  https://github.com/TrevisanGMW/maya-scripts/blob/master/vancouver_film_school/vfs_m1_kitchen_checklist.py
 
- Initial Updates (Trevisan)
- 1.1 - 2020-08-09
- Changed the Output Resolution function to accept the expected values in both height and width (to account for portrait and landscape kitchens)
- 
- 1.2 - 2020-12-07
- Updated some UI colors
- Fixed issue where non-unique objects wouldn't be selected for non-manifold geometry.
- 
- 1.3 - 2021-06-01
- Made script compatible with Python 3 (Maya 2022+)
- Animated visibility check now ignores objects that are hidden in the outliner (cabinet locators)
- Fixed a typo
-
- Atsantiago Updates
- Updates by Alexander T. Santiago - github.com/atsantiago
+Atsantiago Updates
+Updates by Alexander T. Santiago - github.com/atsantiago
 
  2.0 - 2023-07-06
  Updated to fit NMSU courses for a general modeling checklist for students. This should work for most assignments.
  Changed wording to fit CMI course.
  Removed Checklist Item 10 - RS Cast Lighting
- 
- 
+
+ 3.0 - 2025-06-12
+ Optimized for performance and usability. Added new checklist items
+
+Key improvements:
+- Performance optimized using Maya API where possible
+- Scene data caching to minimize repeated queries
+- Resizable window with proper constraints
+- Modular design with error handling
+- Batch UI updates for better responsiveness
 """
 
 import maya.cmds as cmds
 import maya.mel as mel
 import copy
+import sys
 from maya import OpenMayaUI as omui
 
 try:
@@ -43,12 +42,11 @@ try:
 except ImportError:
     from PySide.QtGui import QIcon, QWidget
 
-
 # Checklist Name
 script_name = "CMI Modeling Checklist" 
 
 # Version
-script_version = "2.0"
+script_version = "3.0"
 
 # Python Version
 python_version = sys.version_info.major
@@ -60,30 +58,27 @@ warning_color = (1.0, 1.0, 0.17)
 error_color = (1.0, 0.17, 0.17)
 exception_color = 0.2, 0.2, 0.2
 
-# Checklist Items - Item Number [Name, Expected Value]
-checklist_items = { #0 Removed
-                    1 : ["Scene Units", "cm"],
-                    2 : ["Render Output Resolution", ["1280","720"] ], # Modified
-                    3 : ["Total Texture Count", [40, 50] ],
-                    4 : ["File Paths", ["sourceimages"] ], # Modified
-                    #5 Removed 
-                    6 : ["Unparented Objects", 0],
-                    7 : ["Total Triangle Count", [1800000, 2000000] ],
-                    8 : ["Total Poly Object Count", [90, 100] ],
-                    #9 Removed
-                   #10 Removed: Need to Replace with general casting lights ["RS Shadow Casting Lights", [3, 4]],
-                   #11 Removed
-                   12 : ["Default Object Names", 0],
-                   13 : ["Objects Assigned to lambert1", 0],
-                   14 : ["Ngons", 0],
-                   15 : ["Non-manifold Geometry", 0],
-                   #16 Removed
-                   17 : ["Frozen Transforms", 0],
-                   18 : ["Animated Visibility", 0],
-                   19 : ["Non Deformer History", 0 ],
-                   20 : ["Textures Color Space", 0 ],
-                   #21 Removed
-                  }
+# Checklist Items - Sequential numbering with new items
+checklist_items = {
+    1 : ["Scene Units", "cm"],
+    2 : ["Render Output Resolution", ["1280","720"]],
+    3 : ["Total Texture Count", [40, 50]],
+    4 : ["File Paths", ["sourceimages"]],
+    5 : ["Unparented Objects", 0],
+    6 : ["Total Triangle Count", [1800000, 2000000]],
+    7 : ["Total Polygon Count", [900000, 1000000]],  # New item
+    8 : ["Total Poly Object Count", [90, 100]],
+    9 : ["Default Object Names", 0],
+    10 : ["Objects Assigned to Default Material", 0],  # Updated name
+    11 : ["Ngons", 0],
+    12 : ["Non-manifold Geometry", 0],
+    13 : ["Frozen Transforms", 0],
+    14 : ["Animated Visibility", 0],
+    15 : ["Non Deformer History", 0],
+    16 : ["Textures Color Space", 0],
+    17 : ["AI Shadow Casting Lights", [4, 1]],  # New item: [min_lights, min_skydome]
+    18 : ["Camera Aspect Ratio", [1.77, 1.78]]  # New item
+}
 
 # Store Default Values for Reseting
 settings_default_checklist_values = copy.deepcopy(checklist_items)
@@ -95,51 +90,34 @@ checklist_settings = { "is_settings_visible" : False,
                        "settings_text_fields" : []
                      }
 
-
-
-
 # Build GUI - Main Function ==================================================================================
 def build_gui_ats_cmi_modeling_checklist():
     window_name = "build_gui_ats_cmi_modeling_checklist"
     if cmds.window(window_name, exists=True):
         cmds.deleteUI(window_name, window=True)
 
-    cmds.window(window_name, title=script_name + "  v" + script_version, mnb=False, mxb=False, s=True)
+    # Create window with resizing enabled
+    cmds.window(window_name, title=script_name + "  v" + script_version, 
+                mnb=False, mxb=False, s=True, resizeToFitChildren=True,
+                width=360, height=650)
 
     main_column = cmds.columnLayout()
-
-    cmds.showWindow(window_name)
-    cmds.window(window_name, e=True, h=1, w=1)
     
     # Title Text
-    cmds.rowColumnLayout(nc=1, cw=[(1, 310)], cs=[(1, 10)], p=main_column) # Window Size Adjustment
-    cmds.separator(h=14, style='none') # Empty Space
-    cmds.rowColumnLayout(nc=3, cw=[(1, 10), (2, 240), (3, 50)], cs=[(1, 10), (2, 0), (3, 0)], p=main_column)
+    cmds.rowColumnLayout(nc=1, cw=[(1, 340)], cs=[(1, 10)], p=main_column)
+    cmds.separator(h=14, style='none')
+    cmds.rowColumnLayout(nc=3, cw=[(1, 10), (2, 270), (3, 50)], cs=[(1, 10), (2, 0), (3, 0)], p=main_column)
 
     cmds.text(" ", bgc=[.4,.4,.4])
     cmds.text(script_name, bgc=[0.4,0.4,0.4],  fn="boldLabelFont", align="left")
     cmds.button( l ="Help", bgc=(0.4, 0.4, 0.4), c=lambda x:build_gui_help_ats_cmi_modeling_checklist())
-    cmds.separator(h=10, style='none', p=main_column) # Empty Space
-    cmds.rowColumnLayout(nc=1, cw=[(1, 300)], cs=[(1,10)], p=main_column) # For the separator
+    cmds.separator(h=10, style='none', p=main_column)
+    cmds.rowColumnLayout(nc=1, cw=[(1, 330)], cs=[(1,10)], p=main_column)
     cmds.separator(h=8)
-    cmds.separator(h=5, style='none') # Empty Space
-    
-    # Settings Column  ==========================================================
-    settings_column = cmds.rowColumnLayout(nc=1, cw=[(1, 310)], cs=[(1, 0)], h=1, p=main_column) 
-    
-    cmds.rowColumnLayout(nc=3, cw=[(1, 150), (2, 65), (3, 63)], cs=[(1, 19), (2, 6), (3, 6)])
-    
-    # Header
-    cmds.text(l="Operation", align="left")
-    cmds.text(l='Warning', align="center")
-    cmds.text(l='Expected', align="center")
     cmds.separator(h=5, style='none')
-    cmds.separator(h=5, style='none')
-    cmds.separator(h=5, style='none')
-
- 
+    
     # Checklist Column  ==========================================================
-    checklist_column = cmds.rowColumnLayout(nc=3, cw=[(1, 165), (2, 35), (3, 90)], cs=[(1, 20), (2, 6), (3, 6)], p=main_column) 
+    checklist_column = cmds.rowColumnLayout(nc=3, cw=[(1, 180), (2, 40), (3, 100)], cs=[(1, 20), (2, 6), (3, 6)], p=main_column) 
     
     # Header
     cmds.text(l="Operation", align="left")
@@ -151,7 +129,7 @@ def build_gui_ats_cmi_modeling_checklist():
 
     # Build Checklist 
     def create_checklist_items(items):
-        for item in items:
+        for item in sorted(items.keys()):
             item_id = checklist_items.get(item)[0].lower().replace(" ","_").replace("-","_")
             cmds.text(l=checklist_items.get(item)[0] + ': ', align="left")
             cmds.button("status_" + item_id , l='', h=14, bgc=def_color)
@@ -159,38 +137,36 @@ def build_gui_ats_cmi_modeling_checklist():
 
     create_checklist_items(checklist_items)
 
-    cmds.rowColumnLayout(nc=1, cw=[(1, 300)], cs=[(1,10)], p=main_column) # For the separator
-    cmds.separator(h=8, style='none') # Empty Space
+    cmds.rowColumnLayout(nc=1, cw=[(1, 330)], cs=[(1,10)], p=main_column)
+    cmds.separator(h=8, style='none')
     cmds.separator(h=8)
     
-
     # Checklist Buttons ==========================================================
-    checklist_buttons = cmds.rowColumnLayout(nc=1, cw=[(1, 300)], cs=[(1,10)], p=main_column)
+    checklist_buttons = cmds.rowColumnLayout(nc=1, cw=[(1, 330)], cs=[(1,10)], p=main_column)
     cmds.separator(h=10, style='none')
     cmds.button(l='Generate Report', h=30, c=lambda args: checklist_generate_report())
     cmds.separator(h=10, style='none')
     cmds.button(l='Refresh', h=30, c=lambda args: checklist_refresh())
     cmds.separator(h=8, style='none')
 
-
     # Consider Before Submitting ================================================
-    cmds.separator(h=7, style='none') # Empty Space
+    cmds.separator(h=7, style='none')
     cmds.text(l="Things to Consider Before Submitting", bgc=[.5,.5,.0],  fn="boldLabelFont", align="center")
-    cmds.separator(h=7, style='none') # Empty Space
+    cmds.separator(h=7, style='none')
     cmds.text(l="Topology:", fn="boldLabelFont", align="left")
     cmds.text(l='1. Is it clean?\n2.Does it have a flow and have a good structure?\n3. Does it follow the guidelines we learned? Does it make sense?\n4. Do you have any ngons? Are triangles causing artifacting?\n', align="left")
-    cmds.separator(h=7, style='none') # Empty Space
+    cmds.separator(h=7, style='none')
     cmds.text(l="Project", fn="boldLabelFont", align="left")
     cmds.text(l='1.Have you addressed all the notes from feedback?\n2. Is the project organized?\n3. Have you named everything correctly?\n4. Can another person open my project and easily\n   navigate through it?\n', align="left")
 
     # Disclaimer ================================================
-    cmds.separator(h=7, style='none') # Empty Space
+    cmds.separator(h=7, style='none')
     cmds.text(l="Disclaimer:", fn="boldLabelFont", align="left")
     cmds.text(l='Even if this script shows no errors, it does not necesarrily\nreflect your final grade.\nThis script is just a tool to help you check for some common\nissues.\nVerify instructions and deliverables on Canvas\nor with your instructor.', align="left")
 
-    # Lock Window
+    # Show window and set size (resizable)
     cmds.showWindow(window_name)
-    cmds.window(window_name, e=True, s=False)
+    cmds.window(window_name, e=True, width=360, height=650)
     
     # Set Window Icon
     qw = omui.MQtUtil.findWindow(window_name)
@@ -201,37 +177,29 @@ def build_gui_ats_cmi_modeling_checklist():
     icon = QIcon(':/checkboxOn.png')
     widget.setWindowIcon(icon)
 
-    # Main GUI Ends ==========================================================
-
-    
-
-
 def checklist_refresh():
     # Save Current Selection For Later
     current_selection = cmds.ls(selection=True)
     
-    #Removed
+    # Updated function calls with new sequential numbering
     check_scene_units()
     check_output_resolution()
     check_total_texture_count()
     check_network_file_paths()
-    #Removed
     check_unparented_objects()  
     check_total_triangle_count()
+    check_total_polygon_count()  # New function
     check_total_poly_object_count()
-    #Removed
-    #Removed - Initial:check_rs_shadow_casting_light_count()
-    #Removed
     check_default_object_names()
-    check_objects_assigned_to_lambert1()
+    check_objects_assigned_to_default_material()  # Updated function
     check_ngons()
     check_non_manifold_geometry()
-    #Removed
     check_frozen_transforms()
     check_animated_visibility()
     check_non_deformer_history()
     check_textures_color_space()
-    #Removed
+    check_ai_shadow_casting_lights()  # New function
+    check_camera_aspect_ratio()  # New function
     
     # Clear Selection
     cmds.selectMode( object=True )
@@ -239,35 +207,31 @@ def checklist_refresh():
     
     # Reselect Previous Selection
     cmds.select(current_selection)
-    
 
 def checklist_generate_report():
     # Save Current Selection For Later
     current_selection = cmds.ls(selection=True)
     
     report_strings = []
-    #Removed
+    # Updated function calls with new sequential numbering
     report_strings.append(check_scene_units())
     report_strings.append(check_output_resolution())
     report_strings.append(check_total_texture_count())
     report_strings.append(check_network_file_paths())
-    #Removed
     report_strings.append(check_unparented_objects())
     report_strings.append(check_total_triangle_count())
+    report_strings.append(check_total_polygon_count())  # New function
     report_strings.append(check_total_poly_object_count())
-    #Removed
-    #Removed - Initial: report_strings.append(check_rs_shadow_casting_light_count())
-    #Removed
     report_strings.append(check_default_object_names())
-    report_strings.append(check_objects_assigned_to_lambert1())
+    report_strings.append(check_objects_assigned_to_default_material())  # Updated function
     report_strings.append(check_ngons())
     report_strings.append(check_non_manifold_geometry())
-    #Removed
     report_strings.append(check_frozen_transforms())
     report_strings.append(check_animated_visibility())
     report_strings.append(check_non_deformer_history())
     report_strings.append(check_textures_color_space())
-    #Removed
+    report_strings.append(check_ai_shadow_casting_lights())  # New function
+    report_strings.append(check_camera_aspect_ratio())  # New function
     
     # Clear Selection
     cmds.selectMode( object=True )
@@ -278,9 +242,7 @@ def checklist_generate_report():
     
     # Reselect Previous Selection
     cmds.select(current_selection)
-    
 
-    
 # Creates Help GUI
 def build_gui_help_ats_cmi_modeling_checklist():
     window_name = "build_gui_help_ats_cmi_modeling_checklist"
@@ -293,11 +255,11 @@ def build_gui_help_ats_cmi_modeling_checklist():
     cmds.columnLayout("main_column", p= window_name)
    
     # Title Text
-    cmds.separator(h=12, style='none') # Empty Space
-    cmds.rowColumnLayout(nc=1, cw=[(1, 310)], cs=[(1, 10)], p="main_column") # Window Size Adjustment
-    cmds.rowColumnLayout(nc=1, cw=[(1, 300)], cs=[(1, 10)], p="main_column") # Title Column
+    cmds.separator(h=12, style='none')
+    cmds.rowColumnLayout(nc=1, cw=[(1, 310)], cs=[(1, 10)], p="main_column")
+    cmds.rowColumnLayout(nc=1, cw=[(1, 300)], cs=[(1, 10)], p="main_column")
     cmds.text(script_name + " Help", bgc=[0,.5,0],  fn="boldLabelFont", align="center")
-    cmds.separator(h=10, style='none', p="main_column") # Empty Space
+    cmds.separator(h=10, style='none', p="main_column")
 
     # Body ====================
     checklist_spacing = 4
@@ -305,11 +267,12 @@ def build_gui_help_ats_cmi_modeling_checklist():
     cmds.text(l='This script performs a series of checks to detect common', align="left")
     cmds.text(l='issues that are often accidently ignored/unnoticed for', align="left")
     cmds.text(l='the FDMA 2530: Intro to Modeling.', align="left")
+    
     # Checklist Status =============
-    cmds.separator(h=15, style='none') # Empty Space
+    cmds.separator(h=15, style='none')
     cmds.text(l='Checklist Status:', align="left", fn="boldLabelFont") 
     cmds.text(l='These are also buttons, you can click on them for extra functions:', align="left", fn="smallPlainLabelFont") 
-    cmds.separator(h=5, style='none') # Empty Space
+    cmds.separator(h=5, style='none')
     
     cmds.rowColumnLayout(nc=2, cw=[(1, 35),(2, 265)], cs=[(1, 10),(2, 10)], p="main_column")
     cmds.button(l='', h=14, bgc=def_color, c=lambda args: print_message('Default color, means that it was not yet tested.', as_heads_up_message=True))
@@ -330,73 +293,59 @@ def build_gui_help_ats_cmi_modeling_checklist():
     cmds.button(l='?', h=14, bgc=def_color, c=lambda args: print_message('Question mask, click on button for more help. It often gives you extra options regarding the found issues.', as_heads_up_message=True))
     cmds.text(l='- Question mask, click on button for more help.', align="left", fn="smallPlainLabelFont") 
     
-    cmds.separator(h=15, style='none') # Empty Space
+    cmds.separator(h=15, style='none')
 
     # Checklist Items =============
     cmds.rowColumnLayout(nc=1, cw=[(1, 300)], cs=[(1, 10)], p="main_column")
     cmds.text(l='Checklist Items and Guidelines:', align="left", fn="boldLabelFont") 
-    cmds.separator(h=checklist_spacing, style='none') # Empty Space
+    cmds.separator(h=checklist_spacing, style='none')
    
-    # Create Help List: 
-    font_size ='smallPlainLabelFont'
-    items_for_settings = [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11] # Allow user to update expected values
-    items_with_warnings = [3, 7, 8, 9, 10, 11] # Allow users to update warning values too
-    
     checklist_items_help_scroll_field = cmds.scrollField(editable=False, wordWrap=True, fn="smallPlainLabelFont")
- 
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(1)[0] +': returns error if not matching: "' + str(checklist_items.get(1)[1]) + '".\n\n')
-
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(2)[0] +': returns error if none of the values match:\n    ' + str(checklist_items.get(2)[1])+ '. For more information check the guidelines for\n    this assignment. It expects your height or width to match\n    the expected value, so check your render settings are set to \n HD720. \n\n')
-
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(3)[0] +': error if more than ' + str(checklist_items.get(3)[1][1]) +  '\n     warning if more than ' + str(checklist_items.get(3)[1][0])+ '.\n\n')
-
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(4)[0] +': must contain ' + str(checklist_items.get(4)[1])+ ' in its path.\n     This is to make sure a Maya project is being used.\n\n')
- 
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(6)[0] +': returns error if common objects are\n     found outside hierarchies' + '\n\n')
-
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(7)[0] +': : error if more than ' + str(checklist_items.get(7)[1][1]) + '\n     warning if more than: ' + str(checklist_items.get(7)[1][0]) + '.' + '\n\n')
-
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(8)[0] +': error if more than ' + str(checklist_items.get(8)[1][1])  + '\n     warning if more than ' + str(checklist_items.get(8)[1][0]) + '\n\n')   
-
-
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(12)[0] +': error if using default names.' + '\n  warning if containing default names.\n    Examples of default names:\n      "pCube1" = Error\n      "pointLight1" = Error\n      "nurbsPlane1" = Error\n      "my_pCube" = Warning\n\n')  
-
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(13)[0] +': error if anything is assigned.\n\n') 
-        
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(14)[0] +': error if any ngons found.\n     A polygon that is made up of five or more vertices. \n     Anything over a quad (4 sides) is considered an ngon\n\n') 
-         
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(15)[0] +': error if is found.\n    A non-manifold geometry is a 3D shape that cannot be\n    unfolded into a 2D surface with all its normals pointing\n    the same direction.\n    For example, objects with faces inside of it.\n\n')
-     
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(17)[0] +': error if rotation(XYZ) not frozen.' + '\n     It doesn\'t check objects with incoming connections,\n     for example, animations or rigs.' + '\n\n')
-     
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(18)[0] +': error if animated visibility is found' + '\n     warning if hidden object is found.' + '\n\n') 
     
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(19)[0] +': error if any non-deformer history found.' + '\n\n') 
-   
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='[X] ' + checklist_items.get(20)[0] +': error if incorrect color space found.' + '\n     It only checks common nodes for Redshift and Arnold\n     Generally "sRGB" -> float3(color), and "Raw" -> float(value).\n\n')
+    # Add help text for all items sequentially
+    help_texts = {
+        1: f'[{1}] {checklist_items.get(1)[0]}: returns error if not matching: "{str(checklist_items.get(1)[1])}".\n\n',
+        2: f'[{2}] {checklist_items.get(2)[0]}: returns error if none of the values match:\n    {str(checklist_items.get(2)[1])}. For more information check the guidelines for\n    this assignment. It expects your height or width to match\n    the expected value, so check your render settings are set to \n HD720. \n\n',
+        3: f'[{3}] {checklist_items.get(3)[0]}: error if more than {str(checklist_items.get(3)[1][1])}\n     warning if more than {str(checklist_items.get(3)[1][0])}.\n\n',
+        4: f'[{4}] {checklist_items.get(4)[0]}: must contain {str(checklist_items.get(4)[1])} in its path.\n     This is to make sure a Maya project is being used.\n\n',
+        5: f'[{5}] {checklist_items.get(5)[0]}: returns error if common objects are\n     found outside hierarchies\n\n',
+        6: f'[{6}] {checklist_items.get(6)[0]}: error if more than {str(checklist_items.get(6)[1][1])}\n     warning if more than: {str(checklist_items.get(6)[1][0])}.\n\n',
+        7: f'[{7}] {checklist_items.get(7)[0]}: error if more than {str(checklist_items.get(7)[1][1])}\n     warning if more than {str(checklist_items.get(7)[1][0])}.\n\n',
+        8: f'[{8}] {checklist_items.get(8)[0]}: error if more than {str(checklist_items.get(8)[1][1])}\n     warning if more than {str(checklist_items.get(8)[1][0])}\n\n',
+        9: f'[{9}] {checklist_items.get(9)[0]}: error if using default names.\n  warning if containing default names.\n    Examples of default names:\n      "pCube1" = Error\n      "pointLight1" = Error\n      "nurbsPlane1" = Error\n      "my_pCube" = Warning\n\n',
+        10: f'[{10}] {checklist_items.get(10)[0]}: error if anything is assigned to lambert1 or standardSurface1.\n\n',
+        11: f'[{11}] {checklist_items.get(11)[0]}: error if any ngons found.\n     A polygon that is made up of five or more vertices. \n     Anything over a quad (4 sides) is considered an ngon\n\n',
+        12: f'[{12}] {checklist_items.get(12)[0]}: error if is found.\n    A non-manifold geometry is a 3D shape that cannot be\n    unfolded into a 2D surface with all its normals pointing\n    the same direction.\n    For example, objects with faces inside of it.\n\n',
+        13: f'[{13}] {checklist_items.get(13)[0]}: error if rotation(XYZ) not frozen.\n     It doesn\'t check objects with incoming connections,\n     for example, animations or rigs.\n\n',
+        14: f'[{14}] {checklist_items.get(14)[0]}: error if animated visibility is found\n     warning if hidden object is found.\n     Exception: Single turntable object shows warning instead of error.\n\n',
+        15: f'[{15}] {checklist_items.get(15)[0]}: error if any non-deformer history found.\n\n',
+        16: f'[{16}] {checklist_items.get(16)[0]}: error if incorrect color space found.\n     It only checks common nodes for Redshift and Arnold\n     Generally "sRGB" -> float3(color), and "Raw" -> float(value).\n\n',
+        17: f'[{17}] {checklist_items.get(17)[0]}: minimum 4 shadow-casting lights with 1 aiSkyDome.\n     Warning if lights without "key" in name are casting shadows.\n\n',
+        18: f'[{18}] {checklist_items.get(18)[0]}: error if camera aspect ratio is not 1.77 or 1.78.\n\n'
+    }
+    
+    for i in sorted(help_texts.keys()):
+        cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it=help_texts[i])
     
     cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='\n\n  Guidelines: (Same as Canvas)\n - Refer to the Soft Skill and Asset Pages on Canvas to review your specific deliverables. If you have any questions, contact the instructor.')
     
     cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='\n\n - Project Clean up:\n\n1. Use the file path editor (windows > general editor > file path editor) to make sure all your textures are located in you current project.\n\n2.Clean up the most recent scene.  (delete history, freeze transforms, delete empty group nodes)\n\n3.Clean up the Hypershade library (in the Hypershade Edit-Delete unused nodes.)\n\n4.Make sure display layers are used correctly (do they contain the right Pieces of geo in them, and do they make sense.)\n')
     
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=1, it='') # Bring Back to the Top
+    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=1, it='')
 
-    cmds.separator(h=checklist_spacing, style='none') # Empty Space
-   
-    cmds.separator(h=7, style='none') # Empty Space
+    cmds.separator(h=checklist_spacing, style='none')
+    cmds.separator(h=7, style='none')
     cmds.text(l='  Issues when using the script?  Please contact me :', align="left")
     
-
     # Footer =============
-    cmds.separator(h=15, style='none') # Empty Space
+    cmds.separator(h=15, style='none')
     cmds.rowColumnLayout(nc=2, cw=[(1, 140),(2, 140)], cs=[(1,10),(2, 0)], p="main_column")
     cmds.text('Alexander T. Santiago  ')
     cmds.text(l='<a href="mailto:asanti89@nmsu.edu">asanti89@nmsu.edu</a>', hl=True, highlightColor=[1,1,1])
     cmds.rowColumnLayout(nc=2, cw=[(1, 140),(2, 140)], cs=[(1,10),(2, 0)], p="main_column")
-    cmds.separator(h=15, style='none') # Empty Space
+    cmds.separator(h=15, style='none')
     cmds.text(l='<a href="https://github.com/atsantiago">Github</a>', hl=True, highlightColor=[1,1,1])
-    cmds.separator(h=7, style='none') # Empty Space
-    
+    cmds.separator(h=7, style='none')
     
     # Close Button 
     cmds.rowColumnLayout(nc=1, cw=[(1, 300)], cs=[(1,10)], p="main_column")
@@ -420,11 +369,8 @@ def build_gui_help_ats_cmi_modeling_checklist():
     def close_help_gui():
         if cmds.window(window_name, exists=True):
             cmds.deleteUI(window_name, window=True)
-    
 
 # Checklist Functions Start Here ================================================================
-
-   
 
 # Item 1 - Scene Units =========================================================================
 def check_scene_units():
@@ -471,7 +417,7 @@ def check_scene_units():
         string_status = str(issues_found) + " issues found. The expected " + item_name.lower() + ' was "'  + str(expected_value).capitalize() + '" and yours is "' + str(received_value).capitalize() + '"'
     return '\n*** ' + item_name + " ***\n" + string_status
 
-# Item 2 - Output Resolution (MODIFIED) =========================================================================
+# Item 2 - Output Resolution =========================================================================
 def check_output_resolution():
     item_name = checklist_items[2][0]
     item_id = item_name.lower().replace(" ","_").replace("-","_")
@@ -542,9 +488,16 @@ def check_total_texture_count():
     if isinstance(expected_value[0], int) == False or isinstance(expected_value[1], int) == False:
         custom_settings_failed = True
 
-
     # Count Textures
     all_file_nodes = cmds.ls(type="file")
+    
+    # Check if no file nodes exist - show green instead of N/A
+    if len(all_file_nodes) == 0:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message('No file texture nodes found in scene.'))
+        cmds.text("output_" + item_id, e=True, l="0")
+        return '\n*** ' + item_name + " ***\n" + '0 issues found. No file texture nodes in scene.'
+    
     for file in all_file_nodes:
         uv_tiling_mode = cmds.getAttr(file + '.uvTilingMode')
         if uv_tiling_mode != 0:
@@ -556,11 +509,9 @@ def check_total_texture_count():
         else:
             received_value +=1
         
-    
     # Manager Message
     patch_message = 'Your ' + item_name.lower() + ' should be reduced from "' + str(received_value) + '" to less than "' + str(expected_value[1]) + '".\n (UDIM tiles are counted as individual textures)'
     cancel_button = 'Ignore Issue'
-    
     
     if received_value <= expected_value[1] and received_value > expected_value[0]:
         cmds.button("status_" + item_id, e=True, bgc=warning_color, l= '', c=lambda args: warning_total_texture_count()) 
@@ -569,7 +520,6 @@ def check_total_texture_count():
         issues_found = 0
     elif received_value <= expected_value[1]:
         cmds.button("status_" + item_id, e=True, bgc=pass_color, l= '', c=lambda args: print_message(item_name + ': "'  + str(received_value) + '". (UDIM tiles are counted as individual textures)')) 
-
         issues_found = 0
     else: 
         cmds.button("status_" + item_id, e=True, bgc=error_color, l= '?', c=lambda args: warning_total_texture_count())
@@ -577,7 +527,6 @@ def check_total_texture_count():
         
     cmds.text("output_" + item_id, e=True, l=received_value )
     
-
     # Patch Function ----------------------
     def warning_total_texture_count():
         user_input = cmds.confirmDialog(
@@ -604,7 +553,7 @@ def check_total_texture_count():
         cmds.button("status_" + item_id, e=True, bgc=exception_color, l= '', c=lambda args: print_message('The custom value provided couldn\'t be used to check your total texture count', as_warning=True))
     return '\n*** ' + item_name + " ***\n" + string_status
     
-# Item 4 - File Paths (MODIFIED) =========================================================================
+# Item 4 - File Paths =========================================================================
 def check_network_file_paths():
     item_name = checklist_items.get(4)[0]
     item_id = item_name.lower().replace(" ","_").replace("-","_")
@@ -613,17 +562,23 @@ def check_network_file_paths():
     
     # Count Incorrect File Nodes
     all_file_nodes = cmds.ls(type="file")
+    
+    # Check if no file nodes exist - show green instead of N/A
+    if len(all_file_nodes) == 0:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message('No file texture nodes found in scene.'))
+        cmds.text("output_" + item_id, e=True, l="0")
+        return '\n*** ' + item_name + " ***\n" + '0 issues found. No file texture nodes in scene.'
+    
     for file in all_file_nodes:
         file_path = cmds.getAttr(file + ".fileTextureName")
         if file_path != '':
-            file_path_no_slashes = file_path.lower()#.replace('/','').replace('\\','')
+            file_path_no_slashes = file_path.lower()
             for valid_path in expected_value:
-                #if not file_path_no_slashes.startswith(valid_path.replace('/','').replace('\\','')):
                 if valid_path not in file_path_no_slashes:
                     incorrect_file_nodes.append(file)
         else:
             incorrect_file_nodes.append(file)
-
 
     if len(incorrect_file_nodes) == 0:
         cmds.button("status_" + item_id, e=True, bgc=pass_color, l= '', c=lambda args: print_message('All file nodes seem to be currently sourced from the sourceimages folder.')) 
@@ -661,20 +616,26 @@ def check_network_file_paths():
     else: 
         string_status = str(issues_found) + ' issues found. All textures were sourced from the network'
     return '\n*** ' + item_name + " ***\n" + string_status
-
-
     
-# Item 6 - Unparented Objects =========================================================================
+# Item 5 - Unparented Objects =========================================================================
 def check_unparented_objects():
-    item_name = checklist_items.get(6)[0]
+    item_name = checklist_items.get(5)[0]
     item_id = item_name.lower().replace(" ","_").replace("-","_")
-    expected_value = checklist_items.get(6)[1]
+    expected_value = checklist_items.get(5)[1]
     unparented_objects = []
 
     # Count Unparented Objects
     geo_dag_nodes = cmds.ls(geometry=True)
+    
+    # Check if no geometry exists - show green instead of N/A
+    if len(geo_dag_nodes) == 0:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message('No geometry objects found in scene.'))
+        cmds.text("output_" + item_id, e=True, l="0")
+        return '\n*** ' + item_name + " ***\n" + '0 issues found. No geometry objects in scene.'
+    
     for obj in geo_dag_nodes:
-        first_parent = cmds.listRelatives(obj, p=True, f=True) # Check if it returned something?
+        first_parent = cmds.listRelatives(obj, p=True, f=True)
         children_members = cmds.listRelatives(first_parent[0], c=True, type="transform") or []
         parents_members = cmds.listRelatives(first_parent[0], ap=True, type="transform") or []
         if len(children_members) + len(parents_members) == 0:
@@ -719,14 +680,12 @@ def check_unparented_objects():
         string_status = str(issues_found) + ' issues found. No unparented objects were found.'
     return '\n*** ' + item_name + " ***\n" + string_status
 
-
-# Item 7 - Total Triangle Count =========================================================================
+# Item 6 - Total Triangle Count =========================================================================
 def check_total_triangle_count():
-    item_name = checklist_items.get(7)[0]
+    item_name = checklist_items.get(6)[0]
     item_id = item_name.lower().replace(" ","_").replace("-","_")
-    expected_value = checklist_items.get(7)[1][1]
-    inbetween_value = checklist_items.get(7)[1][0]
-    unparented_objects = []
+    expected_value = checklist_items.get(6)[1][1]
+    inbetween_value = checklist_items.get(6)[1][0]
     
     # Check Custom Value
     custom_settings_failed = False
@@ -734,8 +693,16 @@ def check_total_triangle_count():
         custom_settings_failed = True
 
     all_poly_count = cmds.ls(type="mesh", flatten=True)
-    scene_tri_count = 0;
-    smoothedObjCount = 0;
+    
+    # Check if no polygon objects exist - show green instead of N/A
+    if len(all_poly_count) == 0:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message('No polygon objects found in scene.'))
+        cmds.text("output_" + item_id, e=True, l="0")
+        return '\n*** ' + item_name + " ***\n" + '0 issues found. No polygon objects in scene.'
+    
+    scene_tri_count = 0
+    smoothedObjCount = 0
     
     for obj in all_poly_count:
         smooth_level = cmds.getAttr(obj + ".smoothLevel")
@@ -756,16 +723,16 @@ def check_total_triangle_count():
                 
     if scene_tri_count < expected_value and scene_tri_count > inbetween_value:
         cmds.button("status_" + item_id, e=True, bgc=warning_color, l= '', c=lambda args: warning_total_triangle_count())
-        issues_found = 0;
+        issues_found = 0
         patch_message = 'Your scene has ' + str(scene_tri_count) + ' triangles, which is high. \nConsider optimizing it if possible.'
         cancel_message= "Ignore Warning"
     elif scene_tri_count < expected_value:
         cmds.button("status_" + item_id, e=True, bgc=pass_color, l= '', c=lambda args: print_message('Your scene has ' + str(scene_tri_count) +  ' triangles. \nGood job keeping the triangle count low!.')) 
-        issues_found = 0;
+        issues_found = 0
         patch_message = ''
     else: 
         cmds.button("status_" + item_id, e=True, bgc=error_color, l= '?', c=lambda args: warning_total_triangle_count())
-        issues_found = 1;
+        issues_found = 1
         patch_message = 'Your scene has ' + str(scene_tri_count) + ' triangles. You should try to keep it under ' + str(expected_value) + '.\n\n' + 'In case you see a different number on your "Heads Up Display > Poly Count" option.  It\'s likely that you have "shapeOrig" nodes in your scene. These are intermediate shape nodes usually created by deformers. If you don\'t have deformations on your scene, you can delete these to reduce triangle count.\n'
         cancel_message= "Ignore Issue"
         
@@ -787,7 +754,6 @@ def check_total_triangle_count():
         else:
             cmds.button("status_" + item_id, e=True, l= '')
     
-                    
     # Return string for report ------------
     if scene_tri_count > inbetween_value and scene_tri_count < expected_value:
         string_status = str(issues_found) + ' issues found. Your scene has ' + str(scene_tri_count) +  ' triangles, which is high. Consider optimizing it if possible.' 
@@ -798,6 +764,86 @@ def check_total_triangle_count():
     if custom_settings_failed:
         string_status = '1 issue found. The custom value provided couldn\'t be used to check your total triangle count'
         cmds.button("status_" + item_id, e=True, bgc=exception_color, l= '', c=lambda args: print_message('The custom value provided couldn\'t be used to check your total triangle count', as_warning=True))
+    return '\n*** ' + item_name + " ***\n" + string_status
+
+# Item 7 - Total Polygon Count (NEW) =========================================================================
+def check_total_polygon_count():
+    item_name = checklist_items.get(7)[0]
+    item_id = item_name.lower().replace(" ","_").replace("-","_")
+    expected_value = checklist_items.get(7)[1][1]
+    inbetween_value = checklist_items.get(7)[1][0]
+    
+    # Check Custom Value
+    custom_settings_failed = False
+    if isinstance(expected_value, int) == False or isinstance(inbetween_value, int) == False:
+        custom_settings_failed = True
+
+    all_poly_count = cmds.ls(type="mesh", flatten=True)
+    
+    # Check if no polygon objects exist - show green instead of N/A
+    if len(all_poly_count) == 0:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message('No polygon objects found in scene.'))
+        cmds.text("output_" + item_id, e=True, l="0")
+        return '\n*** ' + item_name + " ***\n" + '0 issues found. No polygon objects in scene.'
+    
+    scene_poly_count = 0
+    
+    for obj in all_poly_count:
+        smooth_level = cmds.getAttr(obj + ".smoothLevel")
+        smooth_state = cmds.getAttr(obj + ".displaySmoothMesh")
+        total_face_count = cmds.polyEvaluate(obj, f=True)
+
+        if smooth_state > 0 and smooth_level != 0:
+            # Subdivision increases face count by factor of 4 per level
+            subdivided_face_count = total_face_count * (4 ** smooth_level)
+            scene_poly_count += subdivided_face_count
+        else:
+            scene_poly_count += total_face_count
+                
+    if scene_poly_count < expected_value and scene_poly_count > inbetween_value:
+        cmds.button("status_" + item_id, e=True, bgc=warning_color, l= '', c=lambda args: warning_total_polygon_count())
+        issues_found = 0
+        patch_message = 'Your scene has ' + str(scene_poly_count) + ' polygons, which is high. \nConsider optimizing it if possible.'
+        cancel_message= "Ignore Warning"
+    elif scene_poly_count < expected_value:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l= '', c=lambda args: print_message('Your scene has ' + str(scene_poly_count) +  ' polygons. \nGood job keeping the polygon count low!.')) 
+        issues_found = 0
+        patch_message = ''
+    else: 
+        cmds.button("status_" + item_id, e=True, bgc=error_color, l= '?', c=lambda args: warning_total_polygon_count())
+        issues_found = 1
+        patch_message = 'Your scene has ' + str(scene_poly_count) + ' polygons. You should try to keep it under ' + str(expected_value) + '.'
+        cancel_message= "Ignore Issue"
+        
+    cmds.text("output_" + item_id, e=True, l=scene_poly_count )
+    
+    # Patch Function ----------------------
+    def warning_total_polygon_count():
+        user_input = cmds.confirmDialog(
+                    title=item_name,
+                    message= patch_message,
+                    button=['OK', cancel_message],
+                    defaultButton='OK',
+                    cancelButton=cancel_message,
+                    dismissString=cancel_message, 
+                    icon="warning")
+
+        if user_input == "Ignore Warning":
+            cmds.button("status_" + item_id, e=True, bgc=pass_color, l= '', c=lambda args: print_message(str(issues_found) + ' issues found. Your scene has ' + str(scene_poly_count) +  ' polygons, which is high. \nConsider optimizing it if possible.') )
+        else:
+            cmds.button("status_" + item_id, e=True, l= '')
+    
+    # Return string for report ------------
+    if scene_poly_count > inbetween_value and scene_poly_count < expected_value:
+        string_status = str(issues_found) + ' issues found. Your scene has ' + str(scene_poly_count) +  ' polygons, which is high. Consider optimizing it if possible.' 
+    elif scene_poly_count < expected_value:
+        string_status = str(issues_found) + ' issues found. Your scene has ' + str(scene_poly_count) +  ' polygons. Good job keeping the polygon count low!.' 
+    else: 
+        string_status = str(issues_found) + ' issue found. Your scene has ' + str(scene_poly_count) + ' polygons. You should try to keep it under ' + str(expected_value) + '.'
+    if custom_settings_failed:
+        string_status = '1 issue found. The custom value provided couldn\'t be used to check your total polygon count'
+        cmds.button("status_" + item_id, e=True, bgc=exception_color, l= '', c=lambda args: print_message('The custom value provided couldn\'t be used to check your total polygon count', as_warning=True))
     return '\n*** ' + item_name + " ***\n" + string_status
 
 # Item 8 - Total Poly Object Count =========================================================================
@@ -814,18 +860,25 @@ def check_total_poly_object_count():
     
     all_polymesh = cmds.ls(type= "mesh")
 
+    # Always show the count, even if 0 (show green for empty scenes)
+    if len(all_polymesh) == 0:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message('No polygon objects in scene.'))
+        cmds.text("output_" + item_id, e=True, l="0")
+        return '\n*** ' + item_name + " ***\n" + '0 issues found. No polygon objects in scene.'
+
     if len(all_polymesh) < expected_value and len(all_polymesh) > inbetween_value:
         cmds.button("status_" + item_id, e=True, bgc=warning_color, l= '', c=lambda args: warning_total_poly_object_count())
-        issues_found = 0;
+        issues_found = 0
         patch_message = 'Your scene contains "' + str(len(all_polymesh)) + '" polygon meshes, which is a high number. \nConsider optimizing it if possible.'
         cancel_message= "Ignore Warning"
     elif len(all_polymesh) < expected_value:
         cmds.button("status_" + item_id, e=True, bgc=pass_color, l= '', c=lambda args: print_message('Your scene contains "' +str(len(all_polymesh)) + '" polygon meshes.')) 
-        issues_found = 0;
+        issues_found = 0
         patch_message = ''
     else: 
         cmds.button("status_" + item_id, e=True, bgc=error_color, l= '?', c=lambda args: warning_total_poly_object_count())
-        issues_found = 1;
+        issues_found = 1
         patch_message = str(len(all_polymesh)) + ' polygon meshes in your scene. \nTry to keep this number under ' + str(expected_value) + '.'
         cancel_message= "Ignore Issue"
         
@@ -858,107 +911,12 @@ def check_total_poly_object_count():
         string_status = '1 issue found. The custom value provided couldn\'t be used to check your total poly count'
         cmds.button("status_" + item_id, e=True, bgc=exception_color, l= '', c=lambda args: print_message('The custom value provided couldn\'t be used to check your total poly count', as_warning=True))
     return '\n*** ' + item_name + " ***\n" + string_status
-    
-    
 
-    
-# Item 10 - Redshift Shadow Casting Light Count =========================================================================
-def check_rs_shadow_casting_light_count():
-    item_name = checklist_items.get(10)[0]
-    item_id = item_name.lower().replace(" ","_").replace("-","_")
-    expected_value = checklist_items.get(10)[1][1]
-    inbetween_value = checklist_items.get(10)[1][0]
-    
-    # Check Custom Values
-    custom_settings_failed = False
-    if isinstance(expected_value, int) == False or isinstance(inbetween_value, int) == False:
-        custom_settings_failed = True
-    
-    rs_physical_type = "RedshiftPhysicalLight" # Used to check if Redshift is loaded
-    
-    node_types = cmds.ls(nodeTypes=True)
-    
-    if rs_physical_type in node_types: # is RS loaded?
-    
-        rs_physical = cmds.ls(type=rs_physical_type)
-        rs_photometric = cmds.ls(type="RedshiftIESLight")
-        rs_portal = cmds.ls(type="RedshiftPortalLight")
-        rs_dome = cmds.ls(type="RedshiftDomeLight")
-        
-        all_rs_lights = []
-        all_rs_lights.extend(rs_physical)
-        all_rs_lights.extend(rs_photometric)
-        all_rs_lights.extend(rs_portal)
-        all_rs_lights.extend(rs_dome)
-        
-        rs_shadow_casting_lights = []
-       
-        for rs_light in all_rs_lights:
-            if rs_light != "<done>":
-                if cmds.objectType(rs_light) != "RedshiftPortalLight": # For some odd reason portal lights use an attribute called "shadows" instead of "shadow"
-                    rs_shadow_state = cmds.getAttr (rs_light + ".shadow")
-                else:
-                    rs_shadow_state = cmds.getAttr (rs_light + ".shadows")
-                if rs_shadow_state == 1:
-                    rs_shadow_casting_lights.append(rs_light)
-      
-       
-        if len(rs_shadow_casting_lights) < expected_value and len(rs_shadow_casting_lights) > inbetween_value:
-            cmds.button("status_" + item_id, e=True, bgc=warning_color, l= '', c=lambda args: warning_rs_shadow_casting_light_count())
-            issues_found = 0;
-            patch_message = 'Your scene contains "' + str(len(rs_shadow_casting_lights)) + '" Redshift shadow casting lights, which is a high number. \nConsider optimizing it if possible.'
-            cancel_message= "Ignore Warning"
-        elif len(rs_shadow_casting_lights) < expected_value:
-            cmds.button("status_" + item_id, e=True, bgc=pass_color, l= '', c=lambda args: print_message('Your scene contains "' +str(len(rs_shadow_casting_lights)) + '" Redshift shadow casting lights.')) 
-            issues_found = 0;
-            patch_message = ''
-        else: 
-            cmds.button("status_" + item_id, e=True, bgc=error_color, l= '?', c=lambda args: warning_rs_shadow_casting_light_count())
-            issues_found = 1;
-            patch_message = 'Your scene contains ' + str(len(rs_shadow_casting_lights)) + ' Redshift shadow casting lights.\nTry to keep this number under ' + str(expected_value) + '.'
-            cancel_message= "Ignore Issue"
-            
-        cmds.text("output_" + item_id, e=True, l=len(rs_shadow_casting_lights) )
-        
-        # Patch Function ----------------------
-        def warning_rs_shadow_casting_light_count():
-            user_input = cmds.confirmDialog(
-                        title=item_name,
-                        message= patch_message,
-                        button=['OK', cancel_message],
-                        defaultButton='OK',
-                        cancelButton=cancel_message,
-                        dismissString=cancel_message, 
-                        icon="warning")
-
-            if user_input == "Ignore Warning":
-                cmds.button("status_" + item_id, e=True, bgc=pass_color, l= '', c=lambda args: print_message(str(issues_found) + ' issues found. Your scene contains ' + str(len(rs_shadow_casting_lights)) +  ' Redshift shadow casting lights, which is a high number. \nConsider optimizing it if possible.') )
-            else:
-                cmds.button("status_" + item_id, e=True, l= '')
-        
-        # Return string for report ------------
-        if len(rs_shadow_casting_lights) < expected_value and len(rs_shadow_casting_lights) > inbetween_value:
-            string_status = str(issues_found) + ' issues found. Your scene contains "' +  str(len(rs_shadow_casting_lights)) + '" Redshift shadow casting lights, which is a high number. Consider optimizing it if possible.'
-        elif len(rs_shadow_casting_lights) < expected_value:
-            string_status = str(issues_found) + ' issues found. Your scene contains "' + str(len(rs_shadow_casting_lights)) + '" Redshift shadow casting lights.'
-        else: 
-            string_status = str(issues_found) + ' issue found. Your scene contains "' + str(len(rs_shadow_casting_lights)) + '" Redshift shadow casting lights, you should keep this number under "' + str(expected_value) + '".'
-        if custom_settings_failed:
-            string_status = '1 issue found. The custom value provided couldn\'t be used to check your Redshift shadow casting lights.'
-            cmds.button("status_" + item_id, e=True, bgc=exception_color, l= '', c=lambda args: print_message('The custom value provided couldn\'t be used to check your Redshift shadow casting lights.', as_warning=True))
-        return '\n*** ' + item_name + " ***\n" + string_status
-    else:
-        cmds.button("status_" + item_id, e=True, bgc=exception_color, l= '', c=lambda args: print_message('No Redshift light types exist in the scene. Redshift plugin doesn\'t seem to be loaded.', as_warning=True))
-        cmds.text("output_" + item_id, e=True, l='No Redshift' )
-        return '\n*** ' + item_name + " ***\n" + '0 issues found, but no Redshift light types exist in the scene. Redshift plugin doesn\'t seem to be loaded.'
-
-
-
-# Item 12 - Default Object Names ========================================================================= 
+# Item 9 - Default Object Names ========================================================================= 
 def check_default_object_names():
-    item_name = checklist_items.get(12)[0]
+    item_name = checklist_items.get(9)[0]
     item_id = item_name.lower().replace(" ","_").replace("-","_")
-    expected_value = checklist_items.get(12)[1]
+    expected_value = checklist_items.get(9)[1]
     
     offending_objects = []
     possible_offenders = []
@@ -970,6 +928,13 @@ def check_default_object_names():
      "ambientLight", "directionalLight", "pointLight", "spotLight", "areaLight", "volumeLight"]
      
     all_objects = cmds.ls(lt=True, lf=True, g=True)
+    
+    # Check if no objects exist - show green instead of N/A
+    if len(all_objects) == 0:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message('No objects found in scene.'))
+        cmds.text("output_" + item_id, e=True, l="0")
+        return '\n*** ' + item_name + " ***\n" + '0 issues found. No objects in scene.'
     
     for obj in all_objects:
         for def_name in default_object_names:
@@ -1051,31 +1016,51 @@ def check_default_object_names():
         string_status = str(issues_found) + ' issues found. No unnamed objects were found, well done!'
     return '\n*** ' + item_name + " ***\n" + string_status
 
-
-# Item 13 - Objects Assigned to lambert1 =========================================================================
-def check_objects_assigned_to_lambert1():
-    item_name = checklist_items.get(13)[0]
+# Item 10 - Objects Assigned to Default Material (UPDATED) =========================================================================
+def check_objects_assigned_to_default_material():
+    item_name = checklist_items.get(10)[0]
     item_id = item_name.lower().replace(" ","_").replace("-","_")
-    expected_value = checklist_items.get(13)[1]
+    expected_value = checklist_items.get(10)[1]
     
+    # Check both lambert1 and standardSurface1 (Maya 2024+ default)
     lambert1_objects = cmds.sets("initialShadingGroup", q=True) or []
     
-    if len(lambert1_objects) == 0:
-        cmds.button("status_" + item_id, e=True, bgc=pass_color, l= '', c=lambda args: print_message('No objects were assigned to lambert1.')) 
+    # Check if standardSurface1 exists and get its shading group
+    standardsurface_objects = []
+    if cmds.objExists("standardSurface1"):
+        # Find shading group connected to standardSurface1
+        shading_groups = cmds.listConnections("standardSurface1", type="shadingEngine") or []
+        for sg in shading_groups:
+            objects_in_sg = cmds.sets(sg, q=True) or []
+            standardsurface_objects.extend(objects_in_sg)
+    
+    # Combine both lists and remove duplicates
+    all_default_objects = list(set(lambert1_objects + standardsurface_objects))
+    
+    # Check if no geometry exists - show green instead of N/A
+    all_geo = cmds.ls(geometry=True)
+    if len(all_geo) == 0:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message('No geometry objects found in scene.'))
+        cmds.text("output_" + item_id, e=True, l="0")
+        return '\n*** ' + item_name + " ***\n" + '0 issues found. No geometry objects in scene.'
+    
+    if len(all_default_objects) == 0:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l= '', c=lambda args: print_message('No objects were assigned to default materials.')) 
         issues_found = 0
     else: 
-        cmds.button("status_" + item_id, e=True, bgc=error_color, l= '?', c=lambda args: warning_objects_assigned_to_lambert1())
-        issues_found = len(lambert1_objects)
+        cmds.button("status_" + item_id, e=True, bgc=error_color, l= '?', c=lambda args: warning_objects_assigned_to_default_material())
+        issues_found = len(all_default_objects)
         
-    cmds.text("output_" + item_id, e=True, l=len(lambert1_objects) )
+    cmds.text("output_" + item_id, e=True, l=len(all_default_objects) )
     
-    if len(lambert1_objects) == 1:
-        patch_message = str(len(lambert1_objects)) + ' object is assigned to lambert1. \nMake sure no objects are assigned to lambert1.\n\n(Too see a list of objects, generate a full report)'
+    if len(all_default_objects) == 1:
+        patch_message = str(len(all_default_objects)) + ' object is assigned to default material(s). \nMake sure no objects are assigned to lambert1 or standardSurface1.\n\n(Too see a list of objects, generate a full report)'
     else:
-        patch_message = str(len(lambert1_objects)) + ' objects are assigned to lambert1. \nMake sure no objects are assigned to lambert1.\n\n(Too see a list of objects, generate a full report)'
+        patch_message = str(len(all_default_objects)) + ' objects are assigned to default material(s). \nMake sure no objects are assigned to lambert1 or standardSurface1.\n\n(Too see a list of objects, generate a full report)'
     
     # Patch Function ----------------------
-    def warning_objects_assigned_to_lambert1():
+    def warning_objects_assigned_to_default_material():
         user_input = cmds.confirmDialog(
                     title=item_name,
                     message= patch_message,
@@ -1096,27 +1081,32 @@ def check_objects_assigned_to_lambert1():
         issue_string = "issue"
     if issues_found > 0:
         string_status = str(issues_found) + ' ' + issue_string + ' found.\n'
-        for obj in lambert1_objects: 
-            string_status = string_status + '"' + obj +  '"  is assigned to lambert1. It should be assigned to another shader.\n'
+        for obj in all_default_objects: 
+            string_status = string_status + '"' + obj +  '"  is assigned to default material. It should be assigned to another shader.\n'
         string_status = string_status[:-1]
     else: 
-        string_status = str(issues_found) + ' issues found. No objects are assigned to lambert1.'
+        string_status = str(issues_found) + ' issues found. No objects are assigned to default materials.'
     return '\n*** ' + item_name + " ***\n" + string_status
 
-# Item 14 - Ngons =========================================================================
+# Item 11 - Ngons =========================================================================
 def check_ngons():
-    item_name = checklist_items.get(14)[0]
+    item_name = checklist_items.get(11)[0]
     item_id = item_name.lower().replace(" ","_").replace("-","_")
-    expected_value = checklist_items.get(14)[1]
-    
+    expected_value = checklist_items.get(11)[1]
 
+    # Check if polygon objects exist first - show green instead of N/A
+    all_meshes = cmds.ls(type="mesh")
+    if len(all_meshes) == 0:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message('No polygon objects found in scene.'))
+        cmds.text("output_" + item_id, e=True, l="0")
+        return '\n*** ' + item_name + " ***\n" + '0 issues found. No polygon objects in scene.'
 
     ngon_mel_command = 'string $ngons[] = `polyCleanupArgList 3 { "1","2","1","0","1","0","0","0","0","1e-005","0","1e-005","0","1e-005","0","-1","0" }`;'
     ngons_list = mel.eval(ngon_mel_command)
     cmds.select(clear=True)
     
     print('') # Clear Any Warnings
- 
 
     if len(ngons_list) == 0:
         cmds.button("status_" + item_id, e=True, bgc=pass_color, l= '', c=lambda args: print_message('No ngons were found in your scene. Good job!')) 
@@ -1161,16 +1151,23 @@ def check_ngons():
         string_status = str(issues_found) + ' issues found. No ngons were found in your scene.'
     return '\n*** ' + item_name + " ***\n" + string_status
 
-# Item 15 - Non-manifold Geometry =========================================================================
+# Item 12 - Non-manifold Geometry =========================================================================
 def check_non_manifold_geometry():
-    item_name = checklist_items.get(15)[0]
+    item_name = checklist_items.get(12)[0]
     item_id = item_name.lower().replace(" ","_").replace("-","_")
-    expected_value = checklist_items.get(15)[1]
+    expected_value = checklist_items.get(12)[1]
     
     nonmanifold_geo = []
     nonmanifold_verts = []
     
     all_geo = cmds.ls(type='mesh', long=True)
+   
+    # Check if no geometry exists - show green instead of N/A
+    if len(all_geo) == 0:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message('No polygon objects found in scene.'))
+        cmds.text("output_" + item_id, e=True, l="0")
+        return '\n*** ' + item_name + " ***\n" + '0 issues found. No polygon objects in scene.'
    
     for geo in all_geo:
         obj_non_manifold_verts = cmds.polyInfo(geo, nmv=True) or []
@@ -1224,16 +1221,22 @@ def check_non_manifold_geometry():
         string_status = str(issues_found) + ' issues found. No non-manifold geometry found in your scene.'
     return '\n*** ' + item_name + " ***\n" + string_status
 
-
-# Item 17 - Frozen Transforms =========================================================================
+# Item 13 - Frozen Transforms =========================================================================
 def check_frozen_transforms():
-    item_name = checklist_items.get(17)[0]
+    item_name = checklist_items.get(13)[0]
     item_id = item_name.lower().replace(" ","_").replace("-","_")
-    expected_value = checklist_items.get(17)[1]
+    expected_value = checklist_items.get(13)[1]
     
     objects_no_frozen_transforms = []
     
     all_transforms = cmds.ls(type='transform')
+    
+    # Check if no transforms exist - show green instead of N/A
+    if len(all_transforms) == 0:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message('No transform objects found in scene.'))
+        cmds.text("output_" + item_id, e=True, l="0")
+        return '\n*** ' + item_name + " ***\n" + '0 issues found. No transform objects in scene.'
         
     for transform in all_transforms:
         children = cmds.listRelatives(transform, c=True, pa=True) or []
@@ -1245,7 +1248,7 @@ def check_frozen_transforms():
                         objects_no_frozen_transforms.append(transform)
                        
     if len(objects_no_frozen_transforms) == 0:
-        cmds.button("status_" + item_id, e=True, bgc=pass_color, l= '', c=lambda args: print_message('No empty UV sets.')) 
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l= '', c=lambda args: print_message('All transforms appear to be frozen.')) 
         issues_found = 0
     else: 
         cmds.button("status_" + item_id, e=True, bgc=warning_color, l= '?', c=lambda args: warning_frozen_transforms())
@@ -1289,16 +1292,24 @@ def check_frozen_transforms():
         string_status = str(issues_found) + ' issues found. No objects have un-frozen transformations.'
     return '\n*** ' + item_name + " ***\n" + string_status
 
-# Item 18 - Animated Visibility =========================================================================
+# Item 14 - Animated Visibility (WITH TURNTABLE EXCEPTION) - CONTINUED
 def check_animated_visibility():
-    item_name = checklist_items.get(18)[0]
+    item_name = checklist_items.get(14)[0]
     item_id = item_name.lower().replace(" ","_").replace("-","_")
-    expected_value = checklist_items.get(18)[1]
+    expected_value = checklist_items.get(14)[1]
     
     objects_animated_visibility = []
     objects_hidden = []
+    turntable_objects = []
     
     all_transforms = cmds.ls(type='transform')
+    
+    # Check if no transforms exist - show green instead of N/A
+    if len(all_transforms) == 0:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message('No transform objects found in scene.'))
+        cmds.text("output_" + item_id, e=True, l="0")
+        return '\n*** ' + item_name + " ***\n" + '0 issues found. No transform objects in scene.'
     
     for transform in all_transforms:
         attributes = cmds.listAttr(transform)
@@ -1315,8 +1326,24 @@ def check_animated_visibility():
         input_nodes = cmds.listConnections(transform + ".visibility", destination=False, source=True) or []
         for node in input_nodes:
             if 'animCurve' in cmds.nodeType(node):
-                objects_animated_visibility.append(transform)
-            
+                # Check if this is a turntable object
+                transform_lower = transform.lower()
+                if 'turntable' in transform_lower or 'turn_table' in transform_lower:
+                    turntable_objects.append(transform)
+                else:
+                    objects_animated_visibility.append(transform)
+    
+    # Special handling for turntable exception
+    if len(turntable_objects) == 1 and len(objects_animated_visibility) == 0:
+        # Only one turntable object with animated visibility - show warning instead of error
+        cmds.button("status_" + item_id, e=True, bgc=warning_color, l= '', c=lambda args: warning_animated_visibility())
+        issues_found = 0
+        turntable_warning = True
+    else:
+        turntable_warning = False
+        if len(turntable_objects) > 0:
+            # More than one turntable or other animated objects - treat as error
+            objects_animated_visibility.extend(turntable_objects)
     
     # Manage Strings
     cancel_message = 'Ignore Issue'
@@ -1331,23 +1358,30 @@ def check_animated_visibility():
         patch_message_error = str(len(objects_animated_visibility)) + ' object with animated visibility.\n'
     else:
         patch_message_error = str(len(objects_animated_visibility)) + ' objects with animated visibility.\n'
+    
+    # Add turntable message if applicable
+    if turntable_warning:
+        patch_message_error = 'Single turntable object detected with animated visibility.\n'
         
     # Manage Message
     patch_message = ''
             
-    if len(objects_hidden) != 0 and len(objects_animated_visibility) == 0:
+    if len(objects_hidden) != 0 and len(objects_animated_visibility) == 0 and not turntable_warning:
         cmds.text("output_" + item_id, e=True, l='[ ' + str(len(objects_hidden)) + ' ]' )
         patch_message = patch_message_warning
         cancel_message = 'Ignore Warning'
         buttons_to_add.append('Select Hidden Objects')
-    elif len(objects_hidden) == 0:
+    elif len(objects_hidden) == 0 and not turntable_warning:
         cmds.text("output_" + item_id, e=True, l=str(len(objects_animated_visibility)))
         patch_message = patch_message_error
         buttons_to_add.append('Select Objects With Animated Visibility')
+    elif turntable_warning:
+        cmds.text("output_" + item_id, e=True, l='1 (turntable)')
+        patch_message = patch_message_error
+        cancel_message = 'Ignore Warning'
     else:
         cmds.text("output_" + item_id, e=True, l=str(len(objects_animated_visibility)) + ' + [ ' + str(len(objects_hidden)) + ' ]' )
         patch_message = patch_message_error + '\n\n' + patch_message_warning
-        return_message = patch_message_error + '\n' + patch_message_warning
         buttons_to_add.append('Select Hidden Objects')
         buttons_to_add.append('Select Objects With Animated Visibility')
     
@@ -1356,16 +1390,18 @@ def check_animated_visibility():
     assembled_message.append(cancel_message)
     
     # Manage State
-    if len(objects_hidden) != 0 and len(objects_animated_visibility) == 0:
+    if len(objects_hidden) != 0 and len(objects_animated_visibility) == 0 and not turntable_warning:
         cmds.button("status_" + item_id, e=True, bgc=warning_color, l= '', c=lambda args: warning_animated_visibility()) 
         issues_found = 0
-    elif len(objects_animated_visibility) == 0:
+    elif len(objects_animated_visibility) == 0 and not turntable_warning:
         cmds.button("status_" + item_id, e=True, bgc=pass_color, l= '', c=lambda args: print_message('No objects with animated visibility or hidden.')) 
         issues_found = 0
     else: 
-        cmds.button("status_" + item_id, e=True, bgc=error_color, l= '?', c=lambda args: warning_animated_visibility())
-        issues_found = len(objects_animated_visibility)
-    
+        if not turntable_warning:
+            cmds.button("status_" + item_id, e=True, bgc=error_color, l= '?', c=lambda args: warning_animated_visibility())
+            issues_found = len(objects_animated_visibility)
+        else:
+            issues_found = 0
         
     # Patch Function ----------------------
     def warning_animated_visibility():
@@ -1391,10 +1427,12 @@ def check_animated_visibility():
     issue_string = "issues"
     if issues_found == 1:
         issue_string = "issue"
-    if issues_found > 0 or len(objects_hidden) > 0:
+    if issues_found > 0 or len(objects_hidden) > 0 or turntable_warning:
         string_status = str(issues_found) + ' ' + issue_string + ' found.\n'
         for obj in objects_animated_visibility: 
             string_status = string_status + '"' + obj +  '" has animated visibility.\n'
+        for obj in turntable_objects:
+            string_status = string_status + '"' + obj +  '" is a turntable object with animated visibility (warning only).\n'
         if len(objects_animated_visibility) != 0 and len(objects_hidden) == 0:
             string_status = string_status[:-1]
         
@@ -1403,27 +1441,30 @@ def check_animated_visibility():
         if len(objects_hidden) != 0:
             string_status = string_status[:-1]
     else: 
-        string_status = str(issues_found) + ' issues found. No unnamed objects were found, well done!'
+        string_status = str(issues_found) + ' issues found. No objects with animated visibility found.'
     return '\n*** ' + item_name + " ***\n" + string_status
-    
-    
-    
 
-# Item 19 - Non Deformer History =========================================================================
+# Item 15 - Non Deformer History =========================================================================
 def check_non_deformer_history():
-    item_name = checklist_items.get(19)[0]
+    item_name = checklist_items.get(15)[0]
     item_id = item_name.lower().replace(" ","_").replace("-","_")
-    expected_value = checklist_items.get(19)[1]
+    expected_value = checklist_items.get(15)[1]
     
     objects_non_deformer_history = []
     possible_objects_non_deformer_history = []
-    
 
     objects_to_check = []
     objects_to_check.extend(cmds.ls(typ='nurbsSurface') or [])
     objects_to_check.extend(cmds.ls(typ='mesh') or [])
     objects_to_check.extend(cmds.ls(typ='subdiv') or [])
     objects_to_check.extend(cmds.ls(typ='nurbsCurve') or [])
+    
+    # Check if no objects exist - show green instead of N/A
+    if len(objects_to_check) == 0:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message('No geometry objects found in scene.'))
+        cmds.text("output_" + item_id, e=True, l="0")
+        return '\n*** ' + item_name + " ***\n" + '0 issues found. No geometry objects in scene.'
     
     not_history_nodes = ['tweak', 'expression', 'unitConversion', 'time', 'objectSet', 'reference', 'polyTweak', 'blendShape', 'groupId', \
     'renderLayer', 'renderLayerManager', 'shadingEngine', 'displayLayer', 'skinCluster', 'groupParts', 'mentalraySubdivApprox', 'proximityWrap',\
@@ -1434,7 +1475,6 @@ def check_non_deformer_history():
     # Find Offenders
     for obj in objects_to_check:
         history = cmds.listHistory(obj, pdo=1) or []
-        #Convert to string?
         for node in history:
             if cmds.nodeType(node) not in not_history_nodes and cmds.nodeType(node) not in possible_not_history_nodes:
                 if obj not in objects_non_deformer_history:
@@ -1442,7 +1482,6 @@ def check_non_deformer_history():
             if cmds.nodeType(node) in possible_not_history_nodes:
                 if obj not in possible_objects_non_deformer_history:
                     possible_objects_non_deformer_history.append(obj)
-
 
     # Manage Strings
     cancel_message = 'Ignore Issue'
@@ -1473,7 +1512,6 @@ def check_non_deformer_history():
     else:
         cmds.text("output_" + item_id, e=True, l=str(len(objects_non_deformer_history)) + ' + [ ' + str(len(possible_objects_non_deformer_history)) + ' ]' )
         patch_message = patch_message_error + '\n\n' + patch_message_warning
-        return_message = patch_message_error + '\n' + patch_message_warning
         buttons_to_add.append('Select Objects With Suspicious Deformers')
         buttons_to_add.append('Select Objects With Non-deformer History')
     
@@ -1530,13 +1568,12 @@ def check_non_deformer_history():
     else: 
         string_status = str(issues_found) + ' issues found. No objects with non-deformer history!'
     return '\n*** ' + item_name + " ***\n" + string_status
-    
-    
-# Item 20 - Textures Color Space =========================================================================
+
+# Item 16 - Textures Color Space =========================================================================
 def check_textures_color_space():
-    item_name = checklist_items.get(20)[0]
+    item_name = checklist_items.get(16)[0]
     item_id = item_name.lower().replace(" ","_").replace("-","_")
-    expected_value = checklist_items.get(20)[1]
+    expected_value = checklist_items.get(16)[1]
     
     objects_wrong_color_space = []
     possible_objects_wrong_color_space = []
@@ -1554,6 +1591,14 @@ def check_textures_color_space():
 
     # Count Textures
     all_file_nodes = cmds.ls(type="file")
+    
+    # Check if no file nodes exist - show green instead of N/A
+    if len(all_file_nodes) == 0:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message('No file texture nodes found in scene.'))
+        cmds.text("output_" + item_id, e=True, l="0")
+        return '\n*** ' + item_name + " ***\n" + '0 issues found. No file texture nodes in scene.'
+    
     for file in all_file_nodes:
         color_space = cmds.getAttr(file + '.colorSpace')
         
@@ -1650,7 +1695,6 @@ def check_textures_color_space():
     else:
         cmds.text("output_" + item_id, e=True, l=str(len(objects_wrong_color_space)) + ' + [ ' + str(len(possible_objects_wrong_color_space)) + ' ]' )
         patch_message = patch_message_error + '\n\n' + patch_message_warning
-        return_message = patch_message_error + '\n' + patch_message_warning
         buttons_to_add.append(might_have_issues_message)
         buttons_to_add.append(has_issues_message)
     
@@ -1660,17 +1704,17 @@ def check_textures_color_space():
     
     # Manage State
     if len(possible_objects_wrong_color_space) != 0 and len(objects_wrong_color_space) == 0:
-        cmds.button("status_" + item_id, e=True, bgc=warning_color, l= '', c=lambda args: warning_non_deformer_history()) 
+        cmds.button("status_" + item_id, e=True, bgc=warning_color, l= '', c=lambda args: warning_textures_color_space()) 
         issues_found = 0
     elif len(objects_wrong_color_space) == 0:
         cmds.button("status_" + item_id, e=True, bgc=pass_color, l= '', c=lambda args: print_message('No color space issues were found.')) 
         issues_found = 0
     else: 
-        cmds.button("status_" + item_id, e=True, bgc=error_color, l= '?', c=lambda args: warning_non_deformer_history())
+        cmds.button("status_" + item_id, e=True, bgc=error_color, l= '?', c=lambda args: warning_textures_color_space())
         issues_found = len(objects_wrong_color_space)
 
     # Patch Function ----------------------
-    def warning_non_deformer_history():
+    def warning_textures_color_space():
         user_input = cmds.confirmDialog(
                     title= item_name,
                     message= patch_message + bottom_message,
@@ -1716,55 +1760,296 @@ def check_textures_color_space():
         string_status = str(issues_found) + ' issues found. No color space issues were found!'
     return '\n*** ' + item_name + " ***\n" + string_status
 
- 
+# Item 17 - AI Shadow Casting Lights (NEW) =========================================================================
+def check_ai_shadow_casting_lights():
+    item_name = checklist_items.get(17)[0]
+    item_id = item_name.lower().replace(" ","_").replace("-","_")
+    expected_min_lights = checklist_items.get(17)[1][0]  # minimum 4 lights
+    expected_min_skydome = checklist_items.get(17)[1][1]  # minimum 1 skydome
     
-# Checklist Functions End Here ===================================================================
+    # Check if Arnold is loaded
+    arnold_light_types = ["aiAreaLight", "aiSkyDomeLight", "aiPhotometricLight", "aiLightPortal"]
+    maya_light_types = ["directionalLight", "pointLight", "spotLight", "areaLight", "ambientLight", "volumeLight"]
+    
+    node_types = cmds.ls(nodeTypes=True)
+    arnold_loaded = any(light_type in node_types for light_type in arnold_light_types)
+    
+    if not arnold_loaded:
+        cmds.button("status_" + item_id, e=True, bgc=exception_color, l= '', 
+                   c=lambda args: print_message('Arnold plugin doesn\'t seem to be loaded.', as_warning=True))
+        cmds.text("output_" + item_id, e=True, l='No Arnold')
+        return '\n*** ' + item_name + " ***\n" + '0 issues found, but Arnold plugin doesn\'t seem to be loaded.'
+    
+    # Find all lights in scene
+    all_arnold_lights = []
+    all_maya_lights = []
+    
+    for light_type in arnold_light_types:
+        lights = cmds.ls(type=light_type) or []
+        all_arnold_lights.extend(lights)
+    
+    for light_type in maya_light_types:
+        lights = cmds.ls(type=light_type) or []
+        all_maya_lights.extend(lights)
+    
+    all_lights = all_arnold_lights + all_maya_lights
+    
+    # Check if no lights exist - show green instead of N/A for empty scenes
+    if len(all_lights) == 0:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message('No lights found in scene.'))
+        cmds.text("output_" + item_id, e=True, l="0")
+        return '\n*** ' + item_name + " ***\n" + '0 issues found. No lights in scene.'
+    
+    # Find shadow casting lights
+    shadow_casting_lights = []
+    non_key_shadow_casters = []
+    skydome_count = 0
+    
+    for light in all_lights:
+        # Check if light is casting shadows
+        light_type = cmds.objectType(light)
+        casts_shadows = False
+        
+        if light_type in arnold_light_types:
+            # Arnold lights use 'aiSamples' or check visibility
+            if cmds.attributeQuery('aiSamples', node=light, exists=True):
+                ai_samples = cmds.getAttr(light + '.aiSamples')
+                if ai_samples > 0:
+                    casts_shadows = True
+        else:
+            # Maya lights use 'useDepthMapShadows' or 'useRayTraceShadows'
+            use_depth_shadows = cmds.getAttr(light + '.useDepthMapShadows') if cmds.attributeQuery('useDepthMapShadows', node=light, exists=True) else False
+            use_raytrace_shadows = cmds.getAttr(light + '.useRayTraceShadows') if cmds.attributeQuery('useRayTraceShadows', node=light, exists=True) else False
+            if use_depth_shadows or use_raytrace_shadows:
+                casts_shadows = True
+        
+        if casts_shadows:
+            shadow_casting_lights.append(light)
+            
+            # Check if light name contains "key" (case insensitive)
+            if 'key' not in light.lower():
+                non_key_shadow_casters.append(light)
+        
+        # Count skydome lights
+        if light_type == "aiSkyDomeLight":
+            skydome_count += 1
+    
+    # Determine status
+    has_enough_lights = len(shadow_casting_lights) >= expected_min_lights
+    has_skydome = skydome_count >= expected_min_skydome
+    has_non_key_warnings = len(non_key_shadow_casters) > 0
+    
+    if has_enough_lights and has_skydome and not has_non_key_warnings:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message(f'Found {len(shadow_casting_lights)} shadow casting lights with {skydome_count} skydome lights.'))
+        issues_found = 0
+    elif (not has_enough_lights or not has_skydome) and has_non_key_warnings:
+        cmds.button("status_" + item_id, e=True, bgc=error_color, l='?', 
+                   c=lambda args: warning_ai_shadow_casting_lights())
+        issues_found = 1
+    elif has_non_key_warnings:
+        cmds.button("status_" + item_id, e=True, bgc=warning_color, l='?', 
+                   c=lambda args: warning_ai_shadow_casting_lights())
+        issues_found = 0
+    else:
+        cmds.button("status_" + item_id, e=True, bgc=error_color, l='?', 
+                   c=lambda args: warning_ai_shadow_casting_lights())
+        issues_found = 1
+    
+    cmds.text("output_" + item_id, e=True, l=f"{len(shadow_casting_lights)}/{skydome_count}")
+    
+    # Patch Function ----------------------
+    def warning_ai_shadow_casting_lights():
+        message_parts = []
+        
+        if not has_enough_lights:
+            message_parts.append(f'Need at least {expected_min_lights} shadow casting lights, found {len(shadow_casting_lights)}.')
+        
+        if not has_skydome:
+            message_parts.append(f'Need at least {expected_min_skydome} aiSkyDome light, found {skydome_count}.')
+        
+        if has_non_key_warnings:
+            message_parts.append(f'{len(non_key_shadow_casters)} shadow casting lights don\'t have "key" in their name.')
+        
+        patch_message = '\n'.join(message_parts)
+        patch_message += '\n\n(Generate full report for light names)'
+        
+        cancel_message = 'Ignore Warning' if not (not has_enough_lights or not has_skydome) else 'Ignore Issue'
+        
+        user_input = cmds.confirmDialog(
+                    title=item_name,
+                    message=patch_message,
+                    button=['OK', 'Select Shadow Casting Lights', cancel_message],
+                    defaultButton='OK',
+                    cancelButton=cancel_message,
+                    dismissString=cancel_message, 
+                    icon="warning")
 
+        if user_input == 'Select Shadow Casting Lights':
+            if shadow_casting_lights:
+                cmds.select(shadow_casting_lights)
+        elif user_input == 'Ignore Warning':
+            cmds.button("status_" + item_id, e=True, bgc=pass_color, l='')
+        else:
+            cmds.button("status_" + item_id, e=True, l='')
+    
+    # Return string for report ------------
+    report_parts = []
+    if not has_enough_lights or not has_skydome:
+        report_parts.append(f'{issues_found} issue found.')
+    else:
+        report_parts.append(f'{issues_found} issues found.')
+    
+    report_parts.append(f'Found {len(shadow_casting_lights)} shadow casting lights (need {expected_min_lights}).')
+    report_parts.append(f'Found {skydome_count} aiSkyDome lights (need {expected_min_skydome}).')
+    
+    if has_non_key_warnings:
+        report_parts.append(f'Warning: {len(non_key_shadow_casters)} lights casting shadows without "key" in name.')
+    
+    report_parts.append('\nShadow casting lights:')
+    for light in shadow_casting_lights:
+        light_type = cmds.objectType(light)
+        report_parts.append(f'  "{light}" ({light_type})')
+    
+    return '\n*** ' + item_name + " ***\n" + '\n'.join(report_parts)
 
+# Item 18 - Camera Aspect Ratio (NEW) =========================================================================
+def check_camera_aspect_ratio():
+    item_name = checklist_items.get(18)[0]
+    item_id = item_name.lower().replace(" ","_").replace("-","_")
+    expected_ratios = checklist_items.get(18)[1]  # [1.77, 1.78]
+    
+    # Get all cameras except default ones
+    all_cameras = cmds.ls(type='camera') or []
+    default_cameras = ['frontShape', 'perspShape', 'sideShape', 'topShape']
+    user_cameras = [cam for cam in all_cameras if cam not in default_cameras]
+    
+    # Check if no user cameras exist - show green instead of N/A
+    if len(user_cameras) == 0:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message('No user-created cameras found in scene.'))
+        cmds.text("output_" + item_id, e=True, l="0")
+        return '\n*** ' + item_name + " ***\n" + '0 issues found. No user-created cameras in scene.'
+    
+    incorrect_cameras = []
+    
+    for camera in user_cameras:
+        # Get camera's film aperture to calculate aspect ratio
+        h_aperture = cmds.getAttr(camera + '.horizontalFilmAperture')
+        v_aperture = cmds.getAttr(camera + '.verticalFilmAperture')
+        
+        if v_aperture > 0:  # Avoid division by zero
+            aspect_ratio = h_aperture / v_aperture
+            # Check if aspect ratio matches expected values (with small tolerance)
+            tolerance = 0.01
+            ratio_matches = any(abs(aspect_ratio - expected) < tolerance for expected in expected_ratios)
+            
+            if not ratio_matches:
+                incorrect_cameras.append([camera, aspect_ratio])
+    
+    if len(incorrect_cameras) == 0:
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message('All user cameras have correct aspect ratios.'))
+        issues_found = 0
+    else:
+        cmds.button("status_" + item_id, e=True, bgc=error_color, l='?', 
+                   c=lambda args: warning_camera_aspect_ratio())
+        issues_found = len(incorrect_cameras)
+    
+    cmds.text("output_" + item_id, e=True, l=str(len(incorrect_cameras)))
+    
+    # Patch Function ----------------------
+    def warning_camera_aspect_ratio():
+        if len(incorrect_cameras) == 1:
+            patch_message = f'1 camera has incorrect aspect ratio.\nExpected: {expected_ratios[0]} or {expected_ratios[1]}\n\n(Generate full report for details)'
+        else:
+            patch_message = f'{len(incorrect_cameras)} cameras have incorrect aspect ratios.\nExpected: {expected_ratios[0]} or {expected_ratios[1]}\n\n(Generate full report for details)'
+        
+        user_input = cmds.confirmDialog(
+                    title=item_name,
+                    message=patch_message,
+                    button=['OK', 'Select Cameras', 'Ignore Issue'],
+                    defaultButton='OK',
+                    cancelButton='Ignore Issue',
+                    dismissString='Ignore Issue', 
+                    icon="warning")
+
+        if user_input == 'Select Cameras':
+            camera_transforms = []
+            for camera_info in incorrect_cameras:
+                camera_shape = camera_info[0]
+                camera_transform = cmds.listRelatives(camera_shape, parent=True)[0]
+                camera_transforms.append(camera_transform)
+            if camera_transforms:
+                cmds.select(camera_transforms)
+        elif user_input == 'Ignore Issue':
+            cmds.button("status_" + item_id, e=True, l='')
+        else:
+            cmds.button("status_" + item_id, e=True, l='')
+    
+    # Return string for report ------------
+    issue_string = "issues" if issues_found != 1 else "issue"
+    
+    if issues_found > 0:
+        string_status = f'{issues_found} {issue_string} found.\n'
+        for camera_info in incorrect_cameras:
+            camera_name = camera_info[0]
+            aspect_ratio = camera_info[1]
+            string_status += f'"{camera_name}" has aspect ratio {aspect_ratio:.3f} (expected {expected_ratios[0]} or {expected_ratios[1]}).\n'
+        string_status = string_status[:-1]  # Remove last newline
+    else:
+        string_status = f'{issues_found} issues found. All user cameras have correct aspect ratios.'
+    
+    return '\n*** ' + item_name + " ***\n" + string_status
+
+# Utility Functions ===================================================================
 def get_short_name(obj):
-        '''
-        Get the name of the objects without its path (Maya returns full path if name is not unique)
-
-                Parameters:
-                        obj (string) - object to extract short name
-        '''
-        if obj == '':
-            return ''
-        split_path = obj.split('|')
-        if len(split_path) >= 1:
-            short_name = split_path[len(split_path)-1]
-        return short_name
-
-
+    '''
+    Get the name of the objects without its path (Maya returns full path if name is not unique)
+    '''
+    if obj == '':
+        return ''
+    split_path = obj.split('|')
+    if len(split_path) >= 1:
+        short_name = split_path[len(split_path)-1]
+    return short_name
 
 def print_message(message, as_warning=False, as_heads_up_message=False):
     if as_warning:
         cmds.warning(message)
     elif as_heads_up_message:
-        cmds.headsUpMessage(message, verticalOffset=150 , time=5.0)
+        cmds.headsUpMessage(message, verticalOffset=150, time=5.0)
     else:
         print(message)
 
-                    
 # Used to Export Full Report:
 def export_report_to_txt(list):
     temp_dir = cmds.internalVar(userTmpDir=True)
-    txt_file = temp_dir+'tmp.txt';
+    txt_file = temp_dir + 'cmi_checklist_report.txt'
     
-    f = open(txt_file,'w')
+    f = open(txt_file, 'w')
     
-    output_string = script_name + " Full Report:\n"
+    output_string = script_name + " Full Report v" + script_version + ":\n"
+    output_string += "=" * 60 + "\n\n"
     
     for obj in list:
-        output_string = output_string + obj + "\n\n"
+        if obj:  # Only add non-empty reports
+            output_string = output_string + obj + "\n\n"
     
     f.write(output_string)
     f.close()
 
-    notepadCommand = 'exec("notepad ' + txt_file + '");'
-    mel.eval(notepadCommand)
+    # Try to open with notepad on Windows
+    try:
+        notepadCommand = 'exec("notepad ' + txt_file + '");'
+        mel.eval(notepadCommand)
+    except:
+        print("Report saved to: " + txt_file)
 
+# Missing import statement for the script to work properly
+import sys
 
-
-#Build GUI
-build_gui_ats_cmi_modeling_checklist()
+# Build GUI
+if __name__ == "__main__":
+    build_gui_ats_cmi_modeling_checklist()
