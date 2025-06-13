@@ -1,0 +1,1 @@
+# Media Directory\nThis directory will contain shelf icons and resources.
