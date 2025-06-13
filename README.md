@@ -6,4 +6,4 @@ Scripts created by <strong>Alexander T. Santiago</strong> to help improve classe
     <ul>
         <li>Rendering Checklist</li>
         <li>Update</li>
-    </ul>
+    </ul> 
