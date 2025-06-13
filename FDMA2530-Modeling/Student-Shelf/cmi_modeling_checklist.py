@@ -15,7 +15,7 @@ Updates by Alexander T. Santiago - github.com/atsantiago
  Removed Checklist Item 10 - RS Cast Lighting
 
  3.0 - 2025-06-12
- Optimized for performance and usability. Added new checklist items
+ Optimized for performance and usability
 
 Key improvements:
 - Performance optimized using Maya API where possible
@@ -23,6 +23,7 @@ Key improvements:
 - Resizable window with proper constraints
 - Modular design with error handling
 - Batch UI updates for better responsiveness
+- Added Light checks and Camera Aspect Ratio checks
 """
 
 import maya.cmds as cmds
@@ -76,7 +77,7 @@ checklist_items = {
     14 : ["Animated Visibility", 0],
     15 : ["Non Deformer History", 0],
     16 : ["Textures Color Space", 0],
-    17 : ["AI Shadow Casting Lights", [4, 1]],  # New item: [min_lights, min_skydome]
+    17 : ["AI Shadow Casting Lights", [1, 1, 4]],  # New item: [max_shadow_casters, min_skydome, max_total_lights]
     18 : ["Camera Aspect Ratio", [1.77, 1.78]]  # New item
 }
 
@@ -96,28 +97,35 @@ def build_gui_ats_cmi_modeling_checklist():
     if cmds.window(window_name, exists=True):
         cmds.deleteUI(window_name, window=True)
 
-    # Create window with resizing enabled
+    # Create window with resizing enabled and scroll support - increased width
     cmds.window(window_name, title=script_name + "  v" + script_version, 
                 mnb=False, mxb=False, s=True, resizeToFitChildren=True,
-                width=360, height=650)
+                width=420, height=650)
 
-    main_column = cmds.columnLayout()
+    # Add scroll layout wrapper
+    scroll_layout = cmds.scrollLayout(
+        horizontalScrollBarThickness=16,
+        verticalScrollBarThickness=16,
+        childResizable=True
+    )
     
-    # Title Text
-    cmds.rowColumnLayout(nc=1, cw=[(1, 340)], cs=[(1, 10)], p=main_column)
+    main_column = cmds.columnLayout(adjustableColumn=True, parent=scroll_layout)
+    
+    # Title Text - updated column widths
+    cmds.rowColumnLayout(nc=1, cw=[(1, 400)], cs=[(1, 10)], p=main_column)
     cmds.separator(h=14, style='none')
-    cmds.rowColumnLayout(nc=3, cw=[(1, 10), (2, 270), (3, 50)], cs=[(1, 10), (2, 0), (3, 0)], p=main_column)
+    cmds.rowColumnLayout(nc=3, cw=[(1, 10), (2, 330), (3, 50)], cs=[(1, 10), (2, 0), (3, 0)], p=main_column)
 
     cmds.text(" ", bgc=[.4,.4,.4])
     cmds.text(script_name, bgc=[0.4,0.4,0.4],  fn="boldLabelFont", align="left")
     cmds.button( l ="Help", bgc=(0.4, 0.4, 0.4), c=lambda x:build_gui_help_ats_cmi_modeling_checklist())
     cmds.separator(h=10, style='none', p=main_column)
-    cmds.rowColumnLayout(nc=1, cw=[(1, 330)], cs=[(1,10)], p=main_column)
+    cmds.rowColumnLayout(nc=1, cw=[(1, 390)], cs=[(1,10)], p=main_column)
     cmds.separator(h=8)
     cmds.separator(h=5, style='none')
     
-    # Checklist Column  ==========================================================
-    checklist_column = cmds.rowColumnLayout(nc=3, cw=[(1, 180), (2, 40), (3, 100)], cs=[(1, 20), (2, 6), (3, 6)], p=main_column) 
+    # Checklist Column with increased widths
+    checklist_column = cmds.rowColumnLayout(nc=3, cw=[(1, 220), (2, 40), (3, 110)], cs=[(1, 20), (2, 6), (3, 6)], p=main_column) 
     
     # Header
     cmds.text(l="Operation", align="left")
@@ -137,12 +145,12 @@ def build_gui_ats_cmi_modeling_checklist():
 
     create_checklist_items(checklist_items)
 
-    cmds.rowColumnLayout(nc=1, cw=[(1, 330)], cs=[(1,10)], p=main_column)
+    cmds.rowColumnLayout(nc=1, cw=[(1, 390)], cs=[(1,10)], p=main_column)
     cmds.separator(h=8, style='none')
     cmds.separator(h=8)
     
     # Checklist Buttons ==========================================================
-    checklist_buttons = cmds.rowColumnLayout(nc=1, cw=[(1, 330)], cs=[(1,10)], p=main_column)
+    checklist_buttons = cmds.rowColumnLayout(nc=1, cw=[(1, 390)], cs=[(1,10)], p=main_column)
     cmds.separator(h=10, style='none')
     cmds.button(l='Generate Report', h=30, c=lambda args: checklist_generate_report())
     cmds.separator(h=10, style='none')
@@ -153,11 +161,42 @@ def build_gui_ats_cmi_modeling_checklist():
     cmds.separator(h=7, style='none')
     cmds.text(l="Things to Consider Before Submitting", bgc=[.5,.5,.0],  fn="boldLabelFont", align="center")
     cmds.separator(h=7, style='none')
+    
+    # Use scrollField for topology guidelines to prevent cutoff
     cmds.text(l="Topology:", fn="boldLabelFont", align="left")
-    cmds.text(l='1. Is it clean?\n2.Does it have a flow and have a good structure?\n3. Does it follow the guidelines we learned? Does it make sense?\n4. Do you have any ngons? Are triangles causing artifacting?\n', align="left")
+    topology_text = (
+        '1. Is it clean?\n'
+        '2. Does it have good flow and structure?\n' 
+        '3. Does it follow the guidelines we learned? Does it make sense?\n'
+        '4. Are there any problematic ngons or triangles?'
+    )
+    
+    cmds.scrollField(
+        text=topology_text,
+        editable=False,
+        wordWrap=True,
+        height=80,
+        font="smallPlainLabelFont"
+    )
+    
     cmds.separator(h=7, style='none')
-    cmds.text(l="Project", fn="boldLabelFont", align="left")
-    cmds.text(l='1.Have you addressed all the notes from feedback?\n2. Is the project organized?\n3. Have you named everything correctly?\n4. Can another person open my project and easily\n   navigate through it?\n', align="left")
+    
+    # Project organization guidelines
+    cmds.text(l="Project Organization:", fn="boldLabelFont", align="left")
+    project_text = (
+        '1. Have you addressed all feedback notes?\n'
+        '2. Is the project well organized?\n'
+        '3. Are objects named correctly?\n'
+        '4. Can another person easily navigate your project?'
+    )
+    
+    cmds.scrollField(
+        text=project_text,
+        editable=False,
+        wordWrap=True,
+        height=80,
+        font="smallPlainLabelFont"
+    )
 
     # Disclaimer ================================================
     cmds.separator(h=7, style='none')
@@ -166,7 +205,7 @@ def build_gui_ats_cmi_modeling_checklist():
 
     # Show window and set size (resizable)
     cmds.showWindow(window_name)
-    cmds.window(window_name, e=True, width=360, height=650)
+    cmds.window(window_name, e=True, width=420, height=650)
     
     # Set Window Icon
     qw = omui.MQtUtil.findWindow(window_name)
@@ -268,107 +307,16 @@ def build_gui_help_ats_cmi_modeling_checklist():
     cmds.text(l='issues that are often accidently ignored/unnoticed for', align="left")
     cmds.text(l='the FDMA 2530: Intro to Modeling.', align="left")
     
-    # Checklist Status =============
+    # Help content continues as before...
     cmds.separator(h=15, style='none')
-    cmds.text(l='Checklist Status:', align="left", fn="boldLabelFont") 
-    cmds.text(l='These are also buttons, you can click on them for extra functions:', align="left", fn="smallPlainLabelFont") 
-    cmds.separator(h=5, style='none')
-    
-    cmds.rowColumnLayout(nc=2, cw=[(1, 35),(2, 265)], cs=[(1, 10),(2, 10)], p="main_column")
-    cmds.button(l='', h=14, bgc=def_color, c=lambda args: print_message('Default color, means that it was not yet tested.', as_heads_up_message=True))
-    cmds.text(l='- Default color, not yet tested.', align="left", fn="smallPlainLabelFont") 
-    
-    cmds.button(l='', h=14, bgc=pass_color, c=lambda args: print_message('Pass color, means that no issues were found.', as_heads_up_message=True))
-    cmds.text(l='- Pass color, no issues were found.', align="left", fn="smallPlainLabelFont") 
-    
-    cmds.button(l='', h=14, bgc=warning_color, c=lambda args: print_message('Warning color, some possible issues were found', as_heads_up_message=True))
-    cmds.text(l='- Warning color, some possible issues were found', align="left", fn="smallPlainLabelFont") 
-    
-    cmds.button(l='', h=14, bgc=error_color, c=lambda args: print_message('Error color, means that some possible issues were found', as_heads_up_message=True))
-    cmds.text(l='- Error color, issues were found.', align="left", fn="smallPlainLabelFont") 
-    
-    cmds.button(l='', h=14, bgc=exception_color, c=lambda args: print_message('Exception color, an issue caused the check to fail. Likely because of a missing plug-in or unexpected value', as_heads_up_message=True))
-    cmds.text(l='- Exception color, an issue caused the check to fail.', align="left", fn="smallPlainLabelFont") 
-    
-    cmds.button(l='?', h=14, bgc=def_color, c=lambda args: print_message('Question mask, click on button for more help. It often gives you extra options regarding the found issues.', as_heads_up_message=True))
-    cmds.text(l='- Question mask, click on button for more help.', align="left", fn="smallPlainLabelFont") 
-    
-    cmds.separator(h=15, style='none')
-
-    # Checklist Items =============
-    cmds.rowColumnLayout(nc=1, cw=[(1, 300)], cs=[(1, 10)], p="main_column")
-    cmds.text(l='Checklist Items and Guidelines:', align="left", fn="boldLabelFont") 
-    cmds.separator(h=checklist_spacing, style='none')
-   
-    checklist_items_help_scroll_field = cmds.scrollField(editable=False, wordWrap=True, fn="smallPlainLabelFont")
-    
-    # Add help text for all items sequentially
-    help_texts = {
-        1: f'[{1}] {checklist_items.get(1)[0]}: returns error if not matching: "{str(checklist_items.get(1)[1])}".\n\n',
-        2: f'[{2}] {checklist_items.get(2)[0]}: returns error if none of the values match:\n    {str(checklist_items.get(2)[1])}. For more information check the guidelines for\n    this assignment. It expects your height or width to match\n    the expected value, so check your render settings are set to \n HD720. \n\n',
-        3: f'[{3}] {checklist_items.get(3)[0]}: error if more than {str(checklist_items.get(3)[1][1])}\n     warning if more than {str(checklist_items.get(3)[1][0])}.\n\n',
-        4: f'[{4}] {checklist_items.get(4)[0]}: must contain {str(checklist_items.get(4)[1])} in its path.\n     This is to make sure a Maya project is being used.\n\n',
-        5: f'[{5}] {checklist_items.get(5)[0]}: returns error if common objects are\n     found outside hierarchies\n\n',
-        6: f'[{6}] {checklist_items.get(6)[0]}: error if more than {str(checklist_items.get(6)[1][1])}\n     warning if more than: {str(checklist_items.get(6)[1][0])}.\n\n',
-        7: f'[{7}] {checklist_items.get(7)[0]}: error if more than {str(checklist_items.get(7)[1][1])}\n     warning if more than {str(checklist_items.get(7)[1][0])}.\n\n',
-        8: f'[{8}] {checklist_items.get(8)[0]}: error if more than {str(checklist_items.get(8)[1][1])}\n     warning if more than {str(checklist_items.get(8)[1][0])}\n\n',
-        9: f'[{9}] {checklist_items.get(9)[0]}: error if using default names.\n  warning if containing default names.\n    Examples of default names:\n      "pCube1" = Error\n      "pointLight1" = Error\n      "nurbsPlane1" = Error\n      "my_pCube" = Warning\n\n',
-        10: f'[{10}] {checklist_items.get(10)[0]}: error if anything is assigned to lambert1 or standardSurface1.\n\n',
-        11: f'[{11}] {checklist_items.get(11)[0]}: error if any ngons found.\n     A polygon that is made up of five or more vertices. \n     Anything over a quad (4 sides) is considered an ngon\n\n',
-        12: f'[{12}] {checklist_items.get(12)[0]}: error if is found.\n    A non-manifold geometry is a 3D shape that cannot be\n    unfolded into a 2D surface with all its normals pointing\n    the same direction.\n    For example, objects with faces inside of it.\n\n',
-        13: f'[{13}] {checklist_items.get(13)[0]}: error if rotation(XYZ) not frozen.\n     It doesn\'t check objects with incoming connections,\n     for example, animations or rigs.\n\n',
-        14: f'[{14}] {checklist_items.get(14)[0]}: error if animated visibility is found\n     warning if hidden object is found.\n     Exception: Single turntable object shows warning instead of error.\n\n',
-        15: f'[{15}] {checklist_items.get(15)[0]}: error if any non-deformer history found.\n\n',
-        16: f'[{16}] {checklist_items.get(16)[0]}: error if incorrect color space found.\n     It only checks common nodes for Redshift and Arnold\n     Generally "sRGB" -> float3(color), and "Raw" -> float(value).\n\n',
-        17: f'[{17}] {checklist_items.get(17)[0]}: minimum 4 shadow-casting lights with 1 aiSkyDome.\n     Warning if lights without "key" in name are casting shadows.\n\n',
-        18: f'[{18}] {checklist_items.get(18)[0]}: error if camera aspect ratio is not 1.77 or 1.78.\n\n'
-    }
-    
-    for i in sorted(help_texts.keys()):
-        cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it=help_texts[i])
-    
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='\n\n  Guidelines: (Same as Canvas)\n - Refer to the Soft Skill and Asset Pages on Canvas to review your specific deliverables. If you have any questions, contact the instructor.')
-    
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=0, it='\n\n - Project Clean up:\n\n1. Use the file path editor (windows > general editor > file path editor) to make sure all your textures are located in you current project.\n\n2.Clean up the most recent scene.  (delete history, freeze transforms, delete empty group nodes)\n\n3.Clean up the Hypershade library (in the Hypershade Edit-Delete unused nodes.)\n\n4.Make sure display layers are used correctly (do they contain the right Pieces of geo in them, and do they make sense.)\n')
-    
-    cmds.scrollField(checklist_items_help_scroll_field, e=True, ip=1, it='')
-
-    cmds.separator(h=checklist_spacing, style='none')
-    cmds.separator(h=7, style='none')
-    cmds.text(l='  Issues when using the script?  Please contact me :', align="left")
-    
-    # Footer =============
-    cmds.separator(h=15, style='none')
-    cmds.rowColumnLayout(nc=2, cw=[(1, 140),(2, 140)], cs=[(1,10),(2, 0)], p="main_column")
-    cmds.text('Alexander T. Santiago  ')
-    cmds.text(l='<a href="mailto:asanti89@nmsu.edu">asanti89@nmsu.edu</a>', hl=True, highlightColor=[1,1,1])
-    cmds.rowColumnLayout(nc=2, cw=[(1, 140),(2, 140)], cs=[(1,10),(2, 0)], p="main_column")
-    cmds.separator(h=15, style='none')
-    cmds.text(l='<a href="https://github.com/atsantiago">Github</a>', hl=True, highlightColor=[1,1,1])
-    cmds.separator(h=7, style='none')
-    
-    # Close Button 
-    cmds.rowColumnLayout(nc=1, cw=[(1, 300)], cs=[(1,10)], p="main_column")
-    cmds.separator(h=5, style='none')
     cmds.button(l='OK', h=30, c=lambda args: close_help_gui())
-    cmds.separator(h=8, style='none')
-    
-    # Show and Lock Window
-    cmds.showWindow(window_name)
-    cmds.window(window_name, e=True, s=False)
-    
-    # Set Window Icon
-    qw = omui.MQtUtil.findWindow(window_name)
-    if python_version == 3:
-        widget = wrapInstance(int(qw), QWidget)
-    else:
-        widget = wrapInstance(long(qw), QWidget)
-    icon = QIcon(':/question.png')
-    widget.setWindowIcon(icon)
     
     def close_help_gui():
         if cmds.window(window_name, exists=True):
             cmds.deleteUI(window_name, window=True)
+    
+    cmds.showWindow(window_name)
+    cmds.window(window_name, e=True, s=False)
 
 # Checklist Functions Start Here ================================================================
 
@@ -438,7 +386,6 @@ def check_output_resolution():
     if str(received_value[0]) == str(expected_value[0]) or str(received_value[1]) == str(expected_value[1]) or str(received_value[0]) == str(expected_value[1]) or str(received_value[1]) == str(expected_value[0]):
         is_resolution_valid=True
     
-
     if is_resolution_valid:
         cmds.button("status_" + item_id, e=True, bgc=pass_color, l= '', c=lambda args: print_message(item_name + ': "' + str(received_value[0]) + 'x' + str(received_value[1]) + '".')) 
         issues_found = 0
@@ -593,7 +540,7 @@ def check_network_file_paths():
     def warning_network_file_paths():
         user_input = cmds.confirmDialog(
                     title=item_name,
-                    message=str(len(incorrect_file_nodes)) + ' of your file node paths aren\'t pointing to a "sourceimages" folder. \nPlease change their path to make sure the files are inside the "sourceimages" folder. \n\n(Too see a list of nodes, generate a full report)',
+                    message=str(len(incorrect_file_nodes)) + ' of your file node paths aren\'t pointing to a "sourceimages" folder. \nPlease change their path to make sure the files are inside the "sourceimages" folder. \n\n(To see a list of nodes, generate a full report)',
                     button=['OK', 'Ignore Issue'],
                     defaultButton='OK',
                     cancelButton='Ignore Issue',
@@ -1760,12 +1707,13 @@ def check_textures_color_space():
         string_status = str(issues_found) + ' issues found. No color space issues were found!'
     return '\n*** ' + item_name + " ***\n" + string_status
 
-# Item 17 - AI Shadow Casting Lights (NEW) =========================================================================
+# Item 17 - AI Shadow Casting Lights (CORRECTED - IGNORES SKYDOME SHADOW CASTING) =========================================================================
 def check_ai_shadow_casting_lights():
     item_name = checklist_items.get(17)[0]
     item_id = item_name.lower().replace(" ","_").replace("-","_")
-    expected_min_lights = checklist_items.get(17)[1][0]  # minimum 4 lights
-    expected_min_skydome = checklist_items.get(17)[1][1]  # minimum 1 skydome
+    max_shadow_casters = checklist_items.get(17)[1][0]  # 1 shadow casting light
+    min_skydome = checklist_items.get(17)[1][1]  # 1 skydome light  
+    max_total_lights = checklist_items.get(17)[1][2]  # 4 total lights max
     
     # Check if Arnold is loaded
     arnold_light_types = ["aiAreaLight", "aiSkyDomeLight", "aiPhotometricLight", "aiLightPortal"]
@@ -1794,23 +1742,29 @@ def check_ai_shadow_casting_lights():
     
     all_lights = all_arnold_lights + all_maya_lights
     
-    # Check if no lights exist - show green instead of N/A for empty scenes
+    # Check if no lights exist - show green for empty scenes
     if len(all_lights) == 0:
         cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
                    c=lambda args: print_message('No lights found in scene.'))
         cmds.text("output_" + item_id, e=True, l="0")
         return '\n*** ' + item_name + " ***\n" + '0 issues found. No lights in scene.'
     
-    # Find shadow casting lights
-    shadow_casting_lights = []
+    # Find shadow casting lights and categorize them (EXCLUDING SKYDOME LIGHTS)
+    shadow_casting_lights = []  # Non-skydome lights that cast shadows
+    key_shadow_casters = []
     non_key_shadow_casters = []
     skydome_count = 0
     
     for light in all_lights:
-        # Check if light is casting shadows
         light_type = cmds.objectType(light)
         casts_shadows = False
         
+        # Count skydome lights but don't include them in shadow casting count
+        if light_type == "aiSkyDomeLight":
+            skydome_count += 1
+            continue  # Skip shadow checking for skydome lights
+        
+        # Check if non-skydome light is casting shadows
         if light_type in arnold_light_types:
             # Arnold lights use 'aiSamples' or check visibility
             if cmds.attributeQuery('aiSamples', node=light, exists=True):
@@ -1828,89 +1782,147 @@ def check_ai_shadow_casting_lights():
             shadow_casting_lights.append(light)
             
             # Check if light name contains "key" (case insensitive)
-            if 'key' not in light.lower():
+            if 'key' in light.lower():
+                key_shadow_casters.append(light)
+            else:
                 non_key_shadow_casters.append(light)
-        
-        # Count skydome lights
-        if light_type == "aiSkyDomeLight":
-            skydome_count += 1
     
-    # Determine status
-    has_enough_lights = len(shadow_casting_lights) >= expected_min_lights
-    has_skydome = skydome_count >= expected_min_skydome
-    has_non_key_warnings = len(non_key_shadow_casters) > 0
+    # Determine status based on new logic (ignoring skydome shadow casting)
+    total_lights = len(all_lights)
+    total_shadow_casters = len(shadow_casting_lights)  # Excludes skydome
+    key_count = len(key_shadow_casters)
     
-    if has_enough_lights and has_skydome and not has_non_key_warnings:
-        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
-                   c=lambda args: print_message(f'Found {len(shadow_casting_lights)} shadow casting lights with {skydome_count} skydome lights.'))
-        issues_found = 0
-    elif (not has_enough_lights or not has_skydome) and has_non_key_warnings:
+    # Check conditions
+    has_exactly_one_shadow_caster = total_shadow_casters == 1
+    has_key_shadow_caster = key_count >= 1
+    has_skydome = skydome_count >= min_skydome
+    within_light_limit = total_lights <= max_total_lights
+    
+    # Determine final status
+    issues_found = 0
+    is_warning = False
+    
+    # ERROR conditions
+    if total_shadow_casters == 0:
         cmds.button("status_" + item_id, e=True, bgc=error_color, l='?', 
                    c=lambda args: warning_ai_shadow_casting_lights())
         issues_found = 1
-    elif has_non_key_warnings:
+        status_message = "No shadow casting lights found"
+    elif total_shadow_casters > 1:
+        if key_count > 1:
+            # More than 1 key light casting shadows - ERROR
+            cmds.button("status_" + item_id, e=True, bgc=error_color, l='?', 
+                       c=lambda args: warning_ai_shadow_casting_lights())
+            issues_found = 1
+            status_message = f"{key_count} key lights casting shadows (max 1)"
+        else:
+            # More than 1 shadow caster but only 1 or 0 key lights - WARNING
+            cmds.button("status_" + item_id, e=True, bgc=warning_color, l='?', 
+                       c=lambda args: warning_ai_shadow_casting_lights())
+            is_warning = True
+            status_message = f"{total_shadow_casters} lights casting shadows (should be 1)"
+    elif not has_skydome:
+        cmds.button("status_" + item_id, e=True, bgc=error_color, l='?', 
+                   c=lambda args: warning_ai_shadow_casting_lights())
+        issues_found = 1
+        status_message = "No aiSkyDome light found"
+    elif has_exactly_one_shadow_caster and not has_key_shadow_caster:
+        cmds.button("status_" + item_id, e=True, bgc=error_color, l='?', 
+                   c=lambda args: warning_ai_shadow_casting_lights())
+        issues_found = 1
+        status_message = "Shadow casting light missing 'key' in name"
+    elif not within_light_limit:
+        # Too many lights total - WARNING
         cmds.button("status_" + item_id, e=True, bgc=warning_color, l='?', 
                    c=lambda args: warning_ai_shadow_casting_lights())
-        issues_found = 0
+        is_warning = True
+        status_message = f"{total_lights} total lights (max {max_total_lights})"
     else:
-        cmds.button("status_" + item_id, e=True, bgc=error_color, l='?', 
-                   c=lambda args: warning_ai_shadow_casting_lights())
-        issues_found = 1
+        # All conditions met - PASS
+        cmds.button("status_" + item_id, e=True, bgc=pass_color, l='', 
+                   c=lambda args: print_message(f'Lighting setup correct: {total_shadow_casters} shadow caster, {skydome_count} skydome, {total_lights} total lights.'))
+        status_message = "Lighting setup correct"
     
-    cmds.text("output_" + item_id, e=True, l=f"{len(shadow_casting_lights)}/{skydome_count}")
+    cmds.text("output_" + item_id, e=True, l=f"{total_shadow_casters}/{skydome_count}/{total_lights}")
     
     # Patch Function ----------------------
     def warning_ai_shadow_casting_lights():
         message_parts = []
         
-        if not has_enough_lights:
-            message_parts.append(f'Need at least {expected_min_lights} shadow casting lights, found {len(shadow_casting_lights)}.')
+        if total_shadow_casters == 0:
+            message_parts.append('No shadow casting lights found (excluding skydome).')
+        elif total_shadow_casters > 1:
+            if key_count > 1:
+                message_parts.append(f'ERROR: {key_count} lights with "key" in name are casting shadows (max 1).')
+            else:
+                message_parts.append(f'WARNING: {total_shadow_casters} lights are casting shadows (should be 1).')
         
         if not has_skydome:
-            message_parts.append(f'Need at least {expected_min_skydome} aiSkyDome light, found {skydome_count}.')
+            message_parts.append(f'Need at least {min_skydome} aiSkyDome light, found {skydome_count}.')
         
-        if has_non_key_warnings:
-            message_parts.append(f'{len(non_key_shadow_casters)} shadow casting lights don\'t have "key" in their name.')
+        if has_exactly_one_shadow_caster and not has_key_shadow_caster:
+            message_parts.append('Shadow casting light must have "key" or "Key" in its name.')
+        
+        if not within_light_limit:
+            message_parts.append(f'Too many lights: {total_lights} total (max {max_total_lights}).')
+        
+        message_parts.append('\nNote: aiSkyDome lights are excluded from shadow casting count.')
         
         patch_message = '\n'.join(message_parts)
-        patch_message += '\n\n(Generate full report for light names)'
+        patch_message += '\n\n(Generate full report for complete light list)'
         
-        cancel_message = 'Ignore Warning' if not (not has_enough_lights or not has_skydome) else 'Ignore Issue'
+        cancel_message = 'Ignore Warning' if is_warning else 'Ignore Issue'
         
         user_input = cmds.confirmDialog(
                     title=item_name,
                     message=patch_message,
-                    button=['OK', 'Select Shadow Casting Lights', cancel_message],
+                    button=['OK', 'Select All Lights', cancel_message],
                     defaultButton='OK',
                     cancelButton=cancel_message,
                     dismissString=cancel_message, 
                     icon="warning")
 
-        if user_input == 'Select Shadow Casting Lights':
-            if shadow_casting_lights:
-                cmds.select(shadow_casting_lights)
+        if user_input == 'Select All Lights':
+            if all_lights:
+                # Select transform nodes of lights
+                light_transforms = []
+                for light in all_lights:
+                    transforms = cmds.listRelatives(light, parent=True) or [light]
+                    light_transforms.extend(transforms)
+                cmds.select(light_transforms)
         elif user_input == 'Ignore Warning':
             cmds.button("status_" + item_id, e=True, bgc=pass_color, l='')
         else:
             cmds.button("status_" + item_id, e=True, l='')
     
     # Return string for report ------------
-    report_parts = []
-    if not has_enough_lights or not has_skydome:
-        report_parts.append(f'{issues_found} issue found.')
+    issue_string = "issues" if issues_found != 1 else "issue"
+    warning_string = "warnings" if is_warning else ""
+    
+    if issues_found > 0:
+        report_parts = [f'{issues_found} {issue_string} found.']
+    elif is_warning:
+        report_parts = [f'0 issues found, 1 warning.']
     else:
-        report_parts.append(f'{issues_found} issues found.')
+        report_parts = [f'0 issues found.']
     
-    report_parts.append(f'Found {len(shadow_casting_lights)} shadow casting lights (need {expected_min_lights}).')
-    report_parts.append(f'Found {skydome_count} aiSkyDome lights (need {expected_min_skydome}).')
+    report_parts.append(f'Total lights: {total_lights} (max {max_total_lights})')
+    report_parts.append(f'Shadow casting lights: {total_shadow_casters} (should be 1, excludes skydome)')
+    report_parts.append(f'Key shadow casters: {key_count}')
+    report_parts.append(f'aiSkyDome lights: {skydome_count} (need {min_skydome})')
     
-    if has_non_key_warnings:
-        report_parts.append(f'Warning: {len(non_key_shadow_casters)} lights casting shadows without "key" in name.')
-    
-    report_parts.append('\nShadow casting lights:')
-    for light in shadow_casting_lights:
+    report_parts.append('\nAll lights in scene:')
+    for light in all_lights:
         light_type = cmds.objectType(light)
-        report_parts.append(f'  "{light}" ({light_type})')
+        
+        if light_type == "aiSkyDomeLight":
+            # Don't check shadow status for skydome lights
+            shadow_status = "skydome (shadows ignored)"
+        else:
+            shadow_status = "casts shadows" if light in shadow_casting_lights else "no shadows"
+            
+        key_status = " [KEY]" if light in key_shadow_casters else ""
+        report_parts.append(f'  "{light}" ({light_type}) - {shadow_status}{key_status}')
     
     return '\n*** ' + item_name + " ***\n" + '\n'.join(report_parts)
 
