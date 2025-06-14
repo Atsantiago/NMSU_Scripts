@@ -1,20 +1,25 @@
 """
-FDMA 2530 Shelf Installer v1.3
-===============================
-Drag-and-drop installer for Maya 2016-2025+ with full Python 2/3 compatibility.
+FDMA 2530 Shelf Installer v1.2.1 - STREAMLINED VERSION
+======================================================
+
+Optimized drag-and-drop installer for Maya 2016-2025+ with essential
+functionality.
+
+Features:
+- Fast installation with minimal overhead
+- Python 2/3 compatibility across all Maya versions
+- Essential error handling without complexity
+- Cross-platform support (Windows, macOS, Linux)
+- Clean, maintainable code following best practices
+
 Created by: Alexander T. Santiago - asanti89@nmsu.edu
 """
 
-from __future__ import print_function, absolute_import
 import os
 import sys
-import traceback
 import tempfile
-import shutil
 
-__version__ = "1.3"
-
-# Python 2/3 compatibility for URL handling
+# Python 2/3 compatibility - minimal approach
 try:
     from urllib.request import urlopen
     from urllib.error import URLError
@@ -27,172 +32,251 @@ try:
 except ImportError:
     raise RuntimeError("This script must be run within Maya")
 
-# ------------------------------------------------------------------ constants
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+
+__version__ = "1.2.1"
+
+# Repository URLs
 REPO_RAW = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/"
 SHELF_URL = REPO_RAW + "FDMA2530-Modeling/Student-Shelf/shelf_FDMA_2530.mel"
 LOADER_URL = REPO_RAW + "FDMA2530-Modeling/Student-Shelf/utilities/cache_loader.py"
 
-# ----------------------------------------------------------------- utilities
-def get_maya_script_dir():
-    """Get Maya scripts directory for current version"""
+# ============================================================================
+# CORE UTILITIES
+# ============================================================================
+
+def get_maya_directories():
+    """Get Maya script and shelf directories with fallbacks"""
     try:
-        return cmds.internalVar(userScriptDir=True)
+        script_dir = cmds.internalVar(userScriptDir=True)
+        shelf_dir = cmds.internalVar(userShelfDir=True)
+        return script_dir, shelf_dir
     except Exception:
-        if sys.platform.startswith("win32"):
-            maya_dir = os.path.join(os.environ.get("USERPROFILE", ""), "Documents", "maya")
+        # Simple fallback for any Maya API failures
+        if sys.platform.startswith("win"):
+            base_dir = os.path.join(os.environ.get("USERPROFILE", ""), "Documents", "maya")
         elif sys.platform.startswith("darwin"):
-            maya_dir = os.path.expanduser("~/Library/Preferences/Autodesk/maya")
+            base_dir = os.path.expanduser("~/Library/Preferences/Autodesk/maya")
         else:
-            maya_dir = os.path.expanduser("~/maya")
-        return os.path.join(maya_dir, "scripts")
-
-
-def get_user_shelf_dir():
-    """Get shelf directory for current Maya version"""
-    return cmds.internalVar(userShelfDir=True)
-
-def safe_write_file(path, content):
-    """Write file with Python 2/3 compatibility"""
-    dir_path = os.path.dirname(path)
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
-    
-    try:
-        import codecs
-        with codecs.open(path, 'w', encoding='utf-8') as f:
-            f.write(content)
-    except Exception:
-        with open(path, 'w') as f:
-            if sys.version_info[0] >= 3:
-                f.write(content)
-            else:
-                f.write(content.encode('utf-8'))
+            base_dir = os.path.expanduser("~/maya")
+        
+        script_dir = os.path.join(base_dir, "scripts")
+        shelf_dir = os.path.join(base_dir, "prefs", "shelves")
+        return script_dir, shelf_dir
 
 def safe_download(url):
-    """Download content with Maya version compatibility"""
+    """Download content with basic error handling"""
     try:
         response = urlopen(url, timeout=15)
         content = response.read()
         
-        if sys.version_info[0] >= 3:
-            if isinstance(content, bytes):
-                content = content.decode("utf-8")
-        else:
-            if hasattr(content, 'decode'):
-                content = content.decode("utf-8")
-                
+        # Handle Python 3 encoding
+        if sys.version_info[0] >= 3 and isinstance(content, bytes):
+            content = content.decode("utf-8")
+        
         return content
-    except URLError as e:
-        cmds.warning("Network error: " + str(e))
-        return None
     except Exception as e:
         cmds.warning("Download failed: " + str(e))
         return None
 
-# ----------------------------------------------------------------- main logic
-def install_permanent():
-    """Install shelf permanently to user directory"""
-    try:
-        util_dir = os.path.join(get_maya_script_dir(), "utilities")
-        if not os.path.exists(util_dir):
-            os.makedirs(util_dir)
+def safe_write(path, content):
+    """Write file with directory creation and encoding handling"""
+    # Create directory if needed
+    directory = os.path.dirname(path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    
+    # Write with appropriate encoding
+    if sys.version_info[0] >= 3:
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(content)
+    else:
+        # Python 2 - use codecs for UTF-8
+        import codecs
+        with codecs.open(path, 'w', encoding='utf-8') as f:
+            f.write(content)
 
+# ============================================================================
+# INSTALLATION FUNCTIONS
+# ============================================================================
+
+def install_permanent():
+    """Install shelf permanently with essential error handling"""
+    try:
+        script_dir, shelf_dir = get_maya_directories()
+        
+        # Download and install cache_loader
         loader_content = safe_download(LOADER_URL)
         if not loader_content:
             return False
-        safe_write_file(os.path.join(util_dir, "cache_loader.py"), loader_content)
-
+        
+        loader_path = os.path.join(script_dir, "utilities", "cache_loader.py")
+        safe_write(loader_path, loader_content)
+        
+        # Download and install shelf
         shelf_content = safe_download(SHELF_URL)
         if not shelf_content:
             return False
-        shelf_path = os.path.join(get_user_shelf_dir(), "shelf_FDMA_2530.mel")
-        safe_write_file(shelf_path, shelf_content)
-
-        mel.eval('loadNewShelf "{}"'.format(shelf_path.replace("\\", "/")))
+        
+        shelf_path = os.path.join(shelf_dir, "shelf_FDMA_2530.mel")
+        safe_write(shelf_path, shelf_content)
+        
+        # Load shelf in Maya
+        shelf_path_mel = shelf_path.replace("\\", "/")  # MEL needs forward slashes
+        mel.eval('loadNewShelf "{}"'.format(shelf_path_mel))
+        
         return True
-
+        
     except Exception as e:
         cmds.warning("Installation failed: " + str(e))
-        print(traceback.format_exc())
         return False
 
 def install_temporary():
-    """Load shelf temporarily for current session only"""
+    """Install shelf temporarily for current session"""
     try:
         temp_dir = tempfile.gettempdir()
         
+        # Download and cache loader
         loader_content = safe_download(LOADER_URL)
         if not loader_content:
             return False
+        
         loader_path = os.path.join(temp_dir, "cache_loader.py")
-        safe_write_file(loader_path, loader_content)
+        safe_write(loader_path, loader_content)
         
-        shelf_content = safe_download(SHELF_URL)
-        if not shelf_content:
-            return False
-        shelf_path = os.path.join(temp_dir, "shelf_FDMA_2530.mel")
-        safe_write_file(shelf_path, shelf_content)
-        
+        # Add temp directory to Python path
         if temp_dir not in sys.path:
             sys.path.insert(0, temp_dir)
         
-        mel.eval('loadNewShelf "{}"'.format(shelf_path.replace("\\", "/")))
+        # Download and install shelf temporarily
+        shelf_content = safe_download(SHELF_URL)
+        if not shelf_content:
+            return False
+        
+        shelf_path = os.path.join(temp_dir, "shelf_FDMA_2530.mel")
+        safe_write(shelf_path, shelf_content)
+        
+        # Load shelf in Maya
+        shelf_path_mel = shelf_path.replace("\\", "/")
+        mel.eval('loadNewShelf "{}"'.format(shelf_path_mel))
+        
         return True
-
+        
     except Exception as e:
-        cmds.warning("Temporary install failed: " + str(e))
-        print(traceback.format_exc())
+        cmds.warning("Temporary installation failed: " + str(e))
         return False
 
+# ============================================================================
+# USER INTERFACE
+# ============================================================================
+
 def show_install_dialog():
-    """Display installation options to user"""
+    """Simple installation dialog"""
     choice = cmds.confirmDialog(
         title="FDMA 2530 Shelf Installer v{}".format(__version__),
-        message="Choose installation type:\n\n"
-                "Install Shelf: Permanent installation\n"
-                "Load Once: Temporary for this session\n"
-                "Cancel: Do nothing",
+        message=(
+            "Choose installation type:\n\n"
+            "INSTALL SHELF:\n"
+            "• Permanent installation for all Maya sessions\n"
+            "• Includes smart caching for fast loading\n\n"
+            "LOAD ONCE:\n"
+            "• Temporary installation for current session only\n"
+            "• Perfect for testing\n\n"
+            "Platform: {} | Python: {}.{}"
+        ).format(
+            "Windows" if sys.platform.startswith("win") else
+            "macOS" if sys.platform.startswith("darwin") else "Linux",
+            sys.version_info[0], sys.version_info[1]
+        ),
         button=["Install Shelf", "Load Once", "Cancel"],
         defaultButton="Install Shelf",
         cancelButton="Cancel",
         dismissString="Cancel"
     )
-
+    
     if choice == "Install Shelf":
         if install_permanent():
             cmds.confirmDialog(
-                title="Success", 
-                message="FDMA 2530 shelf installed successfully!\nShelf will be available in future Maya sessions.", 
-                button=["OK"]
+                title="Installation Successful",
+                message=(
+                    "FDMA 2530 shelf installed successfully!\n\n"
+                    "The shelf is now available in all Maya sessions.\n"
+                    "You can now use the Checklist and Update buttons!"
+                ),
+                button=["Excellent!"]
             )
         else:
             cmds.confirmDialog(
-                title="Error", 
-                message="Installation failed. Check Script Editor for details.", 
+                title="Installation Failed",
+                message=(
+                    "Installation failed. Please check:\n"
+                    "• Internet connection\n"
+                    "• GitHub access\n"
+                    "• Maya console for detailed errors\n\n"
+                    "Contact: asanti89@nmsu.edu"
+                ),
                 button=["OK"]
             )
-
+    
     elif choice == "Load Once":
         if install_temporary():
             cmds.confirmDialog(
-                title="Success", 
-                message="FDMA 2530 shelf loaded temporarily!\nShelf will be removed when Maya closes.", 
-                button=["OK"]
+                title="Temporary Load Successful",
+                message=(
+                    "FDMA 2530 shelf loaded for this session!\n\n"
+                    "The shelf will be removed when Maya closes.\n"
+                    "To make it permanent, run installer again."
+                ),
+                button=["Got it!"]
             )
         else:
             cmds.confirmDialog(
-                title="Error", 
-                message="Temporary load failed. Check Script Editor for details.", 
+                title="Temporary Load Failed",
+                message=(
+                    "Temporary load failed. Please check:\n"
+                    "• Internet connection\n"
+                    "• GitHub access\n"
+                    "• Maya console for detailed errors\n\n"
+                    "Contact: asanti89@nmsu.edu"
+                ),
                 button=["OK"]
             )
 
+# ============================================================================
+# MAYA DRAG-AND-DROP ENTRY POINT
+# ============================================================================
+
 def onMayaDroppedPythonFile(*args):
-    """Maya drag-and-drop entry point"""
+    """
+    Maya drag-and-drop entry point.
+    
+    This function is called automatically when the Python file is
+    dragged and dropped into Maya's viewport.
+    """
     try:
         show_install_dialog()
     except Exception as e:
         cmds.warning("Installer error: " + str(e))
-        print(traceback.format_exc())
+        # Show emergency dialog
+        try:
+            cmds.confirmDialog(
+                title="Installer Error",
+                message=(
+                    "The installer encountered an error.\n\n"
+                    "Error: {}\n\n"
+                    "Contact: asanti89@nmsu.edu"
+                ).format(str(e)),
+                button=["OK"]
+            )
+        except:
+            print("CRITICAL INSTALLER ERROR: {}".format(str(e)))
+
+# ============================================================================
+# DIRECT EXECUTION SUPPORT
+# ============================================================================
 
 if __name__ == "__main__":
+    # Support direct execution for testing
     onMayaDroppedPythonFile()

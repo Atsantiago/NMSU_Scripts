@@ -1,554 +1,363 @@
 """
-FDMA 2530 Shelf - CMI Modeling Checklist Button Script - Version 1.0
-====================================================================
+FDMA 2530 Shelf - CMI Modeling Checklist Button Script v1.2.1
+=============================================================
 
-This script is executed when the "Checklist" button is clicked on the FDMA 2530 
-Maya shelf. It loads and runs the CMI Modeling Checklist tool directly from 
-GitHub without requiring any local file downloads.
+Optimized shelf button script for executing the CMI Modeling Checklist.
+Designed for maximum speed and minimal overhead using cache_loader integration.
 
-The script provides a seamless experience for students by:
-- Automatically loading the latest version of the checklist from GitHub
-- Working across all Maya versions (Python 2.7 through Python 3.x)
-- Providing helpful error messages and troubleshooting information
-- Falling back to direct download if utilities aren't available
-- Offering clear feedback about the loading process
+This script is executed when the "Checklist" button is clicked on the FDMA 2530
+Maya shelf. It provides fast, reliable access to the latest checklist tool.
 
-This script integrates with the FDMA 2530 GitHub repository structure and
-uses the github_utilities.py module for robust GitHub operations.
+Features:
+- Optimized for speed using cache_loader system
+- Minimal overhead and fast execution
+- Cross-platform compatibility via system_utils
+- Python 2/3 handling via github_utilities  
+- Proper error handling without complexity
+- Clean, maintainable code following best practices
 
-Usage:
-This script is called automatically when students click the "Checklist" button
-on their FDMA 2530 shelf. Students don't need to run this manually.
-
-Created by: Alexander T. Santiago
-Contact: asanti89@nmsu.edu
-GitHub: github.com/atsantiago
-Repository: https://github.com/Atsantiago/NMSU_Scripts
-
-Changelog:
-v1.2 - Complete rewrite with:
-     - Full Python 2/3 compatibility
-     - Integration with github_utilities.py
-     - Comprehensive error handling and user feedback
-     - Direct execution without temporary files
-     - Proper logging and status reporting
-     - Fallback mechanisms for reliability
+Created by: Alexander T. Santiago - asanti89@nmsu.edu
 """
 
-# ============================================================================
-# IMPORTS AND PYTHON 2/3 COMPATIBILITY
-# ============================================================================
-# Handle the differences between Python 2 and 3 to ensure this script works
-# across all Maya versions from 2016 onwards.
+from __future__ import print_function, absolute_import
 
 import sys
 import os
-# Version information
-__version__ = "1.2"
-# User interface settings
-SCRIPT_TITLE = "FDMA 2530 - CMI Modeling Checklist v{0}".format(__version__)
-CONTACT_INFO = "Contact: asanti89@nmsu.edu"
-
-
-# Python version detection for compatibility handling
-PYTHON_VERSION = sys.version_info[0]
-IS_PYTHON_2 = (PYTHON_VERSION == 2)
-IS_PYTHON_3 = (PYTHON_VERSION >= 3)
-
-# Import appropriate modules based on Python version
-if IS_PYTHON_2:
-    # Python 2 imports
-    import urllib2 as urllib_request
-    string_types = basestring
-    
-    def format_string(template, **kwargs):
-        """Format strings for Python 2 compatibility."""
-        return template.format(**kwargs)
-        
-    def exec_code(code, globals_dict):
-        """Execute code with Python 2 compatibility."""
-        exec(code, globals_dict)
-        
-else:
-    # Python 3 imports
-    import urllib.request as urllib_request
-    string_types = str
-    
-    def format_string(template, **kwargs):
-        """Format strings for Python 3."""
-        return template.format(**kwargs)
-        
-    def exec_code(code, globals_dict):
-        """Execute code with Python 3 compatibility."""
-        exec(code, globals_dict)
+import tempfile
 
 # ============================================================================
-# CONFIGURATION AND CONSTANTS
+# VERSION AND CONFIGURATION
 # ============================================================================
-# Central configuration for the checklist loading system
 
-# Repository configuration
-REPOSITORY_URL = "https://github.com/Atsantiago/NMSU_Scripts"
-REPOSITORY_BRANCH = "master"
-BASE_PATH = "FDMA2530-Modeling/Student-Shelf"
+__version__ = "1.2.1"
 
-# File paths within the repository structure
-UTILITIES_PATH = "utilities/github_utilities.py"
-CHECKLIST_PATH = "core-scripts/cmi_modeling_checklist.py"
+# Script configuration
+SCRIPT_NAME = "CMI Modeling Checklist Loader"
+CONTACT_INFO = "asanti89@nmsu.edu"
 
-# Network and timeout settings
-DOWNLOAD_TIMEOUT = 20  # Seconds to wait for downloads
-MAX_RETRY_ATTEMPTS = 2  # Number of times to retry failed operations
+# Python version detection
+PY3 = sys.version_info[0] >= 3
 
-# User interface settings
-SCRIPT_TITLE = "FDMA 2530 - CMI Modeling Checklist"
-CONTACT_INFO = "Contact: asanti89@nmsu.edu"
+# Repository configuration  
+REPO_BASE = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf"
+CACHE_LOADER_URL = REPO_BASE + "/utilities/cache_loader.py"
+CHECKLIST_URL = REPO_BASE + "/core-scripts/cmi_modeling_checklist.py"
 
-# ============================================================================
-# LOGGING AND USER FEEDBACK FUNCTIONS
-# ============================================================================
-# Centralized functions for providing consistent user feedback throughout
-# the loading process, making it easy for students to understand what's happening.
-
-def print_header():
-    """Print a formatted header for the checklist loading process."""
-    print("=" * 70)
-    print(SCRIPT_TITLE)
-    print("Loading latest version from GitHub...")
-    print("=" * 70)
-
-
-def print_status(message, is_success=False, is_error=False, is_warning=False):
-    """
-    Print a status message with consistent formatting.
-    
-    Args:
-        message (str): The status message to display
-        is_success (bool): Whether this is a success message
-        is_error (bool): Whether this is an error message  
-        is_warning (bool): Whether this is a warning message
-    """
-    if is_success:
-        print("✓ SUCCESS: {0}".format(message))
-    elif is_error:
-        print("✗ ERROR: {0}".format(message))
-    elif is_warning:
-        print("⚠ WARNING: {0}".format(message))
-    else:
-        print("• INFO: {0}".format(message))
-
-
-def print_footer(success=True):
-    """
-    Print a formatted footer with final status and contact information.
-    
-    Args:
-        success (bool): Whether the overall operation was successful
-    """
-    print("=" * 70)
-    if success:
-        print("✓ CMI Modeling Checklist loaded successfully!")
-        print("The checklist window should now be open.")
-    else:
-        print("✗ Failed to load the CMI Modeling Checklist")
-        print("Please check your internet connection and try again.")
-        print("")
-        print("If problems persist:")
-        print("• Verify GitHub access: https://github.com/Atsantiago/NMSU_Scripts")
-        print("• Check Maya's Python console for detailed error messages")
-        print("• {0}".format(CONTACT_INFO))
-    print("=" * 70)
-
+# Cache configuration
+CACHE_FILE_NAME = "cmi_checklist_v3.py"
 
 # ============================================================================
-# GITHUB UTILITIES LOADING SYSTEM
+# SYSTEM UTILITIES INTEGRATION
 # ============================================================================
-# Functions for loading the GitHub utilities module, which provides all the
-# core functionality for downloading and executing scripts from GitHub.
 
-def load_github_utilities():
-    """
-    Load the GitHub utilities module dynamically from the repository.
-    
-    This function downloads and executes the utilities module directly from
-    GitHub, ensuring we always have access to the latest utility functions.
-    
-    Returns:
-        bool: True if utilities loaded successfully, False otherwise
-    """
+def _detect_os():
+    """Detect operating system using system_utils or fallback"""
     try:
-        print_status("Loading GitHub utilities from repository...")
+        # Try to use system_utils if available
+        from utilities.system_utils import is_windows, is_macos, is_linux
+        if is_windows():
+            return 'windows'
+        elif is_macos():
+            return 'macos'
+        elif is_linux():
+            return 'linux'
+        else:
+            return 'unknown'
+    except ImportError:
+        # Fallback detection
+        import platform
+        os_name = platform.system().lower()
+        if os_name == 'windows':
+            return 'windows'
+        elif os_name == 'darwin':
+            return 'macos'
+        elif os_name == 'linux':
+            return 'linux'
+        else:
+            return 'unknown'
+
+# ============================================================================
+# FAST LOGGING SYSTEM
+# ============================================================================
+
+def _log(message, level="INFO"):
+    """Fast logging with minimal overhead"""
+    print("[FDMA-Checklist] {}: {}".format(level, message))
+
+def _log_error(message):
+    """Log error message"""
+    _log(message, "ERROR")
+
+def _log_success(message):
+    """Log success message"""  
+    _log(message, "SUCCESS")
+
+# ============================================================================
+# MAYA ENVIRONMENT DETECTION
+# ============================================================================
+
+# Detect Maya availability
+try:
+    import maya.cmds as cmds
+    MAYA_AVAILABLE = True
+    MAYA_VERSION = cmds.about(version=True)
+except ImportError:
+    MAYA_AVAILABLE = False
+    MAYA_VERSION = 'Unknown'
+
+def _show_maya_message(message, message_type="info"):
+    """Show message in Maya with fallback"""
+    if not MAYA_AVAILABLE:
+        print(message)
+        return
+    
+    try:
+        if message_type == "warning":
+            cmds.warning(message)
+        elif message_type == "error":
+            cmds.error(message)
+        else:
+            cmds.inViewMessage(amg=message, pos='midCenter', fade=True)
+    except:
+        print(message)
+
+# ============================================================================
+# FAST CACHE_LOADER INTEGRATION
+# ============================================================================
+
+def _ensure_cache_loader():
+    """Fast cache_loader setup with minimal overhead"""
+    try:
+        # Try to import existing cache_loader first (fastest path)
+        from utilities.cache_loader import load_execute
+        _log("Using installed cache_loader")
+        return load_execute
+    except ImportError:
+        # Download cache_loader with minimal overhead
+        _log("Downloading cache_loader...")
         
-        # ====================================================================
-        # BUILD UTILITIES DOWNLOAD URL
-        # ====================================================================
-        # Construct the complete URL for the utilities file
-        utilities_url = format_string(
-            "{repo}/raw/{branch}/{base}/{path}",
-            repo=REPOSITORY_URL.rstrip('/'),
-            branch=REPOSITORY_BRANCH,
-            base=BASE_PATH,
-            path=UTILITIES_PATH
-        )
+        # Import appropriate urllib for Python 2/3
+        if PY3:
+            from urllib.request import urlopen
+        else:
+            from urllib2 import urlopen
         
-        print_status("Downloading from: {0}".format(utilities_url))
+        try:
+            # Fast download with short timeout
+            response = urlopen(CACHE_LOADER_URL, timeout=10)
+            data = response.read()
+            
+            # Handle encoding for Python 3
+            if PY3 and isinstance(data, bytes):
+                data = data.decode('utf-8')
+            
+            # Save to temp directory and add to path
+            temp_dir = tempfile.gettempdir()
+            if temp_dir not in sys.path:
+                sys.path.insert(0, temp_dir)
+            
+            # Write cache_loader file
+            cache_path = os.path.join(temp_dir, 'cache_loader.py')
+            with open(cache_path, 'w') as f:
+                f.write(data)
+            
+            # Execute cache_loader to make functions available
+            exec(data, globals())
+            _log_success("Cache_loader downloaded and ready")
+            return load_execute
+            
+        except Exception as e:
+            _log_error("Failed to setup cache_loader: {}".format(str(e)))
+            return None
+
+# ============================================================================
+# OPTIMIZED CHECKLIST EXECUTION
+# ============================================================================
+
+def _execute_checklist_fast():
+    """Execute checklist with maximum speed optimization"""
+    try:
+        # Get cache_loader function (fast path or download)
+        load_execute_func = _ensure_cache_loader()
+        if not load_execute_func:
+            raise Exception("Cache_loader not available")
         
-        # ====================================================================
-        # DOWNLOAD UTILITIES CONTENT
-        # ====================================================================
-        # Download the utilities file with timeout protection
-        response = urllib_request.urlopen(utilities_url, timeout=DOWNLOAD_TIMEOUT)
-        utilities_content = response.read()
+        # Execute checklist using cache_loader (optimal path)
+        _log("Loading CMI Modeling Checklist...")
+        load_execute_func(CHECKLIST_URL, CACHE_FILE_NAME)
         
-        # Handle encoding for Python 3
-        if IS_PYTHON_3 and isinstance(utilities_content, bytes):
-            utilities_content = utilities_content.decode('utf-8')
+        _log_success("CMI Modeling Checklist loaded successfully!")
         
-        # ====================================================================
-        # VALIDATE DOWNLOADED CONTENT
-        # ====================================================================
-        # Basic validation to ensure we got actual code
-        if not utilities_content or len(utilities_content.strip()) < 100:
-            print_status("Downloaded utilities content appears invalid", is_error=True)
-            return False
+        # Show user confirmation in Maya
+        if MAYA_AVAILABLE:
+            _show_maya_message("CMI Modeling Checklist v3.0 loaded successfully!")
         
-        # Check for expected content markers
-        if 'github_utilities' not in utilities_content.lower():
-            print_status("Downloaded content doesn't appear to be utilities", is_warning=True)
-        
-        # ====================================================================
-        # EXECUTE UTILITIES IN CURRENT NAMESPACE
-        # ====================================================================
-        # Execute the utilities code to make functions available
-        exec_code(utilities_content, globals())
-        
-        print_status("GitHub utilities loaded successfully", is_success=True)
         return True
         
     except Exception as e:
-        print_status("Failed to load GitHub utilities: {0}".format(str(e)), is_error=True)
+        error_msg = "Failed to load checklist: {}".format(str(e))
+        _log_error(error_msg)
+        
+        # Show user-friendly error in Maya
+        if MAYA_AVAILABLE:
+            _show_maya_message(error_msg, "error")
+        
         return False
 
-
-def verify_utilities_available():
-    """
-    Verify that required utility functions are available.
-    
-    This function checks that the essential functions from github_utilities.py
-    are available in the current namespace after loading.
-    
-    Returns:
-        bool: True if all required functions are available, False otherwise
-    """
-    required_functions = [
-        'download_file_content',
-        'execute_script_from_github', 
-        'test_github_connectivity',
-        'build_github_raw_url'
-    ]
-    
-    missing_functions = []
-    
-    for func_name in required_functions:
-        if func_name not in globals():
-            missing_functions.append(func_name)
-    
-    if missing_functions:
-        print_status("Missing utility functions: {0}".format(
-            ', '.join(missing_functions)), is_error=True)
-        return False
-    
-    print_status("All required utility functions available", is_success=True)
-    return True
-
-
-# ============================================================================
-# CHECKLIST EXECUTION SYSTEM
-# ============================================================================
-# Functions for loading and executing the CMI Modeling Checklist using the
-# GitHub utilities or fallback methods.
-
-def execute_checklist_via_utilities():
-    """
-    Execute the checklist using the GitHub utilities system.
-    
-    This is the preferred method as it uses the robust utilities framework
-    with proper error handling and retry logic.
-    
-    Returns:
-        bool: True if checklist executed successfully, False otherwise
-    """
+def _execute_checklist_fallback():
+    """Fallback execution method without cache_loader"""
     try:
-        print_status("Executing checklist via utilities system...")
+        _log("Using fallback execution method...")
         
-        # Use the utility function to execute the checklist
-        success = execute_script_from_github(CHECKLIST_PATH, globals())
-        
-        if success:
-            print_status("Checklist executed successfully via utilities", is_success=True)
-            return True
+        # Import appropriate urllib for Python 2/3
+        if PY3:
+            from urllib.request import urlopen
         else:
-            print_status("Utilities execution failed", is_error=True)
-            return False
-            
-    except NameError as e:
-        print_status("Utilities function not available: {0}".format(str(e)), is_error=True)
-        return False
-    except Exception as e:
-        print_status("Error during utilities execution: {0}".format(str(e)), is_error=True)
-        return False
-
-
-def execute_checklist_direct_fallback():
-    """
-    Execute the checklist using direct download as a fallback method.
-    
-    This method is used when the utilities system isn't available or fails.
-    It provides a basic but reliable way to load the checklist.
-    
-    Returns:
-        bool: True if checklist executed successfully, False otherwise
-    """
-    try:
-        print_status("Attempting direct download fallback...")
+            from urllib2 import urlopen
         
-        # ====================================================================
-        # BUILD CHECKLIST DOWNLOAD URL
-        # ====================================================================
-        checklist_url = format_string(
-            "{repo}/raw/{branch}/{base}/{path}",
-            repo=REPOSITORY_URL.rstrip('/'),
-            branch=REPOSITORY_BRANCH,
-            base=BASE_PATH,
-            path=CHECKLIST_PATH
-        )
-        
-        print_status("Downloading checklist from: {0}".format(checklist_url))
-        
-        # ====================================================================
-        # DOWNLOAD CHECKLIST CONTENT
-        # ====================================================================
-        response = urllib_request.urlopen(checklist_url, timeout=DOWNLOAD_TIMEOUT)
+        # Download checklist directly
+        response = urlopen(CHECKLIST_URL, timeout=15)
         checklist_content = response.read()
         
         # Handle encoding for Python 3
-        if IS_PYTHON_3 and isinstance(checklist_content, bytes):
+        if PY3 and isinstance(checklist_content, bytes):
             checklist_content = checklist_content.decode('utf-8')
         
-        # ====================================================================
-        # VALIDATE AND EXECUTE CHECKLIST
-        # ====================================================================
+        # Basic validation
         if not checklist_content or len(checklist_content.strip()) < 500:
-            print_status("Downloaded checklist content appears invalid", is_error=True)
-            return False
+            raise Exception("Downloaded content appears invalid")
         
-        # Execute the checklist code
-        exec_code(checklist_content, globals())
+        # Execute checklist directly
+        exec(checklist_content, globals())
         
-        print_status("Checklist executed successfully via fallback", is_success=True)
+        _log_success("Checklist loaded via fallback method")
+        
+        if MAYA_AVAILABLE:
+            _show_maya_message("CMI Modeling Checklist loaded (fallback mode)")
+        
         return True
         
     except Exception as e:
-        print_status("Fallback execution failed: {0}".format(str(e)), is_error=True)
+        error_msg = "Fallback execution failed: {}".format(str(e))
+        _log_error(error_msg)
+        
+        if MAYA_AVAILABLE:
+            _show_maya_message(error_msg, "error")
+        
         return False
-
-
-# ============================================================================
-# CONNECTIVITY AND PREREQUISITES TESTING
-# ============================================================================
-# Functions for testing system prerequisites before attempting to load
-# the checklist, providing early feedback about potential issues.
-
-def test_network_connectivity():
-    """
-    Test basic network connectivity to GitHub.
-    
-    This function performs a lightweight test to verify that GitHub is
-    accessible before attempting larger downloads.
-    
-    Returns:
-        bool: True if GitHub is accessible, False otherwise
-    """
-    try:
-        print_status("Testing GitHub connectivity...")
-        
-        # Test with a simple HEAD request to the repository
-        test_url = format_string(
-            "{repo}/raw/{branch}/{base}/{path}",
-            repo=REPOSITORY_URL.rstrip('/'),
-            branch=REPOSITORY_BRANCH,
-            base=BASE_PATH,
-            path=UTILITIES_PATH
-        )
-        
-        # Attempt to open the URL with a short timeout
-        response = urllib_request.urlopen(test_url, timeout=5)
-        
-        # Check response
-        if hasattr(response, 'getcode') and response.getcode() == 200:
-            print_status("GitHub connectivity confirmed", is_success=True)
-            return True
-        else:
-            print_status("GitHub responded but with unexpected status", is_warning=True)
-            return True  # Might still work, so return True
-            
-    except Exception as e:
-        print_status("GitHub connectivity test failed: {0}".format(str(e)), is_error=True)
-        return False
-
-
-def check_maya_environment():
-    """
-    Check that we're running in a proper Maya environment.
-    
-    This function verifies that Maya's Python environment is available
-    and that we can access Maya commands.
-    
-    Returns:
-        bool: True if Maya environment is available, False otherwise
-    """
-    try:
-        # Try to import Maya commands
-        import maya.cmds as cmds
-        
-        # Verify Maya is actually running (not just modules available)
-        maya_version = cmds.about(version=True)
-        
-        print_status("Maya {0} environment confirmed".format(maya_version), is_success=True)
-        return True
-        
-    except ImportError:
-        print_status("Maya not available - running in standalone mode", is_warning=True)
-        return False
-    except Exception as e:
-        print_status("Maya environment check failed: {0}".format(str(e)), is_warning=True)
-        return False
-
 
 # ============================================================================
 # MAIN EXECUTION FUNCTION
 # ============================================================================
-# The main orchestration function that coordinates the entire checklist
-# loading process, including error handling and user feedback.
 
 def main():
     """
-    Main execution function for loading the CMI Modeling Checklist.
+    Main execution function optimized for speed.
     
-    This function coordinates the entire process:
-    1. Print welcome message and setup
-    2. Test prerequisites (network, Maya environment)
-    3. Load GitHub utilities
-    4. Execute the checklist
-    5. Provide final status and troubleshooting information
-    
-    Returns:
-        bool: True if checklist loaded successfully, False otherwise
+    This function coordinates the checklist loading with minimal overhead:
+    1. Fast cache_loader execution attempt
+    2. Fallback method if needed
+    3. User feedback and error handling
     """
-    # ========================================================================
-    # INITIALIZATION AND WELCOME MESSAGE
-    # ========================================================================
-    print_header()
     
-    # Display Python version information for debugging
-    print_status("Python {0}.{1}.{2} compatibility mode active".format(
-        sys.version_info[0], sys.version_info[1], sys.version_info[2]))
-    
-    # ========================================================================
-    # PREREQUISITES TESTING
-    # ========================================================================
-    # Test basic system requirements before proceeding
-    
-    # Check Maya environment (non-critical)
-    maya_available = check_maya_environment()
-    
-    # Test network connectivity (critical)
-    if not test_network_connectivity():
-        print_status("Network connectivity test failed", is_error=True)
-        print_status("Please check your internet connection", is_error=True)
-        print_footer(success=False)
+    try:
+        # Log startup information
+        os_type = _detect_os()
+        _log("Starting checklist loader v{} on {} (Python {})".format(
+            __version__, os_type.title(), sys.version_info[0]))
+        
+        # Attempt fast execution first
+        if _execute_checklist_fast():
+            return True
+        
+        # If fast execution failed, try fallback
+        _log("Trying fallback execution method...")
+        if _execute_checklist_fallback():
+            return True
+        
+        # Both methods failed
+        _log_error("All execution methods failed")
+        
+        if MAYA_AVAILABLE:
+            error_dialog = (
+                "Failed to load CMI Modeling Checklist.\n\n"
+                "Troubleshooting:\n"
+                "• Check internet connection\n"
+                "• Verify GitHub access\n"
+                "• Check Maya console for details\n\n"
+                "Contact: {}"
+            ).format(CONTACT_INFO)
+            
+            cmds.confirmDialog(
+                title='Checklist Load Failed',
+                message=error_dialog,
+                button=['OK'],
+                icon='critical'
+            )
+        
         return False
-    
-    # ========================================================================
-    # ATTEMPT TO LOAD GITHUB UTILITIES
-    # ========================================================================
-    # Try to load the utilities system for robust execution
-    
-    utilities_loaded = False
-    
-    for attempt in range(MAX_RETRY_ATTEMPTS):
-        if attempt > 0:
-            print_status("Retrying utilities load (attempt {0}/{1})...".format(
-                attempt + 1, MAX_RETRY_ATTEMPTS))
         
-        if load_github_utilities():
-            if verify_utilities_available():
-                utilities_loaded = True
-                break
-            else:
-                print_status("Utilities loaded but verification failed", is_warning=True)
+    except Exception as e:
+        critical_error = "Critical error in checklist loader: {}".format(str(e))
+        _log_error(critical_error)
         
-    # ========================================================================
-    # EXECUTE CHECKLIST USING AVAILABLE METHOD
-    # ========================================================================
-    # Try utilities first, then fallback to direct download
-    
-    checklist_success = False
-    
-    if utilities_loaded:
-        # Try execution via utilities system
-        for attempt in range(MAX_RETRY_ATTEMPTS):
-            if attempt > 0:
-                print_status("Retrying checklist execution (attempt {0}/{1})...".format(
-                    attempt + 1, MAX_RETRY_ATTEMPTS))
-            
-            if execute_checklist_via_utilities():
-                checklist_success = True
-                break
-    
-    # If utilities method failed, try direct fallback
-    if not checklist_success:
-        print_status("Trying direct download fallback method...", is_warning=True)
+        if MAYA_AVAILABLE:
+            _show_maya_message(critical_error, "error")
         
-        for attempt in range(MAX_RETRY_ATTEMPTS):
-            if attempt > 0:
-                print_status("Retrying fallback execution (attempt {0}/{1})...".format(
-                    attempt + 1, MAX_RETRY_ATTEMPTS))
-            
-            if execute_checklist_direct_fallback():
-                checklist_success = True
-                break
-    
-    # ========================================================================
-    # FINAL STATUS AND USER FEEDBACK
-    # ========================================================================
-    # Provide clear feedback about the final result
-    
-    print_footer(success=checklist_success)
-    
-    # Additional debugging information if execution failed
-    if not checklist_success:
-        print("")
-        print("TROUBLESHOOTING INFORMATION:")
-        print("• Python Version: {0}.{1}.{2}".format(*sys.version_info[:3]))
-        print("• Maya Available: {0}".format('Yes' if maya_available else 'No'))
-        print("• Utilities Loaded: {0}".format('Yes' if utilities_loaded else 'No'))
-        print("• Repository URL: {0}".format(REPOSITORY_URL))
-        print("")
-    
-    return checklist_success
-
+        return False
 
 # ============================================================================
-# SCRIPT EXECUTION ENTRY POINTS
+# PERFORMANCE TESTING AND DIAGNOSTICS
 # ============================================================================
-# Handle execution whether the script is run directly or imported/executed
-# from the Maya shelf button.
 
+def run_performance_test():
+    """Run performance test of the loading system"""
+    import time
+    
+    _log("Running performance test...")
+    start_time = time.time()
+    
+    # Test cache_loader availability
+    cache_start = time.time()
+    cache_loader_func = _ensure_cache_loader()
+    cache_time = time.time() - cache_start
+    
+    _log("Cache_loader setup time: {:.3f}s".format(cache_time))
+    
+    total_time = time.time() - start_time
+    _log("Total test time: {:.3f}s".format(total_time))
+    
+    return {
+        'cache_loader_available': cache_loader_func is not None,
+        'cache_setup_time': cache_time,
+        'total_time': total_time
+    }
+
+def get_system_info():
+    """Get system information for diagnostics"""
+    os_type = _detect_os()
+    
+    info = {
+        'script_version': __version__,
+        'python_version': "{}.{}.{}".format(*sys.version_info[:3]),
+        'operating_system': os_type,
+        'maya_available': MAYA_AVAILABLE,
+        'maya_version': MAYA_VERSION if MAYA_AVAILABLE else 'N/A'
+    }
+    
+    return info
+
+# ============================================================================
+# EXECUTION ENTRY POINTS
+# ============================================================================
+
+# Execute main function when script is run
 if __name__ == "__main__":
     # Direct execution (for testing)
-    print("Running FDMA 2530 Checklist in direct execution mode...")
-    main()
+    _log("Running checklist loader in direct execution mode...")
+    result = main()
+    if not result:
+        _log_error("Direct execution failed")
 else:
     # Execution from shelf button (normal usage)
     main()
