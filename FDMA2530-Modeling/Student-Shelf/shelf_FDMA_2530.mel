@@ -1,7 +1,7 @@
 // ============================================================================
-// FDMA 2530 Student Shelf v1.2.1 - STREAMLINED VERSION
+// FDMA 2530 Student Shelf v1.2.1 - COMPLETE REWRITE
 // ============================================================================
-// Optimized Maya shelf calling scripts directly via cache_loader
+// Clean Maya shelf with direct cache_loader calls and proper MEL syntax
 // Cross-platform compatible: Windows, macOS, Linux
 // Maya versions: 2016-2025+ | Python 2/3 compatible
 // Created by: Alexander T. Santiago - asanti89@nmsu.edu
@@ -9,7 +9,10 @@
 
 global proc shelf_FDMA_2530() {
     
-    // Validate shelf environment
+    // ========================================================================
+    // ENVIRONMENT VALIDATION
+    // ========================================================================
+    
     global string $gShelfTopLevel;
     if (!`control -exists $gShelfTopLevel`) {
         error("FDMA 2530: Maya shelf system not available.");
@@ -29,18 +32,16 @@ global proc shelf_FDMA_2530() {
     setParent $parentForm;
     
     // ========================================================================
-    // CREATE SHELF LAYOUT
+    // CREATE SHELF LAYOUT - PROPER SYNTAX
     // ========================================================================
     
     string $shelf = `shelfLayout 
         -cellWidth 35 
         -cellHeight 35 
-        -position "left" 
-        //-annotation "FDMA 2530 Student Shelf v1.2.1"
-        //FDMA_2530`;
+        FDMA_2530`;
     
     // ========================================================================
-    // CHECKLIST BUTTON - DIRECT CACHE_LOADER CALL
+    // CHECKLIST BUTTON
     // ========================================================================
     
     shelfButton
@@ -51,11 +52,7 @@ global proc shelf_FDMA_2530() {
         -manage 1
         -visible 1
         -preventOverride 0
-        -annotation ("CMI Modeling Checklist v3.0\n" +
-                    "Direct execution via cache_loader\n" +
-                    "Cross-platform Maya 2016-2025+ compatible\n\n" +
-                    "Created by: Alexander T. Santiago\n" +
-                    "Contact: asanti89@nmsu.edu")
+        -annotation "CMI Modeling Checklist v3.0 - Cross-platform Maya compatible"
         -label "Checklist"
         -image1 "checkboxOn.png"
         -style "iconOnly"
@@ -83,7 +80,7 @@ global proc shelf_FDMA_2530() {
         -parent $shelf;
 
     // ========================================================================
-    // UPDATE BUTTON - DIRECT CACHE_LOADER CALL
+    // UPDATE BUTTON
     // ========================================================================
     
     shelfButton
@@ -94,16 +91,7 @@ global proc shelf_FDMA_2530() {
         -manage 1
         -visible 1
         -preventOverride 0
-        -annotation ("FDMA 2530 Shelf Updater v1.2.1\n" +
-                    "Direct execution via cache_loader\n" +
-                    "Visual status indicators\n\n" +
-                    "Button Colors:\n" +
-                    "• Gray: Up to date\n" +
-                    "• Green: Updates available\n" +
-                    "• Yellow: Checking for updates\n" +
-                    "• Red: Update failed\n\n" +
-                    "Created by: Alexander T. Santiago\n" +
-                    "Contact: asanti89@nmsu.edu")
+        -annotation "FDMA 2530 Shelf Updater v1.2.1 - Visual status indicators"
         -label "Update"
         -image1 "updateApp.png"
         -style "iconOnly"
@@ -127,5 +115,9 @@ global proc shelf_FDMA_2530() {
     print("FDMA 2530 Student Shelf v1.2.1 loaded successfully.\n");
 }
 
-// Auto-execute when sourced
+// ============================================================================
+// AUTO-EXECUTION
+// ============================================================================
+
+// Create the shelf when this script is sourced
 shelf_FDMA_2530();
