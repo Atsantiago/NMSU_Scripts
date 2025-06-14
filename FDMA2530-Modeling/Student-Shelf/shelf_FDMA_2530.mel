@@ -1,29 +1,27 @@
 // ============================================================================
-// FDMA 2530 Student Shelf - Maya MEL Script v1.0
+// FDMA 2530 Student Shelf - Maya MEL Script v1.2 (URL IMPORT FIXED)
 // ============================================================================
 // Clean, efficient shelf that sources all scripts directly from GitHub.
+// Fixed Python 2/3 urllib import issues.
 //
 // Created by: Alexander T. Santiago - github.com/atsantiago
 // Contact: asanti89@nmsu.edu  
 // Repository: https://github.com/Atsantiago/NMSU_Scripts
-// Version: 1.0 - Complete rewrite for Python 2/3 compatibility
+// Version: 1.2 - Fixed urllib import compatibility
 // ============================================================================
 
 global proc shelf_FDMA_2530 () {
     // ========================================================================
     // SHELF CREATION PROCEDURE
     // ========================================================================
-    // Creates the FDMA 2530 shelf with buttons that execute scripts directly
-    // from GitHub. All scripts are Python 2/3 compatible.
     
     global string $gBuffStr;
     global string $gBuffStr0;
     global string $gBuffStr1;
 
     // ========================================================================
-    // BUTTON 1: CMI MODELING CHECKLIST
+    // BUTTON 1: CMI MODELING CHECKLIST (FIXED URLLIB IMPORT)
     // ========================================================================
-    // Loads the CMI Modeling Checklist tool directly from GitHub
     
     shelfButton
         -enableCommandRepeat 1
@@ -53,7 +51,7 @@ global proc shelf_FDMA_2530 () {
         -style "iconOnly"
         -marginWidth 0
         -marginHeight 1
-        -command "python(\"import sys; exec(compile(open('https://github.com/Atsantiago/NMSU_Scripts/raw/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/shelf_run-cmi_modeling_checklist.py').read(), 'shelf_run-cmi_modeling_checklist.py', 'exec'))\")"
+        -command "python(\"try:\\n    from urllib.request import urlopen\\nexcept ImportError:\\n    from urllib2 import urlopen\\ncontent = urlopen('https://github.com/Atsantiago/NMSU_Scripts/raw/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/shelf_run-cmi_modeling_checklist.py').read()\\nif hasattr(content, 'decode'):\\n    content = content.decode('utf-8')\\nexec(content)\")"
         -sourceType "mel"
         -commandRepeatable 1
         -flat 1;
@@ -75,23 +73,9 @@ global proc shelf_FDMA_2530 () {
         -style "shelf"
         -horizontal 0;
 
-    separator
-        -enable 1
-        -width 12
-        -height 35
-        -manage 1
-        -visible 1
-        -preventOverride 0
-        -enableBackground 0
-        -backgroundColor 0 0 0
-        -highlightColor 0.321569 0.521569 0.65098
-        -style "shelf"
-        -horizontal 0;
-
     // ========================================================================
-    // BUTTON 2: SHELF UPDATE SYSTEM
+    // BUTTON 2: SHELF UPDATE SYSTEM (FIXED URLLIB IMPORT)
     // ========================================================================
-    // Handles automatic shelf updates from GitHub with visual status indicators
     
     shelfButton
         -enableCommandRepeat 1
@@ -103,7 +87,7 @@ global proc shelf_FDMA_2530 () {
         -manage 1
         -visible 1
         -preventOverride 0
-        -annotation "FDMA 2530 Shelf Updater v1.0\n\nAutomatically updates this shelf from GitHub.\n\nFeatures:\n• Check for script updates\n• Visual update notifications\n• Add new tools automatically\n• Update button icons and layout\n• Python 2/3 compatible\n\nButton Colors:\n• Gray: Up to date\n• Green: Updates available\n• Red: Update failed\n\nWorks in all Maya versions\n\nCreated by: Alexander T. Santiago\nContact: asanti89@nmsu.edu"
+        -annotation "FDMA 2530 Shelf Updater v1.2\n\nAutomatically updates this shelf from GitHub.\n\nFeatures:\n• Check for script updates\n• Visual update notifications\n• Add new tools automatically\n• Update button icons and layout\n• Python 2/3 compatible\n\nButton Colors:\n• Gray: Up to date\n• Green: Updates available\n• Red: Update failed\n\nWorks in all Maya versions\n\nCreated by: Alexander T. Santiago\nContact: asanti89@nmsu.edu"
         -enableBackground 0
         -backgroundColor 0 0 0
         -highlightColor 0.321569 0.521569 0.65098
@@ -121,7 +105,7 @@ global proc shelf_FDMA_2530 () {
         -style "iconOnly"
         -marginWidth 0
         -marginHeight 1
-        -command "python(\"import sys; exec(compile(open('https://github.com/Atsantiago/NMSU_Scripts/raw/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/update_shelf.py').read(), 'update_shelf.py', 'exec'))\")"
+        -command "python(\"try:\\n    from urllib.request import urlopen\\nexcept ImportError:\\n    from urllib2 import urlopen\\ncontent = urlopen('https://github.com/Atsantiago/NMSU_Scripts/raw/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/update_shelf.py').read()\\nif hasattr(content, 'decode'):\\n    content = content.decode('utf-8')\\nexec(content)\")"
         -sourceType "mel"
         -commandRepeatable 1
         -flat 1;
@@ -130,6 +114,5 @@ global proc shelf_FDMA_2530 () {
 // ============================================================================
 // AUTO-EXECUTION
 // ============================================================================
-// Maya automatically calls this procedure when the shelf is loaded
 
 shelf_FDMA_2530();
