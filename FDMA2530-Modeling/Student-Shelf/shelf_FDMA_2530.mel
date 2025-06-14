@@ -10,11 +10,11 @@ global proc shelf_FDMA_2530 () {
     //  first arg = raw GitHub url, second = cache filename
     "";
 
-    // =================== Checklist Button (fast via cache) ===================
+    // =================== Checklist Button ===================
     -style "iconOnly"
     -image "checkboxOn.png"
     -label "Checklist"
-    -annotation "CMI Modeling Checklist v3.0 "
+    -annotation "CMI Modeling Checklist v3.0"
     -sourceType "mel"                          // MEL source
     -command
         "python(\"import sys;  "
