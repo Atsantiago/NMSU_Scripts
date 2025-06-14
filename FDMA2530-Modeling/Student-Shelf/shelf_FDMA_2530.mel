@@ -11,23 +11,31 @@ global proc shelf_FDMA_2530 () {
     "";
 
     // =================== Checklist Button (fast via cache) ===================
-    shelfButton
-        -style  "iconOnly"
-        -image  "checkboxOn.png"
-        -label  "Checklist"
-        -annotation "CMI Modeling Checklist v3.0  – Validates your scene.\nLoads once, then cached locally."
-        -enableBackground 1
-        -backgroundColor 0 .59 0
-        -command
-        (
-        "python(\"" +
-            $loaderCmd +
-            "_L('https://raw.githubusercontent.com/Atsantiago/"
-            + "NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/"
-            + "shelf-button-scripts/shelf_run-cmi_modeling_checklist.py',"
-            + "'checklist_btn.py')\")"
-        )
-        -sourceType "python";
+    -style "iconOnly"
+    -image "checkboxOn.png"
+    -label "Checklist"
+    -annotation "CMI Modeling Checklist v3.0 "
+    -sourceType "mel"                          // MEL source
+    -command
+        "python(\"import sys;  "
+        "try:\\n"
+        "    from utilities.cache_loader import load_execute as _L\\n"
+        "except ImportError:\\n"
+        "    import urllib.request as _u, types, os; "
+        "    data=_u.urlopen('https://raw.githubusercontent.com/"
+        "Atsantiago/NMSU_Scripts/master/"
+        "FDMA2530-Modeling/Student-Shelf/utilities/cache_loader.py'"
+        ").read(); "
+        # -- create utilities.cache_loader at runtime if missing
+        "    mod=types.ModuleType('utilities.cache_loader'); "
+        "    exec(data.decode('utf-8'), mod.__dict__); "
+        "    sys.modules['utilities.cache_loader']=mod; "
+        "    _L=mod.load_execute\\n"
+        "_L('https://raw.githubusercontent.com/Atsantiago/"
+        "NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/"
+        "shelf-button-scripts/shelf_run-cmi_modeling_checklist.py',"
+        "'checklist_btn.py')\")";
+
 
     // --------------------  separator  ---------------------------------------
     separator -style "shelf";
