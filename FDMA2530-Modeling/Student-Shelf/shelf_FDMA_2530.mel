@@ -1,62 +1,25 @@
 // ============================================================================
-// FDMA 2530 Student Shelf  v1.2  (Performance-Optimised, Cached Loader)
+// FDMA 2530 Student Shelf (Python 2/3 Compatible)
 // ============================================================================
-global proc shelf_FDMA_2530 () {
-
-    // -------------  local shorthand to keep button commands readable  --------
-    string $loaderCmd = 
-    "import sys;" +
-    "from utilities.cache_loader import load_execute as _L;" +
-    //  first arg = raw GitHub url, second = cache filename
-    "";
-
-    // =================== Checklist Button ===================
-    -style "iconOnly"
-    -image "checkboxOn.png"
-    -label "Checklist"
-    -annotation "CMI Modeling Checklist v3.0"
-    -sourceType "mel"                          // MEL source
-    -command
-        "python(\"import sys;  "
-        "try:\\n"
-        "    from utilities.cache_loader import load_execute as _L\\n"
-        "except ImportError:\\n"
-        "    import urllib.request as _u, types, os; "
-        "    data=_u.urlopen('https://raw.githubusercontent.com/"
-        "Atsantiago/NMSU_Scripts/master/"
-        "FDMA2530-Modeling/Student-Shelf/utilities/cache_loader.py'"
-        ").read(); "
-        # -- create utilities.cache_loader at runtime if missing
-        "    mod=types.ModuleType('utilities.cache_loader'); "
-        "    exec(data.decode('utf-8'), mod.__dict__); "
-        "    sys.modules['utilities.cache_loader']=mod; "
-        "    _L=mod.load_execute\\n"
-        "_L('https://raw.githubusercontent.com/Atsantiago/"
-        "NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/"
-        "shelf-button-scripts/shelf_run-cmi_modeling_checklist.py',"
-        "'checklist_btn.py')\")";
-
-
-    // --------------------  separator  ---------------------------------------
-    separator -style "shelf";
-
-    // =================== Update Button (safe, cached) =======================
+global proc shelf_FDMA_2530() {
+    // Checklist Button
     shelfButton
-        -style  "iconOnly"
-        -image  "updateApp.png"
-        -label  "Update"
-        -annotation "Shelf Updater v1.2  – Checks GitHub for newer shelf files."
-        -command
-        (
-        "python(\"" +
-            $loaderCmd +
-            "_L('https://raw.githubusercontent.com/Atsantiago/"
-            + "NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/"
-            + "shelf-button-scripts/update_shelf.py',"
-            + "'update_btn.py')\")"
-        )
+        -annotation "CMI Modeling Checklist v3.0\nValidates 3D models against FDMA 2530 requirements"
+        -label "Checklist"
+        -image "checkboxOn.png"
+        -command "python(\"import sys;exec(compile(open('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/shelf_run-cmi_modeling_checklist.py').read(),'checklist.py','exec'))\")"
         -sourceType "python";
 
+    separator;
+
+    // Update Button
+    shelfButton
+        -annotation "FDMA 2530 Shelf Updater v1.2\nAutomatically checks for updates"
+        -label "Update"
+        -image "updateApp.png"
+        -command "python(\"import sys;exec(compile(open('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/update_shelf.py').read(),'update.py','exec'))\")"
+        -sourceType "python";
 }
-// auto-run when shelf loads
+
+// Auto-load
 shelf_FDMA_2530();
