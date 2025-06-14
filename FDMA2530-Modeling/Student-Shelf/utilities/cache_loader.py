@@ -2,7 +2,7 @@
 FDMA 2530 GitHub Cache Loader v1.2
 ==================================
 Small helper that downloads a script from GitHub once, caches it in the
-user’s Maya scripts folder, and executes it instantly on subsequent runs.
+Maya scripts folder, and executes it instantly on subsequent runs.
 
 Advantages
 ----------

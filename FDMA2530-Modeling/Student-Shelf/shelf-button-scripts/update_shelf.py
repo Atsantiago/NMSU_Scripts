@@ -3,7 +3,7 @@ FDMA 2530 Shelf Update System v1.2
 ==================================
 Safely checks GitHub for a newer `shelf_FDMA_2530.mel`.  
 If found, asks the user whether to install, backs up the current shelf,
-writes the new file, and reloads the shelf – never crashing Maya.
+writes the new file, and reloads the shelf never crashing Maya.
 
 """
 from __future__ import print_function

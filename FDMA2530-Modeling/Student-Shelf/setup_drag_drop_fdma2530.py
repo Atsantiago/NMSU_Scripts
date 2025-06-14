@@ -154,3 +154,4 @@ def onMayaDroppedPythonFile(*_):
 
 if __name__ == "__main__":
     onMayaDroppedPythonFile()
+
