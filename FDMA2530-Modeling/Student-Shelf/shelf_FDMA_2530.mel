@@ -1,5 +1,5 @@
 // ============================================================================
-// FDMA 2530 Student Shelf - Maya MEL Script v1.2 (URL IMPORT FIXED)
+// FDMA 2530 Student Shelf - Maya MEL Script v1.2 
 // ============================================================================
 // Clean, efficient shelf that sources all scripts directly from GitHub.
 // Fixed Python 2/3 urllib import issues.
