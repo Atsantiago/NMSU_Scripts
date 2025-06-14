@@ -52,7 +52,7 @@ def _safe_write(path, data):
     if not os.path.isdir(d):
         os.makedirs(d)
     # ADD ENCODING PARAMETER
-    with open(path, 'w', encoding='utf-8') as fh:  # 👈 Fix here
+    with open(path, 'w', encoding='utf-8') as fh:
         fh.write(data)
 
 # ===========================================================================
@@ -62,8 +62,8 @@ def _show_install_dialog():
     # Replace Unicode arrows with ASCII equivalents
     message=(
         "Choose installation type:\n\n"
-        "- Install Shelf: Permanent installation\n"  # → removed
-        "- Load Once: Temporary for this session\n"   # → removed
+        "- Install Shelf: Permanent installation\n"  
+        "- Load Once: Temporary for this session\n"  
         "- Cancel: Do nothing"
     )
 
