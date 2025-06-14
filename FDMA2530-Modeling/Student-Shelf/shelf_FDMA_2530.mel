@@ -4,20 +4,20 @@
 global proc shelf_FDMA_2530() {
     // Checklist Button
     shelfButton
-        -annotation "CMI Modeling Checklist v3.0\nValidates 3D models against FDMA 2530 requirements"
+        -annotation "CMI Modeling Checklist\nValidates 3D models against FDMA 2530 requirements"
         -label "Checklist"
         -image "checkboxOn.png"
-        -command "python(\"import sys;exec(compile(open('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/shelf_run-cmi_modeling_checklist.py').read(),'checklist.py','exec'))\")"
+        -command "python(\"from cache_loader import load_execute as _le; _le('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/shelf_run-cmi_modeling_checklist.py','checklist.py')\")"
         -sourceType "python";
 
     separator;
 
     // Update Button
     shelfButton
-        -annotation "FDMA 2530 Shelf Updater v1.2\nAutomatically checks for updates"
+        -annotation "Shelf Updater\nChecks for updates from GitHub"
         -label "Update"
         -image "updateApp.png"
-        -command "python(\"import sys;exec(compile(open('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/update_shelf.py').read(),'update.py','exec'))\")"
+        -command "python(\"from cache_loader import load_execute as _le; _le('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/update_shelf.py','update.py')\")"
         -sourceType "python";
 }
 
