@@ -1,139 +1,173 @@
 """
-setup_drag_drop_fdma2530.py  •  v1.2.0
-=======================================
+FDMA 2530 Shelf Installer v1.2
+===============================
+Drag-and-drop this file into Maya's viewport to install/update the FDMA 2530 shelf system.
+Provides Python 2/3 compatibility and user-friendly options.
 
-Drag-and-drop this file into Maya’s viewport to install or
-temporarily load the FDMA 2530 Student Shelf.
+Features:
+- Install Shelf (persistent)
+- Load Once (temporary session)
+- Cancel
+- Visual feedback with Maya dialogs
+- Automatic dependency handling
 
-Options presented to the user
------------------------------
-•  Install Shelf   – copies required files to the user profile
-•  Load Once       – loads the shelf for this session only
-•  Cancel          – abort
-
-Installed files
----------------
-•  <maya>/scripts/utilities/cache_loader.py
-•  <maya>/prefs/shelves/shelf_FDMA_2530.mel
-
-Author: Alexander T. Santiago  •  asanti89@nmsu.edu
-Repo  : https://github.com/Atsantiago/NMSU_Scripts
+Created by: Alexander T. Santiago
+GitHub: github.com/atsantiago
+Repository: https://github.com/Atsantiago/NMSU_Scripts
 """
 
-from __future__ import absolute_import, division, print_function
-import os, sys, tempfile, traceback, shutil
+from __future__ import print_function, absolute_import
+import os
+import sys
+import traceback
 
-__version__ = "1.2.0"
+# Python 2/3 compatibility
+try:
+    from urllib.request import urlopen  # Py3
+except ImportError:
+    from urllib2 import urlopen  # Py2
 
-# ---------------------------------------------------------  Py2 / Py3 urllib
-try:                                # Py-3
-    from urllib.request import urlopen
-except ImportError:                 # Py-2
-    from urllib2 import urlopen
-
-# ---------------------------------------------------------  Maya imports
+# Maya imports with error handling
 try:
     import maya.cmds as cmds
-    import maya.mel  as mel
-except Exception:
-    raise RuntimeError("Must be executed inside Maya.")
+    import maya.mel as mel
+    MAYA_AVAILABLE = True
+except ImportError:
+    MAYA_AVAILABLE = False
 
-# ---------------------------------------------------------  GitHub RAW URLs
-BASE_RAW = ("https://raw.githubusercontent.com/Atsantiago/"
-            "NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/")
-URL_SHELF  = BASE_RAW + "shelf_FDMA_2530.mel"
-URL_LOADER = BASE_RAW + "utilities/cache_loader.py"
+# ===========================================================================
+# CONFIGURATION
+# ===========================================================================
+REPO_RAW = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/"
+SHELF_URL = REPO_RAW + "FDMA2530-Modeling/Student-Shelf/shelf_FDMA_2530.mel"
+LOADER_URL = REPO_RAW + "FDMA2530-Modeling/Student-Shelf/utilities/cache_loader.py"
 
-# ---------------------------------------------------------  Local paths
-SCRIPTS_DIR = cmds.internalVar(userScriptDir=True)
-UTIL_DIR    = os.path.join(SCRIPTS_DIR, "utilities")
-LOADER_DST  = os.path.join(UTIL_DIR, "cache_loader.py")
-
-SHELF_DIR   = cmds.internalVar(userShelfDir=True)
-SHELF_DST   = os.path.join(SHELF_DIR, "shelf_FDMA_2530.mel")
-
-TEMP_DIR    = tempfile.gettempdir()
-
-# ---------------------------------------------------------  Small helpers
-def _download(url):
-    """Return ASCII/UTF-8 text from *url* (raise on error)."""
-    data = urlopen(url, timeout=25).read()
-    if isinstance(data, bytes):
-        data = data.decode('utf-8')
-    return data
-
-def _safe_write(path, data):
-    """Write *data* (str) to *path*, creating folders as needed."""
-    d = os.path.dirname(path)
-    if not os.path.isdir(d):
-        os.makedirs(d)
-    with open(path, 'w') as fh:
-        fh.write(data)
-
-def _info(msg):
-    cmds.warning("[FDMA 2530] " + msg)
-
-def _load_shelf_from(path):
-    """Instruct Maya to load a shelf file from *path*."""
+# ===========================================================================
+# CORE FUNCTIONS
+# ===========================================================================
+def _maya_script_dir():
+    """Get Maya's user script directory with Python 2/3 safety."""
     try:
-        mel.eval('loadNewShelf "%s"' % path.replace("\\", "/"))
-        _info("Shelf loaded from: " + path)
-    except Exception as e:
-        _info("Failed to load shelf: %s" % e)
-        cmds.confirmDialog(t="FDMA 2530 Shelf",
-                           m="Could not load shelf.\nSee Script-Editor.",
-                           b=["OK"])
-        print(traceback.format_exc())
+        return cmds.internalVar(userScriptDir=True)
+    except Exception:
+        return os.path.join(os.path.expanduser('~'), 'maya', 'scripts')
 
-# ---------------------------------------------------------  Main entry
-def onMayaDroppedPythonFile(*_):
-    """Entry-point Maya calls when the script is dropped into the viewport."""
-    # --------------------------------------- ask user what to do
+def _install_files():
+    """Download and install required files."""
+    script_dir = _maya_script_dir()
+    
+    # Create utilities directory if needed
+    util_dir = os.path.join(script_dir, 'utilities')
+    if not os.path.exists(util_dir):
+        os.makedirs(util_dir)
+    
+    # Download cache_loader.py
+    loader_path = os.path.join(util_dir, 'cache_loader.py')
+    with open(loader_path, 'wb') as f:
+        f.write(urlopen(LOADER_URL).read())
+    
+    # Download shelf file
+    shelf_dir = cmds.internalVar(userShelfDir=True)
+    shelf_path = os.path.join(shelf_dir, 'shelf_FDMA_2530.mel')
+    with open(shelf_path, 'wb') as f:
+        f.write(urlopen(SHELF_URL).read())
+    
+    return shelf_path
+
+def _load_temp_shelf():
+    """Load shelf temporarily without installation."""
+    temp_dir = tempfile.gettempdir()
+    
+    # Download loader to temp
+    loader_path = os.path.join(temp_dir, 'cache_loader.py')
+    with open(loader_path, 'wb') as f:
+        f.write(urlopen(LOADER_URL).read())
+    
+    # Download shelf to temp
+    shelf_path = os.path.join(temp_dir, 'shelf_FDMA_2530.mel')
+    with open(shelf_path, 'wb') as f:
+        f.write(urlopen(SHELF_URL).read())
+    
+    # Add temp to Python path
+    if temp_dir not in sys.path:
+        sys.path.insert(0, temp_dir)
+    
+    return shelf_path
+
+# ===========================================================================
+# USER INTERFACE
+# ===========================================================================
+def _show_install_dialog():
+    """Style installation dialog."""
     choice = cmds.confirmDialog(
-        t="FDMA 2530 Shelf Installer",
-        m=("Choose an action for the FDMA 2530 shelf:\n\n"
-           "•  Install Shelf  – installs files to your user profile\n"
-           "•  Load Once      – loads shelf for this session only\n"
-           "•  Cancel         – do nothing"),
-        b=["Install Shelf", "Load Once", "Cancel"],
-        db="Install Shelf", cb="Cancel", ds="Cancel")
+        title='FDMA 2530 Shelf Installer',
+        message=(
+            "Choose installation type:\n\n"
+            "• Install Shelf - Permanent installation\n"
+            "• Load Once - Temporary for this session\n"
+            "• Cancel - Do nothing"
+        ),
+        button=['Install Shelf', 'Load Once', 'Cancel'],
+        defaultButton='Install Shelf',
+        cancelButton='Cancel',
+        dismissString='Cancel'
+    )
+    
+    if choice == 'Install Shelf':
+        try:
+            shelf_path = _install_files()
+            cmds.confirmDialog(
+                title='Success',
+                message='Shelf installed successfully!\nRestart Maya to see changes.',
+                button=['OK']
+            )
+            if MAYA_AVAILABLE:
+                mel.eval('loadNewShelf "{0}"'.format(shelf_path.replace('\\', '/')))
+        except Exception as e:
+            cmds.confirmDialog(
+                title='Error',
+                message='Installation failed:\n{}'.format(str(e)),
+                button=['OK']
+            )
+            print(traceback.format_exc())
+    
+    elif choice == 'Load Once':
+        try:
+            shelf_path = _load_temp_shelf()
+            mel.eval('loadNewShelf "{0}"'.format(shelf_path.replace('\\', '/')))
+            cmds.confirmDialog(
+                title='Success',
+                message='Shelf loaded temporarily!\nChanges will reset on Maya restart.',
+                button=['OK']
+            )
+        except Exception as e:
+            cmds.confirmDialog(
+                title='Error',
+                message='Temporary load failed:\n{}'.format(str(e)),
+                button=['OK']
+            )
+            print(traceback.format_exc())
 
-    if choice == "Cancel":
-        _info("Operation cancelled by user.")
+# ===========================================================================
+# ENTRY POINT 
+# ===========================================================================
+def onMayaDroppedPythonFile(*args):
+    """Maya drag-and-drop entry point."""
+    if not MAYA_AVAILABLE:
+        cmds.warning("Maya not detected - cannot install shelf")
         return
+    
+    # Python version check
+    if sys.version_info[0] < 2:
+        cmds.confirmDialog(
+            title='Python Error',
+            message='Python 2.7 or newer required',
+            button=['OK']
+        )
+        return
+    
+    _show_install_dialog()
 
-    try:
-        # ----------------------------------- always ensure loader exists
-        loader_data = _download(URL_LOADER)
-        if choice == "Install Shelf":
-            _safe_write(LOADER_DST, loader_data)
-            _info("cache_loader.py installed to " + LOADER_DST)
-        else:
-            # load-once path: write to temp
-            tmp_loader = os.path.join(TEMP_DIR, "cache_loader.py")
-            _safe_write(tmp_loader, loader_data)
-            sys.path.insert(0, TEMP_DIR)          # make importable
-
-        # ----------------------------------- download shelf file
-        shelf_data = _download(URL_SHELF)
-        if choice == "Install Shelf":
-            _safe_write(SHELF_DST, shelf_data)
-            _load_shelf_from(SHELF_DST)
-            cmds.confirmDialog(t="FDMA 2530 Shelf",
-                               m="Shelf installed successfully!",
-                               b=["Great!"])
-        else:  # Load Once
-            temp_shelf = os.path.join(TEMP_DIR, "shelf_FDMA_2530.mel")
-            _safe_write(temp_shelf, shelf_data)
-            _load_shelf_from(temp_shelf)
-
-    except Exception as e:
-        _info("Installer error: %s" % e)
-        cmds.confirmDialog(t="FDMA 2530 Shelf",
-                           m="Installer failed.\nSee Script-Editor.",
-                           b=["OK"])
-        print(traceback.format_exc())
-
-# ---------------------------------------------------------  CLI support
+# CLI support
 if __name__ == "__main__":
     onMayaDroppedPythonFile()
