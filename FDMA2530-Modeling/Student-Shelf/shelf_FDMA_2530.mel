@@ -16,7 +16,7 @@ global proc shelf_FDMA_2530() {
         -cellWidth 33 
         -cellHeight 33 
         -position "left" 
-        -annotation "FDMA 2530 Student Shelf"
+        //-annotation "FDMA 2530 Student Shelf"
         FDMA_2530`;
     
     shelfButton
@@ -78,7 +78,7 @@ global proc shelf_FDMA_2530() {
         -manage 1
         -visible 1
         -preventOverride 0
-        -annotation "FDMA 2530 Shelf Updater v1.3"
+        //-annotation "FDMA 2530 Shelf Updater v1.3"
         -label "Update"
         -image1 "updateApp.png"
         -style "iconOnly"
