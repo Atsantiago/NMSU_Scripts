@@ -27,7 +27,7 @@ global proc shelf_FDMA_2530() {
         -manage 1
         -visible 1
         -preventOverride 0
-        -annotation "CMI Modeling Checklist v3.0\n\nValidates 3D models against FDMA 2530 requirements.\nSources directly from GitHub with smart caching.\n\nCreated by: Alexander T. Santiago\nContact: asanti89@nmsu.edu"
+        -annotation "CMI Modeling Checklist v3.0"
         -label "Checklist"
         -image1 "checkboxOn.png"
         -style "iconOnly"
@@ -78,7 +78,7 @@ global proc shelf_FDMA_2530() {
         -manage 1
         -visible 1
         -preventOverride 0
-        -annotation "FDMA 2530 Shelf Updater v1.3\n\nChecks for shelf updates from GitHub.\nProvides visual status indicators.\n\nButton Colors:\n- Gray: Up to date\n- Green: Updates available\n- Red: Update failed\n\nCreated by: Alexander T. Santiago\nContact: asanti89@nmsu.edu"
+        -annotation "FDMA 2530 Shelf Updater v1.3"
         -label "Update"
         -image1 "updateApp.png"
         -style "iconOnly"
