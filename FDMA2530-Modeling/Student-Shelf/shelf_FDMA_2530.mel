@@ -7,17 +7,9 @@
 
 global proc shelf_FDMA_2530() {
     
-    global string $gShelfTopLevel;
-    string $parentForm = $gShelfTopLevel + "|" + `tabLayout -q -selectTab $gShelfTopLevel`;
-    
-    setParent $parentForm;
-    
-    string $shelf = `shelfLayout 
-        -cellWidth 33 
-        -cellHeight 33 
-        -position "left" 
-        //-annotation "FDMA 2530 Student Shelf"
-        FDMA_2530`;
+    global string $gBuffStr;
+    global string $gBuffStr0;
+    global string $gBuffStr1;
     
     shelfButton
         -enableCommandRepeat 1
@@ -27,7 +19,7 @@ global proc shelf_FDMA_2530() {
         -manage 1
         -visible 1
         -preventOverride 0
-        -annotation "CMI Modeling Checklist v3.0"
+        -annotation "CMI Modeling Checklist v3.0\n\nValidates 3D models against FDMA 2530 requirements.\nSources directly from GitHub with smart caching.\n\nCreated by: Alexander T. Santiago\nContact: asanti89@nmsu.edu"
         -label "Checklist"
         -image1 "checkboxOn.png"
         -style "iconOnly"
@@ -56,8 +48,7 @@ global proc shelf_FDMA_2530() {
         )
         -sourceType "mel"
         -commandRepeatable 1
-        -flat 1
-        -parent $shelf;
+        -flat 1;
 
     separator
         -enable 1
@@ -67,8 +58,7 @@ global proc shelf_FDMA_2530() {
         -visible 1
         -preventOverride 0
         -style "shelf"
-        -horizontal 0
-        -parent $shelf;
+        -horizontal 0;
 
     shelfButton
         -enableCommandRepeat 1
@@ -78,7 +68,7 @@ global proc shelf_FDMA_2530() {
         -manage 1
         -visible 1
         -preventOverride 0
-        //-annotation "FDMA 2530 Shelf Updater v1.3"
+        -annotation "FDMA 2530 Shelf Updater v1.3\n\nChecks for shelf updates from GitHub.\nProvides visual status indicators.\n\nButton Colors:\n- Gray: Up to date\n- Green: Updates available\n- Red: Update failed\n\nCreated by: Alexander T. Santiago\nContact: asanti89@nmsu.edu"
         -label "Update"
         -image1 "updateApp.png"
         -style "iconOnly"
@@ -107,11 +97,7 @@ global proc shelf_FDMA_2530() {
         )
         -sourceType "mel"
         -commandRepeatable 1
-        -flat 1
-        -parent $shelf;
-    
-    tabLayout -edit -selectTab $shelf $gShelfTopLevel;
-    shelfTabChange();
+        -flat 1;
 }
 
 shelf_FDMA_2530();
