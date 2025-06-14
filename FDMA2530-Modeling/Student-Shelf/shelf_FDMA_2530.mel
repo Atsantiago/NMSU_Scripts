@@ -36,7 +36,7 @@ global proc shelf_FDMA_2530() {
         -cellWidth 35 
         -cellHeight 35 
         -position "left" 
-        -annotation "FDMA 2530 Student Shelf v1.2.1 - Streamlined"
+        //-annotation "FDMA 2530 Student Shelf v1.2.1"
         FDMA_2530`;
     
     // ========================================================================
