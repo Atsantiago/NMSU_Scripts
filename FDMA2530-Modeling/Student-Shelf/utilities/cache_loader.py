@@ -6,12 +6,12 @@ Maya scripts folder, and executes it instantly on subsequent runs.
 
 Advantages
 ----------
-• Huge speed-up: first call downloads, later calls run local copy  
-• Works in Python 2 and 3 (Maya 2016 → 2025+)  
-• Keeps a simple MD5 manifest to know when the remote file changed  
-• No external dependencies and safe to import multiple times
+- Huge speed-up: first call downloads, later calls run local copy  
+- Works in Python 2 and 3 (Maya 2016 -> 2025+)  
+- Keeps a simple MD5 manifest to know when the remote file changed  
+- No external dependencies and safe to import multiple times
 
-Author: Alexander T. Santiago  •  asanti89@nmsu.edu
+Author: Alexander T. Santiago - asanti89@nmsu.edu
 """
 
 from __future__ import absolute_import, division, print_function
@@ -106,7 +106,7 @@ def load_execute(raw_url, local_name, namespace=None):
             print("[FDMA-cache] Download failed:", e)
             print(traceback.format_exc())
             if not data:
-                raise  # nothing to exec – bubble up
+                raise  # nothing to exec - bubble up
 
     # ------------------------------------------------------ decode / execute
     if sys.version_info[0] >= 3 and isinstance(data, bytes):
