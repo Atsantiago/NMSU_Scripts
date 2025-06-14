@@ -32,6 +32,13 @@ Key improvements:
 # Standard library imports
 import copy
 import sys
+# Version information
+__version__ = "3.0"
+
+# Script Information  
+SCRIPT_NAME = "CMI Modeling Checklist"
+SCRIPT_VERSION = __version__  # Will be "3.0"
+PYTHON_VERSION = sys.version_info.major
 
 # Maya imports  
 import maya.cmds as cmds
