@@ -53,7 +53,7 @@ global proc shelf_FDMA_2530 () {
         -style "iconOnly"
         -marginWidth 0
         -marginHeight 1
-        -command "python(\"import sys; exec(compile(open('https://github.com/Atsantiago/NMSU_Scripts/raw/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/shelf_run-cmi_modeling_checklist.py').read(), 'shelf_run-cmi_modeling_checklist.py', 'exec'))\")"
+        -command "python(\"import sys; urllib_request = __import__('urllib2' if sys.version_info[0] == 2 else 'urllib.request'); content = urllib_request.urlopen('https://github.com/Atsantiago/NMSU_Scripts/raw/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/shelf_run-cmi_modeling_checklist.py').read(); exec(content.decode('utf-8') if sys.version_info[0] >= 3 and isinstance(content, bytes) else content)\")"
         -sourceType "mel"
         -commandRepeatable 1
         -flat 1;
@@ -121,7 +121,7 @@ global proc shelf_FDMA_2530 () {
         -style "iconOnly"
         -marginWidth 0
         -marginHeight 1
-        -command "python(\"import sys; exec(compile(open('https://github.com/Atsantiago/NMSU_Scripts/raw/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/update_shelf.py').read(), 'update_shelf.py', 'exec'))\")"
+        -command "python(\"import sys; urllib_request = __import__('urllib2' if sys.version_info[0] == 2 else 'urllib.request'); content = urllib_request.urlopen('https://github.com/Atsantiago/NMSU_Scripts/raw/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/update_shelf.py').read(); exec(content.decode('utf-8') if sys.version_info[0] >= 3 and isinstance(content, bytes) else content)\")"
         -sourceType "mel"
         -commandRepeatable 1
         -flat 1;
