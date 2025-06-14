@@ -1,13 +1,12 @@
 // ============================================================================
 // FDMA 2530 Student Shelf - Maya MEL Script v1.2 
 // ============================================================================
-// Clean, efficient shelf that sources all scripts directly from GitHub.
-// Fixed Python 2/3 urllib import issues.
+// Clean, efficient shelf using Python sourceType with fixed compatibility.
 //
 // Created by: Alexander T. Santiago - github.com/atsantiago
 // Contact: asanti89@nmsu.edu  
 // Repository: https://github.com/Atsantiago/NMSU_Scripts
-// Version: 1.2 - Fixed urllib import compatibility
+// Version: 1.2 - Fixed Python 2/3 compatibility in Python sourceType
 // ============================================================================
 
 global proc shelf_FDMA_2530 () {
@@ -20,7 +19,7 @@ global proc shelf_FDMA_2530 () {
     global string $gBuffStr1;
 
     // ========================================================================
-    // BUTTON 1: CMI MODELING CHECKLIST (FIXED URLLIB IMPORT)
+    // BUTTON 1: CMI MODELING CHECKLIST (FIXED PYTHON SOURCETYPE)
     // ========================================================================
     
     shelfButton
@@ -51,8 +50,8 @@ global proc shelf_FDMA_2530 () {
         -style "iconOnly"
         -marginWidth 0
         -marginHeight 1
-        -command "python(\"try:\\n    from urllib.request import urlopen\\nexcept ImportError:\\n    from urllib2 import urlopen\\ncontent = urlopen('https://github.com/Atsantiago/NMSU_Scripts/raw/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/shelf_run-cmi_modeling_checklist.py').read()\\nif hasattr(content, 'decode'):\\n    content = content.decode('utf-8')\\nexec(content)\")"
-        -sourceType "mel"
+        -command "import sys\ntry:\n    from urllib.request import urlopen\nexcept ImportError:\n    from urllib2 import urlopen\n\nscript_url = 'https://github.com/Atsantiago/NMSU_Scripts/raw/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/shelf_run-cmi_modeling_checklist.py'\ncontent = urlopen(script_url).read()\n\nif sys.version_info[0] >= 3 and hasattr(content, 'decode'):\n    content = content.decode('utf-8')\n\nexec(content)"
+        -sourceType "python"
         -commandRepeatable 1
         -flat 1;
 
@@ -74,7 +73,7 @@ global proc shelf_FDMA_2530 () {
         -horizontal 0;
 
     // ========================================================================
-    // BUTTON 2: SHELF UPDATE SYSTEM (FIXED URLLIB IMPORT)
+    // BUTTON 2: SHELF UPDATE SYSTEM (FIXED PYTHON SOURCETYPE)
     // ========================================================================
     
     shelfButton
@@ -105,8 +104,8 @@ global proc shelf_FDMA_2530 () {
         -style "iconOnly"
         -marginWidth 0
         -marginHeight 1
-        -command "python(\"try:\\n    from urllib.request import urlopen\\nexcept ImportError:\\n    from urllib2 import urlopen\\ncontent = urlopen('https://github.com/Atsantiago/NMSU_Scripts/raw/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/update_shelf.py').read()\\nif hasattr(content, 'decode'):\\n    content = content.decode('utf-8')\\nexec(content)\")"
-        -sourceType "mel"
+        -command "import sys\ntry:\n    from urllib.request import urlopen\nexcept ImportError:\n    from urllib2 import urlopen\n\nscript_url = 'https://github.com/Atsantiago/NMSU_Scripts/raw/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/update_shelf.py'\ncontent = urlopen(script_url).read()\n\nif sys.version_info[0] >= 3 and hasattr(content, 'decode'):\n    content = content.decode('utf-8')\n\nexec(content)"
+        -sourceType "python"
         -commandRepeatable 1
         -flat 1;
 }
