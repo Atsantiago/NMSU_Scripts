@@ -1,26 +1,125 @@
 // ============================================================================
-// FDMA 2530 Student Shelf (Python 2/3 Compatible)
+// FDMA 2530 Student Shelf v1.3 - Properly Structured
 // ============================================================================
+// Creates a Maya shelf with proper layout structure and fast-loading buttons.
+// Python 2/3 compatible with cached script execution for zero lag.
+//
+// Created by: Alexander T. Santiago
+// Contact: asanti89@nmsu.edu
+// Repository: https://github.com/Atsantiago/NMSU_Scripts
+// ============================================================================
+
 global proc shelf_FDMA_2530() {
-    // Checklist Button
-    shelfButton
-        -annotation "CMI Modeling Checklist\nValidates 3D models against FDMA 2530 requirements"
+    // SHELF LAYOUT CREATION
+    // Create the main shelf layout container - this is critical for proper UI
+    
+    global string $gShelfTopLevel;
+    string $parentForm = $gShelfTopLevel + "|" + `tabLayout -q -selectTab $gShelfTopLevel`;
+    
+    // Create shelf layout with proper parent
+    setParent $parentForm;
+    
+    string $shelf = `shelfLayout 
+        -cellWidth 33 
+        -cellHeight 33 
+        -position "left" 
+        -animateChange 1
+        -annotation "FDMA 2530 Student Shelf"
+        FDMA_2530`;
+    
+    // CHECKLIST BUTTON - Fast Cached Loading
+
+        shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 34
+        -height 34
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "CMI Modeling Checklist v3.0\n\nValidates 3D models against FDMA 2530 requirements.\nSources directly from GitHub with smart caching for instant loading.\n\nCreated by: Alexander T. Santiago\nContact: asanti89@nmsu.edu"
         -label "Checklist"
-        -image "checkboxOn.png"
-        -command "python(\"from cache_loader import load_execute as _le; _le('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/shelf_run-cmi_modeling_checklist.py','checklist.py')\")"
-        -sourceType "python";
+        -image1 "checkboxOn.png"
+        -style "iconOnly"
+        -marginWidth 1
+        -marginHeight 1
+        -command (
+            "python(\"" +
+            "import sys, os, tempfile; " +
+            "try: from utilities.cache_loader import load_execute as le; " +
+            "except: " +
+                "import urllib2 as ul if sys.version_info[0]==2 else __import__('urllib.request', fromlist=['']); " +
+                "td=tempfile.gettempdir(); " +
+                "cl=os.path.join(td,'cache_loader.py'); " +
+                "if not os.path.exists(cl): " +
+                    "with open(cl,'w') as f: f.write(ul.urlopen('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/utilities/cache_loader.py').read().decode('utf-8')); " +
+                "sys.path.insert(0,td); " +
+                "exec(open(cl).read()); " +
+                "le=load_execute; " +
+            "le('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/shelf_run-cmi_modeling_checklist.py','checklist.py')" +
+            "\")"
+        )
+        -sourceType "mel"
+        -commandRepeatable 1
+        -flat 1
+        -parent $shelf;
 
-    separator;
+    // VISUAL SEPARATOR
+    
+    separator
+        -enable 1
+        -width 12
+        -height 34
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -style "shelf"
+        -horizontal 0
+        -parent $shelf;
 
-    // Update Button
+    // UPDATE BUTTON - Safe Update System
+       
     shelfButton
-        -annotation "Shelf Updater\nChecks for updates from GitHub"
+        -enableCommandRepeat 1
+        -enable 1
+        -width 34
+        -height 34
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "FDMA 2530 Shelf Updater v1.3\n\nAutomatically checks for shelf updates from GitHub.\nProvides visual status indicators and safe update process.\n\nButton Colors:\n- Gray: Up to date\n- Green: Updates available\n- Red: Update failed\n\nCreated by: Alexander T. Santiago\nContact: asanti89@nmsu.edu"
         -label "Update"
-        -image "updateApp.png"
-        -command "python(\"from cache_loader import load_execute as _le; _le('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/update_shelf.py','update.py')\")"
-        -sourceType "python";
+        -image1 "updateApp.png"
+        -style "iconOnly"
+        -marginWidth 1
+        -marginHeight 1
+        -command (
+            "python(\"" +
+            "import sys, os, tempfile; " +
+            "try: from utilities.cache_loader import load_execute as le; " +
+            "except: " +
+                "import urllib2 as ul if sys.version_info[0]==2 else __import__('urllib.request', fromlist=['']); " +
+                "td=tempfile.gettempdir(); " +
+                "cl=os.path.join(td,'cache_loader.py'); " +
+                "if not os.path.exists(cl): " +
+                    "with open(cl,'w') as f: f.write(ul.urlopen('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/utilities/cache_loader.py').read().decode('utf-8')); " +
+                "sys.path.insert(0,td); " +
+                "exec(open(cl).read()); " +
+                "le=load_execute; " +
+            "le('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/update_shelf.py','update.py')" +
+            "\")"
+        )
+        -sourceType "mel"
+        -commandRepeatable 1
+        -flat 1
+        -parent $shelf;
+    
+    // Set the new shelf as active and ensure proper display
+    
+    tabLayout -edit -selectTab $shelf $gShelfTopLevel;
+    shelfTabChange();
 }
 
-// Auto-load
-shelf_FDMA_2530();
+// Maya automatically calls this when the shelf file is loaded
 
+shelf_FDMA_2530();
