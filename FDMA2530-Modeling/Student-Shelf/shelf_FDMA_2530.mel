@@ -8,21 +8,12 @@
 // ============================================================================
 
 global proc shelf_FDMA_2530() {
-    
-    // ========================================================================
-    // ENVIRONMENT VALIDATION
-    // ========================================================================
-    
     global string $gShelfTopLevel;
-    if (!`control -exists $gShelfTopLevel`) {
-        error("FDMA 2530: Maya shelf system not available.");
-        return;
-    }
     
     // Get current shelf parent
     string $parentForm = $gShelfTopLevel + "|" + `tabLayout -q -selectTab $gShelfTopLevel`;
     
-    // Remove existing shelf to prevent conflicts
+    // Check if shelf already exists and delete it
     if (`shelfLayout -exists "FDMA_2530"`) {
         deleteUI "FDMA_2530";
         print("FDMA 2530: Removed existing shelf for clean installation.\n");
@@ -31,14 +22,12 @@ global proc shelf_FDMA_2530() {
     // Set parent context
     setParent $parentForm;
     
-    // ========================================================================
-    // CREATE SHELF LAYOUT - PROPER SYNTAX
-    // ========================================================================
-    
+    // Create shelf with proper syntax
     string $shelf = `shelfLayout 
         -cellWidth 35 
         -cellHeight 35 
         FDMA_2530`;
+    
     
     // ========================================================================
     // CHECKLIST BUTTON
@@ -103,21 +92,7 @@ global proc shelf_FDMA_2530() {
         -flat 1
         -parent $shelf;
     
-    // ========================================================================
-    // SHELF ACTIVATION
-    // ========================================================================
-    
-    // Activate the new shelf tab
+    // Activate the shelf
     tabLayout -edit -selectTab $shelf $gShelfTopLevel;
     shelfTabChange();
-    
-    // Success confirmation
-    print("FDMA 2530 Student Shelf v1.2.1 loaded successfully.\n");
 }
-
-// ============================================================================
-// AUTO-EXECUTION
-// ============================================================================
-
-// Create the shelf when this script is sourced
-shelf_FDMA_2530();
