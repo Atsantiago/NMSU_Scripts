@@ -42,7 +42,7 @@ __version__ = "1.2.1"
 REPO_RAW = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/"
 SHELF_URL = REPO_RAW + "FDMA2530-Modeling/Student-Shelf/shelf_FDMA_2530.mel"
 LOADER_URL = REPO_RAW + "FDMA2530-Modeling/Student-Shelf/utilities/cache_loader.py"
-SHELF_NAME = "shelf_FDMA_2530"
+SHELF_NAME = "FDMA_2530"
 # ============================================================================
 # CORE UTILITIES
 # ============================================================================
@@ -111,6 +111,7 @@ def install_permanent():
         if cmds.shelfLayout(SHELF_NAME, exists=True):
             cmds.deleteUI(SHELF_NAME)
             print("Removed existing shelf UI")
+        mel.eval(f'deleteShelfTab "{SHELF_NAME}"')  # Clean preferences
         
         # Delete existing shelf MEL file
         shelf_path = os.path.join(shelf_dir, "shelf_FDMA_2530.mel")
@@ -156,6 +157,7 @@ def install_temporary():
         if cmds.shelfLayout(SHELF_NAME, exists=True):
             cmds.deleteUI(SHELF_NAME)
             print("Removed existing temporary shelf UI")
+        mel.eval(f'deleteShelfTab "{SHELF_NAME}"')  # Clean preferences
         
         # Clean temporary preferences
         mel.eval('evalDeferred("deleteShelfTab FDMA_2530")')
