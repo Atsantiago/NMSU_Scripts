@@ -47,6 +47,7 @@ SHELF_NAME = "FDMA_2530"
 # CORE UTILITIES
 # ============================================================================
 
+""""
 def get_maya_directories():
     """Get Maya script and shelf directories with fallbacks"""
     try:
@@ -65,8 +66,9 @@ def get_maya_directories():
         script_dir = os.path.join(base_dir, "scripts")
         shelf_dir = os.path.join(base_dir, "prefs", "shelves")
         return script_dir, shelf_dir
-
-def safe_download(url):
+"""
+    
+    def safe_download(url):
     try:
         response = urlopen(url, timeout=15)
         content = response.read()
