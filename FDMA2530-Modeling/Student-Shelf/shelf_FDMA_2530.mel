@@ -10,69 +10,64 @@
 // ============================================================================
 // FDMA 2530 Student Shelf v1.2.1 - FIXED VERSION
 // ============================================================================
+// ============================================================================
+// FDMA 2530 Student Shelf v1.2.1 - FIXED SHELF CREATION
+// ============================================================================
+
 global proc shelf_FDMA_2530() {
-    global string $gShelfTopLevel;
     
-    // Get current shelf parent context
+global proc shelf_FDMA_2530() {
+    global string $gBuffStr;
+    global string $gBuffStr0;
+    global string $gBuffStr1;
+    
+    shelfButton  // <-- This creates buttons but NO SHELF!
+        -enableCommandRepeat 1
+        // ... button properties
+}
+
+    
+    // Get current shelf parent
     string $parentForm = $gShelfTopLevel + "|" + `tabLayout -q -selectTab $gShelfTopLevel`;
     
-    // Forcefully delete existing shelf if present
+    // Remove existing shelf if it exists (CRITICAL FOR AVOIDING DUPLICATES)
     if (`shelfLayout -exists "FDMA_2530"`) {
-        // First delete the shelf layout
-        deleteUI "FDMA_2530";
-        
-        // Then remove the shelf tab completely
-        evalDeferred("deleteShelfTab FDMA_2530");
-        
-        // Clear any lingering preferences
-        evalDeferred("saveAllShelves $gShelfTopLevel");
-        print("FDMA 2530: Removed existing shelf completely\\n");
+        deleteUI "FDMA_2530" -layout;
+        print("Removed existing FDMA_2530 shelf\n");
     }
     
-    // Create new shelf with proper parent context
+    // Set parent context
     setParent $parentForm;
-    string $shelf = `shelfLayout -cellWidth 35 -cellHeight 35 FDMA_2530`;
     
-    // Checklist Button
+    // CREATE THE ACTUAL SHELF LAYOUT (THIS WAS MISSING!)
+    string $shelf = `shelfLayout 
+        -cellWidth 35 
+        -cellHeight 35 
+        FDMA_2530`;
+    
+    // Now add buttons to OUR specific shelf
     shelfButton
         -parent $shelf
         -label "Checklist"
         -image1 "checkboxOn.png"
-        -command ("python(\"from utilities.cache_loader import load_execute; " +
-                 "load_execute('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/" +
-                 "FDMA2530-Modeling/Student-Shelf/core-scripts/cmi_modeling_checklist.py', 'checklist_v3.py')\")");
-
-    // ========================================================================
-    // SEPARATOR
-    // ========================================================================
+        -annotation "CMI Modeling Checklist v3.0"
+        -command "python(\"from utilities.cache_loader import load_execute; load_execute('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/core-scripts/cmi_modeling_checklist.py', 'checklist.py')\")";
     
-    separator
-        -enable 1
-        -width 12
-        -height 35
-        -manage 1
-        -visible 1
-        -preventOverride 0
-        -style "shelf"
-        -horizontal 0
-        -parent $shelf;
-
-    // ========================================================================
-    // UPDATE BUTTON
-    // ========================================================================
+    separator -parent $shelf -width 12;
     
     shelfButton
         -parent $shelf
         -label "Update"
         -image1 "updateApp.png"
-        -command ("python(\"from utilities.cache_loader import load_execute; " +
-                 "load_execute('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/" +
-                 "FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/update_shelf.py', 'update_v1.py')\")");
+        -annotation "FDMA 2530 Shelf Updater v1.2.1"
+        -command "python(\"from utilities.cache_loader import load_execute; load_execute('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/update_shelf.py', 'update.py')\")";
     
     // Activate the new shelf
-    evalDeferred("tabLayout -e -selectTab FDMA_2530 $gShelfTopLevel");
-    evalDeferred("shelfTabChange");
+    tabLayout -edit -selectTab $shelf $gShelfTopLevel;
+    shelfTabChange();
+    
+    print("FDMA 2530 shelf created successfully\n");
 }
 
-// Auto-create when sourced
+// Execute when sourced
 shelf_FDMA_2530();
