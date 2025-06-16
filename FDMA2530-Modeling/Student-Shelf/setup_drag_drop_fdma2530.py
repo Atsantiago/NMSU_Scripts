@@ -42,7 +42,7 @@ __version__ = "1.2.1"
 REPO_RAW = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/"
 SHELF_URL = REPO_RAW + "FDMA2530-Modeling/Student-Shelf/shelf_FDMA_2530.mel"
 LOADER_URL = REPO_RAW + "FDMA2530-Modeling/Student-Shelf/utilities/cache_loader.py"
-SHELF_NAME = "FDMA_2530"
+SHELF_NAME = "shelf_FDMA_2530"
 # ============================================================================
 # CORE UTILITIES
 # ============================================================================
@@ -107,6 +107,20 @@ def install_permanent():
     try:
         script_dir, shelf_dir = get_maya_directories()
         
+        # Remove existing shelf UI and files
+        if cmds.shelfLayout(SHELF_NAME, exists=True):
+            cmds.deleteUI(SHELF_NAME)
+            print("Removed existing shelf UI")
+        
+        # Delete existing shelf MEL file
+        shelf_path = os.path.join(shelf_dir, "shelf_FDMA_2530.mel")
+        if os.path.exists(shelf_path):
+            os.remove(shelf_path)
+            print("Removed existing shelf file")
+        
+        # Clean preferences (from search result [11])
+        mel.eval('evalDeferred("deleteShelfTab FDMA_2530")')
+        
         # Download and install cache_loader
         loader_content = safe_download(LOADER_URL)
         if not loader_content:
@@ -114,12 +128,7 @@ def install_permanent():
         
         loader_path = os.path.join(script_dir, "utilities", "cache_loader.py")
         safe_write(loader_path, loader_content)
-        
-         # Remove existing shelf if it exists
-        if cmds.shelfLayout(SHELF_NAME, exists=True):
-            cmds.deleteUI(SHELF_NAME)
-            print("Removed existing shelf before installation")
-            
+                    
         # Download and install shelf
         shelf_content = safe_download(SHELF_URL)
         if not shelf_content:
@@ -143,10 +152,13 @@ def install_temporary():
     try:
         temp_dir = tempfile.gettempdir()
         
-        # Remove existing shelf if it exists
+        # Remove existing temporary shelf
         if cmds.shelfLayout(SHELF_NAME, exists=True):
             cmds.deleteUI(SHELF_NAME)
-            print("Removed existing shelf before installation")
+            print("Removed existing temporary shelf UI")
+        
+        # Clean temporary preferences
+        mel.eval('evalDeferred("deleteShelfTab FDMA_2530")')
 
         # Download and cache loader
         loader_content = safe_download(LOADER_URL)
@@ -215,7 +227,7 @@ def show_install_dialog():
                     "FDMA 2530 shelf installed successfully!\n\n"
                     "The shelf is now available in all Maya sessions.\n"
                 ),
-                button=["Excellent!"]
+                button=["Great!"]
             )
         else:
             cmds.confirmDialog(
