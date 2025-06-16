@@ -116,6 +116,7 @@ def install_permanent():
         safe_write(loader_path, loader_content)
         
          # Remove existing shelf if it exists
+        SHELF_NAME = "FDMA_2530"
         if cmds.shelfLayout(SHELF_NAME, exists=True):
             cmds.deleteUI(SHELF_NAME)
             print("Removed existing shelf before installation")
