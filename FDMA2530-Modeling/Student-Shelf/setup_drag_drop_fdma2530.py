@@ -115,6 +115,11 @@ def install_permanent():
         loader_path = os.path.join(script_dir, "utilities", "cache_loader.py")
         safe_write(loader_path, loader_content)
         
+         # Remove existing shelf if it exists
+        if cmds.shelfLayout(SHELF_NAME, exists=True):
+            cmds.deleteUI(SHELF_NAME)
+            print("Removed existing shelf before installation")
+            
         # Download and install shelf
         shelf_content = safe_download(SHELF_URL)
         if not shelf_content:
@@ -203,7 +208,6 @@ def show_install_dialog():
                 message=(
                     "FDMA 2530 shelf installed successfully!\n\n"
                     "The shelf is now available in all Maya sessions.\n"
-                    "You can now use the Checklist and Update buttons!"
                 ),
                 button=["Excellent!"]
             )
