@@ -42,7 +42,7 @@ __version__ = "1.2.1"
 REPO_RAW = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/"
 SHELF_URL = REPO_RAW + "FDMA2530-Modeling/Student-Shelf/shelf_FDMA_2530.mel"
 LOADER_URL = REPO_RAW + "FDMA2530-Modeling/Student-Shelf/utilities/cache_loader.py"
-
+SHELF_NAME = "FDMA_2530"
 # ============================================================================
 # CORE UTILITIES
 # ============================================================================
@@ -116,7 +116,6 @@ def install_permanent():
         safe_write(loader_path, loader_content)
         
          # Remove existing shelf if it exists
-        SHELF_NAME = "FDMA_2530"
         if cmds.shelfLayout(SHELF_NAME, exists=True):
             cmds.deleteUI(SHELF_NAME)
             print("Removed existing shelf before installation")
@@ -144,6 +143,11 @@ def install_temporary():
     try:
         temp_dir = tempfile.gettempdir()
         
+        # Remove existing shelf if it exists
+        if cmds.shelfLayout(SHELF_NAME, exists=True):
+            cmds.deleteUI(SHELF_NAME)
+            print("Removed existing shelf before installation")
+
         # Download and cache loader
         loader_content = safe_download(LOADER_URL)
         if not loader_content:
@@ -152,6 +156,7 @@ def install_temporary():
         loader_path = os.path.join(temp_dir, "cache_loader.py")
         safe_write(loader_path, loader_content)
         
+
         # Add temp directory to Python path
         if temp_dir not in sys.path:
             sys.path.insert(0, temp_dir)
