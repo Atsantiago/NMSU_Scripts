@@ -1,5 +1,5 @@
 """
-FDMA 2530 Shelf Installer v1.3.2 
+FDMA 2530 Shelf Installer v1.2.3 
 ================================================================
 Cross-platform compatible: Windows, macOS, Linux
 Maya versions: 2016-2025+ | Python 2/3 compatible
@@ -19,7 +19,7 @@ except ImportError:
 import maya.cmds as cmds
 import maya.mel as mel
 
-__version__ = "1.3.2"
+__version__ = "1.2.3"
 
 # Configuration
 REPO_RAW = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/"

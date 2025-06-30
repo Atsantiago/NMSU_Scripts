@@ -365,7 +365,7 @@ def main():
             if MAYA_AVAILABLE:
                 cmds.inViewMessage(
                     amg="FDMA 2530 shelf is up to date!",
-                    pos='botLeft',
+                    pos='midCenter',
                     fade=True
                 )
             return True
