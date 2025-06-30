@@ -1,74 +1,34 @@
 """
-FDMA 2530 Shelf Installer v1.2.1 - STREAMLINED VERSION
-======================================================
-
-Optimized drag-and-drop installer for Maya 2016-2025+ with essential
-functionality.
-
-Features:
-- Fast installation with minimal overhead
-- Python 2/3 compatibility across all Maya versions
-- Essential error handling without complexity
-- Cross-platform support (Windows, macOS, Linux)
-- Clean, maintainable code following best practices
-
-Created by: Alexander T. Santiago - asanti89@nmsu.edu
+FDMA 2530 Shelf Installer v1.3.0 - COMPLETE DRAG-DROP SOLUTION
+================================================================
+Handles Maya UI timing, module reloading, and robust shelf creation
+Cross-platform compatible: Windows, macOS, Linux
+Maya versions: 2016-2025+ | Python 2/3 compatible
 """
 
 import os
 import sys
 import tempfile
+import importlib
 
-# Python 2/3 compatibility - minimal approach
 try:
     from urllib.request import urlopen
-    from urllib.error import URLError
 except ImportError:
-    from urllib2 import urlopen, URLError
+    from urllib2 import urlopen
 
-try:
-    import maya.cmds as cmds
-    import maya.mel as mel
-except ImportError:
-    raise RuntimeError("This script must be run within Maya")
+import maya.cmds as cmds
+import maya.mel as mel
 
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
+__version__ = "1.3.0"
 
-__version__ = "1.2.1"
-
-# Repository URLs
+# Configuration
 REPO_RAW = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/"
 SHELF_URL = REPO_RAW + "FDMA2530-Modeling/Student-Shelf/shelf_FDMA_2530.mel"
 LOADER_URL = REPO_RAW + "FDMA2530-Modeling/Student-Shelf/utilities/cache_loader.py"
 SHELF_NAME = "FDMA_2530"
-# ============================================================================
-# CORE UTILITIES
-# ============================================================================
 
-""""
-def get_maya_directories():
-    """Get Maya script and shelf directories with fallbacks"""
-    try:
-        script_dir = cmds.internalVar(userScriptDir=True)
-        shelf_dir = cmds.internalVar(userShelfDir=True)
-        return script_dir, shelf_dir
-    except Exception:
-        # Simple fallback for any Maya API failures
-        if sys.platform.startswith("win"):
-            base_dir = os.path.join(os.environ.get("USERPROFILE", ""), "Documents", "maya")
-        elif sys.platform.startswith("darwin"):
-            base_dir = os.path.expanduser("~/Library/Preferences/Autodesk/maya")
-        else:
-            base_dir = os.path.expanduser("~/maya")
-        
-        script_dir = os.path.join(base_dir, "scripts")
-        shelf_dir = os.path.join(base_dir, "prefs", "shelves")
-        return script_dir, shelf_dir
-"""
-    
-    def safe_download(url):
+def safe_download(url):
+    """Download content from URL with error handling"""
     try:
         response = urlopen(url, timeout=15)
         content = response.read()
@@ -80,6 +40,7 @@ def get_maya_directories():
         return None
 
 def safe_write(path, content):
+    """Write content to file with directory creation"""
     directory = os.path.dirname(path)
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -93,109 +54,137 @@ def safe_write(path, content):
             f.write(content)
 
 def cleanup_existing_shelf():
-    """Clean up existing shelf using the working pattern"""
+    """Clean up existing shelf"""
     try:
-        # Use the working pattern from your old code
         if cmds.shelfLayout(SHELF_NAME, exists=True):
-            cmds.deleteUI(SHELF_NAME, layout=True)  # KEY: layout=True parameter
+            cmds.deleteUI(SHELF_NAME, layout=True)
             print("Removed existing shelf UI")
         return True
     except Exception as e:
         print("Shelf cleanup warning: " + str(e))
-        return True  # Continue anyway
+        return True
 
-def load_and_show_shelf(shelf_path):
-    """Load shelf and make it visible in the UI"""
+def create_shelf_directly():
+    """Create shelf directly in Python - bypasses MEL timing issues"""
     try:
-        # Load the shelf
-        shelf_path_mel = shelf_path.replace("\\", "/")
-        mel.eval('loadNewShelf "{}"'.format(shelf_path_mel))
+        # Get the shelf top level using Python - much more reliable
+        gShelfTopLevel = mel.eval('global string $gShelfTopLevel; $temp = $gShelfTopLevel')
         
-        # Get the main shelf tab layout
-        shelf_tab_layout = mel.eval('$tempVar = $gShelfTopLevel')
+        # If still empty, force UI refresh and try again
+        if not gShelfTopLevel:
+            cmds.refresh(force=True)
+            # Process any pending idle events
+            try:
+                import maya.utils
+                maya.utils.processIdleEvents()
+            except:
+                pass
+            gShelfTopLevel = mel.eval('global string $gShelfTopLevel; $temp = $gShelfTopLevel')
         
-        # Verify shelf loaded and make it visible
-        if cmds.shelfLayout(SHELF_NAME, exists=True):
-            # Select the shelf tab to make it visible
-            if shelf_tab_layout:
-                cmds.shelfTabLayout(shelf_tab_layout, edit=True, selectTab=SHELF_NAME)
-            print("Shelf loaded and displayed successfully!")
-            return True
-        else:
-            print("Shelf failed to load")
+        if not gShelfTopLevel:
+            cmds.warning("Maya shelf system not ready")
             return False
-            
-    except Exception as e:
-        print("Error loading shelf: " + str(e))
-        return False
-
-def install_permanent():
-    try:
-        script_dir = cmds.internalVar(userScriptDir=True)
-        shelf_dir = cmds.internalVar(userShelfDir=True)
         
-        # Clean up existing shelf FIRST
+        print("Using shelf parent: " + gShelfTopLevel)
+        
+        # Remove existing shelf
         cleanup_existing_shelf()
         
+        # Create new shelf
+        shelf = cmds.shelfLayout(SHELF_NAME, parent=gShelfTopLevel, cellWidth=35, cellHeight=35)
+        print("Created shelf layout: " + shelf)
+        
+        # Add Checklist button
+        cmds.shelfButton(
+            parent=shelf,
+            label="Checklist",
+            image1="checkboxOn.png",
+            annotation="CMI Modeling Checklist v3.0",
+            command='python("from utilities.cache_loader import load_execute; load_execute(\'https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/core-scripts/cmi_modeling_checklist.py\', \'checklist.py\')")'
+        )
+        
+        # Add separator
+        cmds.separator(parent=shelf, width=12)
+        
+        # Add Update button
+        cmds.shelfButton(
+            parent=shelf,
+            label="Update", 
+            image1="updateApp.png",
+            annotation="FDMA 2530 Shelf Updater v1.2.1",
+            command='python("from utilities.cache_loader import load_execute; load_execute(\'https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/update_shelf.py\', \'update.py\')")'
+        )
+        
+        print("Added shelf buttons")
+        
+        # Activate the shelf
+        if cmds.control(gShelfTopLevel, exists=True) and cmds.control(shelf, exists=True):
+            cmds.tabLayout(gShelfTopLevel, edit=True, selectTab=shelf)
+            print("FDMA_2530 shelf created and activated successfully")
+        
+        return True
+        
+    except Exception as e:
+        cmds.warning("Failed to create shelf: " + str(e))
+        return False
+
+def install_cache_loader(use_temp=False):
+    """Download and install the cache_loader utility"""
+    try:
         # Download cache_loader
         loader_content = safe_download(LOADER_URL)
         if not loader_content:
             return False
         
-        loader_path = os.path.join(script_dir, "utilities", "cache_loader.py")
-        safe_write(loader_path, loader_content)
+        if use_temp:
+            # Temporary installation
+            temp_dir = tempfile.gettempdir()
+            loader_path = os.path.join(temp_dir, "utilities", "cache_loader.py")
+            if temp_dir not in sys.path:
+                sys.path.insert(0, temp_dir)
+        else:
+            # Permanent installation
+            script_dir = cmds.internalVar(userScriptDir=True)
+            loader_path = os.path.join(script_dir, "utilities", "cache_loader.py")
         
-        # Download shelf
-        shelf_content = safe_download(SHELF_URL)
-        if not shelf_content:
+        safe_write(loader_path, loader_content)
+        print("Cache loader installed at: " + loader_path)
+        return True
+        
+    except Exception as e:
+        cmds.warning("Cache loader installation failed: " + str(e))
+        return False
+
+def install_permanent():
+    """Install shelf permanently"""
+    try:
+        # Install cache loader
+        if not install_cache_loader(use_temp=False):
             return False
         
-        # Write shelf file
-        shelf_path = os.path.join(shelf_dir, "shelf_FDMA_2530.mel")
-        safe_write(shelf_path, shelf_content)
-        
-        # Load shelf and make it visible
-        return load_and_show_shelf(shelf_path)
+        # Create shelf directly in Python
+        return create_shelf_directly()
         
     except Exception as e:
         cmds.warning("Installation failed: " + str(e))
         return False
 
 def install_temporary():
+    """Install shelf temporarily"""
     try:
-        temp_dir = tempfile.gettempdir()
-        
-        # Clean up existing shelf FIRST
-        cleanup_existing_shelf()
-        
-        # Download cache_loader
-        loader_content = safe_download(LOADER_URL)
-        if not loader_content:
+        # Install cache loader to temp directory
+        if not install_cache_loader(use_temp=True):
             return False
         
-        loader_path = os.path.join(temp_dir, "cache_loader.py")
-        safe_write(loader_path, loader_content)
-        
-        if temp_dir not in sys.path:
-            sys.path.insert(0, temp_dir)
-        
-        # Download shelf
-        shelf_content = safe_download(SHELF_URL)
-        if not shelf_content:
-            return False
-        
-        # Write temporary shelf file
-        shelf_path = os.path.join(temp_dir, "shelf_FDMA_2530.mel")
-        safe_write(shelf_path, shelf_content)
-        
-        # Load shelf and make it visible
-        return load_and_show_shelf(shelf_path)
+        # Create shelf directly in Python
+        return create_shelf_directly()
         
     except Exception as e:
         cmds.warning("Temporary installation failed: " + str(e))
         return False
 
 def show_install_dialog():
+    """Show installation dialog"""
     choice = cmds.confirmDialog(
         title="FDMA 2530 Shelf Installer v{}".format(__version__),
         message="Choose installation type:\n\nInstall Shelf: Permanent\nLoad Once: Temporary",
@@ -215,11 +204,33 @@ def show_install_dialog():
         else:
             cmds.confirmDialog(title="Error", message="Temporary load failed.", button=["OK"])
 
-def onMayaDroppedPythonFile(*args):
+def force_reload_self():
+    """Force reload this module to handle Maya's caching issue"""
     try:
+        # Get the current module name
+        current_module = __name__
+        if current_module in sys.modules:
+            if sys.version_info[0] >= 3:
+                importlib.reload(sys.modules[current_module])
+            else:
+                reload(sys.modules[current_module])
+    except:
+        pass  # Ignore reload errors
+
+def onMayaDroppedPythonFile(*args):
+    """Maya's drag-and-drop entry point"""
+    try:
+        # Force reload to handle Maya's caching bug
+        force_reload_self()
+        
+        # Show installation dialog
         show_install_dialog()
+        
     except Exception as e:
         cmds.warning("Installer error: " + str(e))
+        import traceback
+        print(traceback.format_exc())
 
+# Execute if run directly (for testing)
 if __name__ == "__main__":
     onMayaDroppedPythonFile()

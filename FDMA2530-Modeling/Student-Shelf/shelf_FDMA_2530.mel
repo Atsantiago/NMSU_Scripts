@@ -1,28 +1,40 @@
 // ============================================================================
-// FDMA 2530 Student Shelf v1.2.1 - COMPLETE REWRITE
+// FDMA 2530 Student Shelf v1.2.1
 // ============================================================================
-// Clean Maya shelf with direct cache_loader calls and proper MEL syntax
 // Cross-platform compatible: Windows, macOS, Linux
 // Maya versions: 2016-2025+ | Python 2/3 compatible
 // Created by: Alexander T. Santiago - asanti89@nmsu.edu
 // ============================================================================
 
 global proc shelf_FDMA_2530() {
-    global string $gBuffStr;
-    global string $gBuffStr0;
-    global string $gBuffStr1;
+    // Safely get gShelfTopLevel using Python bridge - most reliable method
+    string $gShelfTopLevel = `python "import maya.mel as mel; print(mel.eval('global string $gShelfTopLevel; $temp = $gShelfTopLevel'))"`;
     
-    // Get current shelf parent
-    string $parentForm = $gShelfTopLevel + "|" + `tabLayout -q -selectTab $gShelfTopLevel`;
+    // Fallback: try direct MEL access
+    if ($gShelfTopLevel == "" || $gShelfTopLevel == "None") {
+        global string $gShelfTopLevel;
+        // Force UI refresh to ensure shelf system is ready
+        python("maya.utils.processIdleEvents()");
+        refresh -force;
+    }
     
-    // Remove existing shelf if it exists (CRITICAL FOR AVOIDING DUPLICATES)
+    // Final validation - if still empty, Maya UI isn't ready
+    if ($gShelfTopLevel == "" || $gShelfTopLevel == "None") {
+        warning("Maya shelf system not ready - deferring shelf creation");
+        evalDeferred("shelf_FDMA_2530");
+        return;
+    }
+    
+    print("Using shelf parent: " + $gShelfTopLevel + "\n");
+    
+    // Remove existing shelf if it exists
     if (`shelfLayout -exists "FDMA_2530"`) {
         deleteUI "FDMA_2530" -layout;
         print("Removed existing FDMA_2530 shelf\n");
     }
     
-    // Set parent context
-    setParent $parentForm;
+    // Set parent to the main shelf tab layout
+    setParent $gShelfTopLevel;
     
     // CREATE THE ACTUAL SHELF LAYOUT 
     string $shelf = `shelfLayout 
@@ -30,13 +42,15 @@ global proc shelf_FDMA_2530() {
         -cellHeight 35 
         FDMA_2530`;
     
-    // Now add buttons to OUR specific shelf
+    print("Created shelf layout: " + $shelf + "\n");
+    
+    // Add buttons with explicit parent specification
     shelfButton
         -parent $shelf
         -label "Checklist"
         -image1 "checkboxOn.png"
         -annotation "CMI Modeling Checklist v3.0"
-        -command "python(\"from utilities.cache_loader import load_execute; load_execute('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/core-scripts/cmi_modeling_checklist.py', 'checklist.py')\")";
+        -command ("python(\"from utilities.cache_loader import load_execute; load_execute('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/core-scripts/cmi_modeling_checklist.py', 'checklist.py')\")");
     
     separator -parent $shelf -width 12;
     
@@ -45,13 +59,17 @@ global proc shelf_FDMA_2530() {
         -label "Update"
         -image1 "updateApp.png"
         -annotation "FDMA 2530 Shelf Updater v1.2.1"
-        -command "python(\"from utilities.cache_loader import load_execute; load_execute('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/update_shelf.py', 'update.py')\")";
+        -command ("python(\"from utilities.cache_loader import load_execute; load_execute('https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/update_shelf.py', 'update.py')\")");
     
-    // Activate the new shelf
-    tabLayout -edit -selectTab $shelf $gShelfTopLevel;
-    shelfTabChange();
+    print("Added shelf buttons\n");
     
-    print("FDMA 2530 shelf created successfully\n");
+    // Activate the new shelf with error checking
+    if (`control -exists $gShelfTopLevel` && `control -exists $shelf`) {
+        tabLayout -edit -selectTab $shelf $gShelfTopLevel;
+        print("FDMA_2530 shelf created and activated successfully\n");
+    } else {
+        print("FDMA_2530 shelf created successfully (activation skipped - UI timing issue)\n");
+    }
 }
 
 // Execute when sourced
