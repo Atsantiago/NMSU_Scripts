@@ -363,10 +363,12 @@ def main():
             update_button_visual_status('up_to_date')
             
             if MAYA_AVAILABLE:
+                message += '<span style="color:#FF0000;">"FDMA 2530 shelf is up to date!"</span'
                 cmds.inViewMessage(
-                    amg="FDMA 2530 shelf is up to date!",
-                    pos='midCenter',
-                    fade=True
+                    amg=message,
+                    pos='botLeft',
+                    fade=True,
+                    alpha=0.9
                 )
             return True
             
