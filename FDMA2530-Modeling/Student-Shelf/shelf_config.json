@@ -1,0 +1,35 @@
+{
+  "shelf_info": {
+    "name": "FDMA_2530",
+    "version": "1.4.0",
+    "description": "FDMA 2530 Student Modeling Shelf",
+    "cell_width": 35,
+    "cell_height": 35
+  },
+  "buttons": [
+    {
+      "type": "button",
+      "label": "Checklist",
+      "icon": "checkboxOn.png",
+      "annotation": "CMI Modeling Checklist v3.0",
+      "script_url": "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/core-scripts/cmi_modeling_checklist.py",
+      "width": 35,
+      "height": 35,
+      "enabled": true
+    },
+    {
+      "type": "separator",
+      "width": 12
+    },
+    {
+      "type": "button", 
+      "label": "Update",
+      "icon": "updateApp.png",
+      "annotation": "FDMA 2530 Shelf Updater v1.2.1",
+      "script_url": "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/update_shelf.py",
+      "width": 28,
+      "height": 28,
+      "enabled": true
+    }
+  ]
+}
