@@ -228,7 +228,7 @@ def perform_shelf_update(latest_config):
         config = json.loads(latest_config)
         
         # Import the shelf creation function from the main installer
-        installer_url = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/installer.py"
+        installer_url = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/setup_drag_drop_fdma2530.py"
         installer_code = safe_download(installer_url)
         if not installer_code:
             return False
