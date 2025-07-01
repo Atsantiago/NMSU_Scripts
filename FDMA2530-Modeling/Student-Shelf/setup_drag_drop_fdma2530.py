@@ -165,7 +165,7 @@ execute_script()
     return command_template.format(script_url=script_url)
 
 def create_update_button_command(script_url):
-    """Specialized command for the Update button with complete update functionality"""
+    """Specialized command for the Update button with correct string syntax"""
     return '''
 import sys, hashlib, os, json, tempfile
 try:
@@ -177,7 +177,6 @@ import maya.cmds as cmds
 
 # Get functions from installer namespace
 update_button_visual_status = globals().get('update_button_visual_status')
-viewport_yellow_alert = globals().get('viewport_yellow_alert')
 
 label = "Update"
 if update_button_visual_status:
@@ -197,7 +196,7 @@ def show_up_to_date_message():
     """Show yellow viewport message when shelf is up to date"""
     try:
         cmds.inViewMessage(
-            amg='<span style="color:#FFCC00">Your shelf is up to date!</span>',
+            amg='<span style="color:#FFCC00">You currently have latest version</span>',
             pos='botLeft',
             fade=True,
             alpha=0.9,
@@ -221,49 +220,81 @@ def show_update_confirmation_dialog():
     except Exception:
         return False
 
-def perform_shelf_update(latest_config):
-    """Perform the actual shelf update by recreating it from new configuration"""
+def get_installed_version():
+    """Get the version that was actually installed (from when shelf was created)"""
     try:
-        # Parse the latest configuration
-        config = json.loads(latest_config)
-        
-        # Import the shelf creation function from the main installer
+        cache = os.path.join(cmds.internalVar(userScriptDir=True), "shelf_config_cache.json")
+        if os.path.exists(cache):
+            with open(cache, 'r') as f:
+                cached_content = f.read()
+            if cached_content.strip():
+                cached_config = json.loads(cached_content)
+                return cached_content, cached_config.get('shelf_info', {}).get('version', 'unknown')
+        return "", "no_cache"
+    except Exception as e:
+        print("Error reading installed version: " + str(e))
+        return "", "error"
+
+def perform_shelf_reinstall():
+    """Reinstall the shelf using the installer"""
+    try:
+        # Simple approach: run the installer temp function
         installer_url = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/setup_drag_drop_fdma2530.py"
         installer_code = safe_download(installer_url)
         if not installer_code:
             return False
         
-        # Execute installer code in current namespace to get access to functions
-        exec(installer_code, globals(), globals())
+        # Execute installer code in global namespace
+        exec(installer_code, globals())
         
-        # Call the shelf creation function with new config
-        success = create_shelf_from_json_config(config, use_temp=True)
+        # Call temporary installation to rebuild shelf
+        result = install_temporary()
+        return result
         
-        if success:
-            print("Shelf updated successfully!")
-            return True
-        else:
-            print("Shelf update failed")
-            return False
-            
     except Exception as e:
-        print("Update execution failed: " + str(e))
+        print("Shelf reinstall failed: " + str(e))
         return False
 
 try:
     config_url = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf_config.json"
-    latest = safe_download(config_url)
-    if not latest:
-        raise RuntimeError("No data")
+    latest_config = safe_download(config_url)
+    if not latest_config:
+        raise RuntimeError("Could not download latest configuration")
 
-    # Check against cached copy
-    cache = os.path.join(cmds.internalVar(userScriptDir=True), "shelf_config_cache.json")
-    cached_txt = ""
-    if os.path.exists(cache):
-        with open(cache, 'r') as f:
-            cached_txt = f.read()
+    # Get what's currently installed
+    installed_config, installed_version = get_installed_version()
     
-    upd_needed = hashlib.md5(latest.encode("utf-8")).hexdigest() != hashlib.md5(cached_txt.encode("utf-8")).hexdigest()
+    # Parse latest config to get version
+    try:
+        latest_parsed = json.loads(latest_config)
+        latest_version = latest_parsed['shelf_info']['version']
+    except:
+        latest_version = "unknown"
+    
+    print("Installed version: " + str(installed_version))
+    print("Latest version: " + str(latest_version))
+    
+    # Determine if update is needed
+    if installed_version == "no_cache":
+        # First time running update - shelf was just installed so should be current
+        # Write cache with current version
+        cache = os.path.join(cmds.internalVar(userScriptDir=True), "shelf_config_cache.json")
+        with open(cache, "w") as f:
+            f.write(latest_config)
+        upd_needed = False
+        print("First run - cached current version")
+        
+    elif installed_version == "error":
+        # Cache read error - treat as update needed to be safe
+        upd_needed = True
+        print("Cache error - treating as update needed")
+        
+    else:
+        # Compare installed vs latest using content hash
+        latest_hash = hashlib.md5(latest_config.encode("utf-8")).hexdigest()
+        installed_hash = hashlib.md5(installed_config.encode("utf-8")).hexdigest()
+        upd_needed = latest_hash != installed_hash
+        print("Hash comparison - update needed: " + str(upd_needed))
 
     if upd_needed:
         # Updates available - show confirmation dialog
@@ -272,31 +303,35 @@ try:
         
         if show_update_confirmation_dialog():
             # User chose to update
-            if perform_shelf_update(latest):
-                # Update successful - update cache and set button to up_to_date
+            if perform_shelf_reinstall():
+                # Update successful - NOW update cache with new version
+                cache = os.path.join(cmds.internalVar(userScriptDir=True), "shelf_config_cache.json")
                 with open(cache, "w") as f:
-                    f.write(latest)
+                    f.write(latest_config)
                 if update_button_visual_status:
                     update_button_visual_status(label, "up_to_date")
+                print("Shelf updated successfully to version: " + latest_version)
             else:
                 # Update failed
                 if update_button_visual_status:
                     update_button_visual_status(label, "update_failed")
+                print("Shelf update failed")
         else:
             # User declined update - keep button green as reminder
-            # Don't update cache so updates remain available
-            pass
+            print("User declined shelf update")
     else:
-        # No updates available - show up to date message
+        # No updates available
         show_up_to_date_message()
         if update_button_visual_status:
             update_button_visual_status(label, "up_to_date")
+        print("Shelf is already up to date")
 
 except Exception as err:
     cmds.warning("Update check failed: " + str(err))
     if update_button_visual_status:
         update_button_visual_status(label, "update_failed")
-'''.format(script_url)
+    print("Update check error: " + str(err))
+'''
 
 def create_shelf_from_json_config(config, use_temp=False):
     """Create shelf dynamically from JSON configuration"""
