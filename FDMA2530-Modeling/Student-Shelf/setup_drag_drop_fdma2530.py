@@ -74,21 +74,21 @@ def update_button_visual_status(label, status):
     except RuntimeError:
         pass
 
-def viewport_red_alert(msg):
-    """Single-shot red banner in lower-left of viewport"""
-    if not hasattr(viewport_red_alert, '_fired'):
-        viewport_red_alert._fired = False
+def viewport_yellow_alert(msg):
+    """Single-shot yellow banner in lower-left of viewport"""
+    if not hasattr(viewport_yellow_alert, '_fired'):
+        viewport_yellow_alert._fired = False
     
-    if not viewport_red_alert._fired:
+    if not viewport_yellow_alert._fired:
         cmds.inViewMessage(
-            amg='<span style="color:#FF3333">{}</span>'.format(msg),
+            amg='<span style="color:#FFF00">{}</span>'.format(msg),
             pos='botLeft',
             fade=True,
             alpha=0.95,
             dragKill=False,
             fadeStayTime=3000
         )
-        viewport_red_alert._fired = True
+        viewport_yellow_alert._fired = True
 
 def download_json_config():
     """Download and parse the JSON configuration file"""
@@ -177,7 +177,7 @@ import maya.cmds as cmds
 
 # Get functions from installer namespace
 update_button_visual_status = globals().get('update_button_visual_status')
-viewport_red_alert = globals().get('viewport_red_alert')
+viewport_yellow_alert = globals().get('viewport_yellow_alert')
 
 label = "Update"
 if update_button_visual_status:
@@ -209,8 +209,8 @@ try:
     upd_needed = hashlib.md5(latest.encode("utf-8")).hexdigest() != hashlib.md5(cached_txt.encode("utf-8")).hexdigest()
 
     if upd_needed:
-        if viewport_red_alert:
-            viewport_red_alert("New Updates to FDMA 2530 Shelf available!")
+        if viewport_yellow_alert:
+            viewport_yellow_alert("New Updates to FDMA 2530 Shelf available!")
         # Update cache
         with open(cache, "w") as f:
             f.write(latest)
@@ -267,7 +267,7 @@ def create_shelf_from_json_config(config, use_temp=False):
         # Make status functions available to button commands
         import __main__
         __main__.update_button_visual_status = update_button_visual_status
-        __main__.viewport_red_alert = viewport_red_alert
+        __main__.viewport_yellow_alert = viewport_yellow_alert
         
         # Create buttons and separators from JSON configuration
         for item in config['buttons']:

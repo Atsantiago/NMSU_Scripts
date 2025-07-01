@@ -1,7 +1,7 @@
 {
   "shelf_info": {
     "name": "FDMA_2530",
-    "version": "1.4.0",
+    "version": "1.2.4",
     "description": "FDMA 2530 Student Modeling Shelf",
     "cell_width": 35,
     "cell_height": 35
@@ -18,8 +18,30 @@
       "enabled": true
     },
     {
-      "type": "separator",
-      "width": 12
+     "type": "separator",
+      "width": 12,
+     "height": 35,
+     "style": "shelf",
+     "horizontal": false,
+     "enabled": true
+    },
+    {
+      "type": "button",
+      "label": "HumanBody",
+      "icon": "humanBody.png",
+      "annotation": "Import Human Body ",
+      "script_url": "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/core-scripts/TEMP_humanBody_import.py",
+      "width": 35,
+      "height": 35,
+      "enabled": true
+    },
+    {
+     "type": "separator",
+      "width": 12,
+     "height": 35,
+     "style": "shelf",
+     "horizontal": false,
+     "enabled": true
     },
     {
       "type": "button", 
@@ -33,3 +55,4 @@
     }
   ]
 }
+
