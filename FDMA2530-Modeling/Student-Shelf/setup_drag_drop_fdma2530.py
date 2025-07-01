@@ -165,7 +165,7 @@ execute_script()
     return command_template.format(script_url=script_url)
 
 def create_update_button_command(script_url):
-    """Specialized command for the Update button with color and alert feedback"""
+    """Specialized command for the Update button with complete update functionality"""
     return '''
 import sys, hashlib, os, json, tempfile
 try:
@@ -193,6 +193,63 @@ def safe_download(u):
         cmds.warning("Download failed: " + str(e))
         return None
 
+def show_up_to_date_message():
+    """Show yellow viewport message when shelf is up to date"""
+    try:
+        cmds.inViewMessage(
+            amg='<span style="color:#FFCC00">Your shelf is up to date!</span>',
+            pos='botLeft',
+            fade=True,
+            alpha=0.9,
+            dragKill=False,
+            fadeStayTime=3000
+        )
+    except Exception:
+        pass
+
+def show_update_confirmation_dialog():
+    """Show update confirmation dialog and return user choice"""
+    try:
+        choice = cmds.confirmDialog(
+            title='New Updates Available',
+            message='New Updates Available. Would you like to update the shelf?',
+            button=['Yes', 'No'],
+            defaultButton='Yes',
+            cancelButton='No'
+        )
+        return choice == 'Yes'
+    except Exception:
+        return False
+
+def perform_shelf_update(latest_config):
+    """Perform the actual shelf update by recreating it from new configuration"""
+    try:
+        # Parse the latest configuration
+        config = json.loads(latest_config)
+        
+        # Import the shelf creation function from the main installer
+        installer_url = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/installer.py"
+        installer_code = safe_download(installer_url)
+        if not installer_code:
+            return False
+        
+        # Execute installer code in current namespace to get access to functions
+        exec(installer_code, globals(), globals())
+        
+        # Call the shelf creation function with new config
+        success = create_shelf_from_json_config(config, use_temp=True)
+        
+        if success:
+            print("Shelf updated successfully!")
+            return True
+        else:
+            print("Shelf update failed")
+            return False
+            
+    except Exception as e:
+        print("Update execution failed: " + str(e))
+        return False
+
 try:
     config_url = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf_config.json"
     latest = safe_download(config_url)
@@ -209,14 +266,29 @@ try:
     upd_needed = hashlib.md5(latest.encode("utf-8")).hexdigest() != hashlib.md5(cached_txt.encode("utf-8")).hexdigest()
 
     if upd_needed:
-        if viewport_yellow_alert:
-            viewport_yellow_alert("New Updates to FDMA 2530 Shelf available!")
-        # Update cache
-        with open(cache, "w") as f:
-            f.write(latest)
+        # Updates available - show confirmation dialog
         if update_button_visual_status:
             update_button_visual_status(label, "updates_available")
+        
+        if show_update_confirmation_dialog():
+            # User chose to update
+            if perform_shelf_update(latest):
+                # Update successful - update cache and set button to up_to_date
+                with open(cache, "w") as f:
+                    f.write(latest)
+                if update_button_visual_status:
+                    update_button_visual_status(label, "up_to_date")
+            else:
+                # Update failed
+                if update_button_visual_status:
+                    update_button_visual_status(label, "update_failed")
+        else:
+            # User declined update - keep button green as reminder
+            # Don't update cache so updates remain available
+            pass
     else:
+        # No updates available - show up to date message
+        show_up_to_date_message()
         if update_button_visual_status:
             update_button_visual_status(label, "up_to_date")
 
