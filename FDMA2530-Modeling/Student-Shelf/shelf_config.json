@@ -19,8 +19,6 @@
     },
     {
      "type": "separator",
-      "width": 12,
-     "height": 35,
      "style": "shelf",
      "horizontal": false,
      "enabled": true
@@ -37,8 +35,6 @@
     },
     {
      "type": "separator",
-      "width": 12,
-     "height": 35,
      "style": "shelf",
      "horizontal": false,
      "enabled": true

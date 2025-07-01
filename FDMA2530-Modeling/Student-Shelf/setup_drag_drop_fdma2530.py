@@ -275,7 +275,11 @@ def create_shelf_from_json_config(config, use_temp=False):
                 continue  # Skip disabled items
                 
             if item['type'] == 'separator':
-                cmds.separator(parent=shelf, width=item.get('width', 12))
+                cmds.separator(
+                    parent=shelf,
+                    style=item.get('style', 'shelf'),
+                    hr=not item.get('horizontal', False)
+                    )
                 print("Added separator")
                 
             elif item['type'] == 'button':
