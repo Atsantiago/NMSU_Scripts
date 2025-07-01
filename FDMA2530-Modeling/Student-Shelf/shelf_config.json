@@ -24,22 +24,6 @@
      "enabled": true
     },
     {
-      "type": "button",
-      "label": "HumanBody",
-      "icon": "HumanBody.png",
-      "annotation": "Import Human Body ",
-      "script_url": "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/core-scripts/TEMP_humanBody_import.py",
-      "width": 35,
-      "height": 35,
-      "enabled": true
-    },
-    {
-     "type": "separator",
-     "style": "shelf",
-     "horizontal": false,
-     "enabled": true
-    },
-    {
       "type": "button", 
       "label": "Update",
       "icon": "updateApp.png",
