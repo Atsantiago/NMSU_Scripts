@@ -157,8 +157,8 @@ def build_gui_ats_cmi_modeling_checklist():
         mxb=False,
         s=True,
         resizeToFitChildren=True,
-        width=420,
-        height=650
+        width=600,
+        height=800
     )
 
     # Add scroll layout wrapper
