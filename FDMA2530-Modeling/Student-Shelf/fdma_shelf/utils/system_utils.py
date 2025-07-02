@@ -1,11 +1,11 @@
 """
-FDMA 2530 System Utilities v1.2.1
+FDMA 2530 System Utilities v2.0.0
 =================================
 
 Cross-platform OS detection utilities for Maya shelf systems.
 Optimized for speed and simplicity across all Maya versions (2016-2025+).
 
-Created by: Alexander T. Santiago - asanti89@nmsu.edu
+Part of the fdma_shelf package ecosystem.
 """
 
 import sys
@@ -14,7 +14,7 @@ import sys
 # VERSION INFORMATION
 # ============================================================================
 
-__version__ = "1.2.1"
+__version__ = "2.0.0"
 
 # ============================================================================
 # CORE OS DETECTION FUNCTIONS
