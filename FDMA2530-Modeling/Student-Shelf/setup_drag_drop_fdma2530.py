@@ -293,7 +293,7 @@ def show_install_dialog():
     """Show installation dialog"""
     choice = cmds.confirmDialog(
         title="FDMA 2530 Shelf Installer v{0}".format(__version__),
-        message="GT Tools-Style Installation\n\nChoose installation type:\n\nInstall Shelf: Permanent installation with auto-startup\nLoad Once: Temporary installation (session only)\nUninstall: Remove FDMA 2530 shelf system",
+        message="Install Shelf: Permanent installation\nLoad Once: Temporary installation (session only)\nUninstall: Remove FDMA 2530 shelf system",
         button=["Install Shelf", "Load Once", "Uninstall", "Cancel"],
         defaultButton="Install Shelf",
         cancelButton="Cancel"
