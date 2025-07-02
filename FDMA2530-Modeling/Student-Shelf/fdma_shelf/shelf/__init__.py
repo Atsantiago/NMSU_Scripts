@@ -1,1 +1,8 @@
-###holds __version__ and triggers startup check_startup_updates() (was your old top-level __init__.py; just move its contents)
+"""
+Shelf sub-package
+Provides build_shelf to create or rebuild the FDMA 2530 shelf
+"""
+
+from .builder import build_shelf
+
+__all__ = ["build_shelf"]
