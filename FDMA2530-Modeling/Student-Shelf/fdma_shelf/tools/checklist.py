@@ -3273,5 +3273,9 @@ except ImportError:
 # ==============================================================================
 
 # Main execution
-if __name__ == "__main__":
+def main():
     build_gui_ats_cmi_modeling_checklist()
+
+# If run as a script, launch the GUI
+if __name__ == "__main__":
+    main()
