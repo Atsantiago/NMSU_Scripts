@@ -2,7 +2,6 @@
 FDMA 2530 Shelf Installer v2.0.0 - GT TOOLS STYLE APPROACH
 ===========================================================
 Drag-and-drop installer for FDMA 2530 student shelf system.
-Follows GT Tools architecture for reliable installation and updates.
 
 Cross-platform compatible: Windows, macOS, Linux
 Maya versions: 2016-2025+ | Python 2/3 compatible
