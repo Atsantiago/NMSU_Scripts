@@ -1,5 +1,5 @@
 """
-CMI Tools Shelf Installer v2.0.0 - OPTIMIZED ZIP DOWNLOAD
+CMI Tools Shelf Installer v2.0.1 - OPTIMIZED ZIP DOWNLOAD
 =========================================================
 Drag-and-drop installer for CMI Tools student shelf system.
 Fast ZIP-based installation following GT Tools architecture.
@@ -24,7 +24,7 @@ except ImportError:
 
 import maya.cmds as cmds
 
-__version__ = "2.0.0"
+__version__ = "2.0.1"
 
 # Configuration - GitHub repository ZIP download
 REPO_ZIP_URL = "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/master.zip"
@@ -136,7 +136,7 @@ def create_module_file():
         mod_file_path = os.path.join(modules_dir, "cmi-tools.mod")
         cmi_root = get_cmi_tools_root()
         
-        mod_content = """+ cmi-tools 2.0.0 {cmi_root}
+        mod_content = """+ cmi-tools 2.0.1 {cmi_root}
 scripts: scripts
 icons: icons
 shelves: shelves
@@ -221,7 +221,7 @@ To remove this system completely:
 
 ## Technical Details
 
-- **Version**: 2.0.0
+- **Version**: 2.0.1
 - **Compatibility**: Maya 2016-2025+
 - **Platforms**: Windows, macOS, Linux
 - **Architecture**: GT Tools-inspired professional structure

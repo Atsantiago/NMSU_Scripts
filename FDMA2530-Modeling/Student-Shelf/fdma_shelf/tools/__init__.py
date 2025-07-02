@@ -1,5 +1,5 @@
 """
-FDMA 2530 Student Tools Package v2.0.0
+FDMA 2530 Student Tools Package v2.0.1
 ======================================
 
 Collection of educational tools for FDMA 2530 modeling students.
@@ -8,7 +8,7 @@ the shelf interface.
 
 Version
 -------
-2.0.0
+2.0.1
 """
 
 from __future__ import absolute_import
@@ -17,7 +17,7 @@ from __future__ import absolute_import
 # Package metadata
 # ----------------------------------------------------------------------
 
-__version__ = "2.0.0"         # Update this when making a new package release
+__version__ = "2.0.1"         # Update this when making a new package release
 __author__ = "Alexander T. Santiago"
 
 # ----------------------------------------------------------------------

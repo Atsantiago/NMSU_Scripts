@@ -1,5 +1,5 @@
 """
-FDMA 2530 Shelf Update System v2.0.0
+FDMA 2530 Shelf Update System v2.0.1
 =====================================
 
 Handles checking for updates via GitHub Releases, version comparison,

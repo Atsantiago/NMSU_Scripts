@@ -1,35 +1,44 @@
 """
 Utility modules for FDMA 2530 shelf system.
 
-Provides helper functions for downloading, caching, system operations,
-and other common tasks used throughout the shelf ecosystem.
-
-Modules
--------
-cache : Configuration caching and hash management
-downloader : HTTP download utilities for GitHub integration  
-system_utils : System and Maya environment helpers
-updater : Shelf update checking and installation
+Provides helper functions for:
+- caching (cache.py)
+- downloading (downloader.py)
+- system utilities (system_utils.py)
+- updating (updater.py)
 """
 
 from __future__ import absolute_import
 
-# Re-export commonly used functions for convenience
+# Re-export core cache functions
 from .cache import (
     read_local_config,
-    write_local_config, 
+    write_local_config,
     get_config_hash,
     cache_exists,
-    clear_cache
+    clear_cache,
 )
 
+# Re-export downloader function
 from .downloader import download_raw
+
+# Expose updater and system utils if desired
+from .system_utils import is_windows, is_macos, is_linux, get_os_name, get_platform_info
+from .updater import run_update, startup_check, check_for_updates
 
 __all__ = [
     "read_local_config",
-    "write_local_config", 
+    "write_local_config",
     "get_config_hash",
     "cache_exists",
     "clear_cache",
-    "download_raw"
+    "download_raw",
+    "is_windows",
+    "is_macos",
+    "is_linux",
+    "get_os_name",
+    "get_platform_info",
+    "run_update",
+    "startup_check",
+    "check_for_updates",
 ]
