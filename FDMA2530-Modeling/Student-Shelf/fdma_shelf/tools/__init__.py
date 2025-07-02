@@ -42,6 +42,7 @@ except ImportError:
     # checklist.py missing or had import errors
     pass
 
+"""
 # Import temporary human body import tool
 try:
     from . import TEMP_humanBody_import
@@ -49,7 +50,7 @@ try:
 except ImportError:
     # TEMP_humanBody_import.py missing or had import errors
     pass
-
+"""
 # ----------------------------------------------------------------------
 # Helper functions for tool discovery (optional)
 # ----------------------------------------------------------------------

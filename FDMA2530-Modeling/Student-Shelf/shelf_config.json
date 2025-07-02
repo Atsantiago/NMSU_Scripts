@@ -23,20 +23,6 @@
     },
     {
       "type": "button",
-      "label": "HumanBody",
-      "icon": "HumanBody.png",
-      "annotation": "Import Human Body v1.0.0",
-      "command": "import fdma_shelf.tools.TEMP_humanBody_import as h; h.main()",
-      "enabled": true
-    },
-    {
-      "type": "separator",
-      "style": "shelf",
-      "horizontal": false,
-      "enabled": true
-    },
-    {
-      "type": "button",
       "label": "Update",
       "icon": "updateApp.png",
       "annotation": "FDMA 2530 Shelf Updater v2.0.0",
