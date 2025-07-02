@@ -1,212 +1,208 @@
 """
-FDMA 2530 GitHub Cache Loader v1.2.1 - STREAMLINED VERSION
-==========================================================
+Cache management utilities for FDMA 2530 shelf system.
 
-Minimal, fast cache loader optimized for Maya shelf performance.
-Downloads GitHub scripts once, caches locally, executes instantly on subsequent runs.
+Handles reading and writing shelf configuration cache files,
+hash comparison for update detection, and local file management.
 
-Features:
-- Lightning-fast execution with minimal overhead
-- Python 2/3 compatibility across Maya 2016-2025+
-- Simple MD5 manifest for update detection
-- No external dependencies
-- Optimized for speed over features
+Functions
+---------
+read_local_config() -> dict or None
+    Read the cached shelf configuration from user scripts directory.
 
-Author: Alexander T. Santiago - asanti89@nmsu.edu
+write_local_config(config_data) -> bool
+    Write shelf configuration to cache file.
+
+get_config_hash(config_text) -> str
+    Generate MD5 hash of configuration text for change detection.
+
+cache_exists() -> bool
+    Check if local cache file exists.
+
+clear_cache() -> bool
+    Delete the local cache file.
 """
 
-from __future__ import absolute_import, division, print_function
+from __future__ import absolute_import, print_function
 
 import os
-import sys
 import json
 import hashlib
 
-# Python 2/3 compatibility - minimal approach
-try:
-    from urllib.request import urlopen  # Python 3
-except ImportError:
-    from urllib2 import urlopen  # Python 2
+import maya.cmds as cmds
 
-# ============================================================================
-# CONFIGURATION - MINIMAL AND FAST
-# ============================================================================
 
-__version__ = "1.2.1"
-MANIFEST_FILE = "fdma_cache_manifest.json"
+# ------------------------------------------------------------------
+# Constants
+# ------------------------------------------------------------------
 
-# ============================================================================
-# OPTIMIZED DIRECTORY DETECTION
-# ============================================================================
+_CACHE_FILENAME = "shelf_config_cache.json"
 
-def _get_cache_dir():
-    """Get cache directory with minimal overhead"""
-    try:
-        # Fast Maya detection
-        import maya.cmds as cmds
-        maya_scripts = cmds.internalVar(userScriptDir=True)
-        if maya_scripts:
-            return os.path.join(maya_scripts, "fdma_cache")
-    except:
-        pass
+
+# ------------------------------------------------------------------
+# Path helpers
+# ------------------------------------------------------------------
+
+def _get_cache_path():
+    """Return full path to the cache file in user scripts directory."""
+    scripts_dir = cmds.internalVar(userScriptDir=True)
+    return os.path.join(scripts_dir, _CACHE_FILENAME)
+
+
+# ------------------------------------------------------------------
+# Public cache operations
+# ------------------------------------------------------------------
+
+def cache_exists():
+    """Check if the cache file exists on disk."""
+    return os.path.exists(_get_cache_path())
+
+
+def read_local_config():
+    """
+    Read cached shelf configuration from disk.
     
-    # Fast fallback
-    return os.path.join(os.path.expanduser('~'), '.fdma_cache')
-
-# Global cache directory (computed once for speed)
-CACHE_DIR = _get_cache_dir()
-MANIFEST_PATH = os.path.join(CACHE_DIR, MANIFEST_FILE)
-
-# ============================================================================
-# FAST UTILITY FUNCTIONS
-# ============================================================================
-
-def _md5(data):
-    """Fast MD5 calculation with minimal type checking"""
-    if isinstance(data, str):
-        data = data.encode('utf-8')
-    h = hashlib.md5()
-    h.update(data)
-    return h.hexdigest()
-
-def _read_manifest():
-    """Read manifest with minimal error handling"""
+    Returns
+    -------
+    dict or None
+        Configuration dictionary if successful, None if file missing or invalid.
+    """
+    cache_path = _get_cache_path()
+    
+    if not os.path.exists(cache_path):
+        return None
+    
     try:
-        with open(MANIFEST_PATH, 'r') as fh:
+        with open(cache_path, "r") as fh:
             return json.load(fh)
-    except:
-        return {}
+    except (IOError, ValueError, TypeError) as e:
+        print("Failed to read cache file: {0}".format(e))
+        return None
 
-def _write_manifest(manifest):
-    """Write manifest with atomic operation - optimized for speed"""
+
+def write_local_config(config_data):
+    """
+    Write shelf configuration to cache file.
+    
+    Parameters
+    ----------
+    config_data : dict or str
+        Configuration data as dictionary or JSON string.
+        
+    Returns
+    -------
+    bool
+        True if write successful, False otherwise.
+    """
+    cache_path = _get_cache_path()
+    
     try:
-        # Ensure directory exists
-        if not os.path.isdir(CACHE_DIR):
-            os.makedirs(CACHE_DIR)
+        # Ensure parent directory exists
+        cache_dir = os.path.dirname(cache_path)
+        if not os.path.exists(cache_dir):
+            os.makedirs(cache_dir)
         
-        # Fast atomic write
-        temp_path = MANIFEST_PATH + '.tmp'
-        with open(temp_path, 'w') as fh:
-            json.dump(manifest, fh, separators=(',', ':'))  # Compact JSON
+        # Convert to string if dict provided
+        if isinstance(config_data, dict):
+            config_text = json.dumps(config_data, indent=2, sort_keys=True)
+        else:
+            config_text = str(config_data)
         
-        # Atomic rename (cross-platform safe)
-        if os.path.exists(MANIFEST_PATH) and sys.platform.startswith('win'):
-            os.remove(MANIFEST_PATH)  # Windows requirement
-        os.rename(temp_path, MANIFEST_PATH)
-    except:
-        # Silent failure - don't break execution for manifest issues
-        pass
+        # Write to file
+        with open(cache_path, "w") as fh:
+            fh.write(config_text)
+        
+        return True
+        
+    except (IOError, TypeError) as e:
+        print("Failed to write cache file: {0}".format(e))
+        return False
 
-# ============================================================================
-# MAIN API FUNCTION - OPTIMIZED FOR SPEED
-# ============================================================================
 
-def load_execute(raw_url, local_name, namespace=None):
+def read_local_config_text():
     """
-    Download and cache script from GitHub, execute instantly on subsequent runs.
+    Read cached configuration as raw text string.
     
-    Optimized for maximum speed:
-    - Minimal error handling for performance
-    - Fast cache checks with simple hash comparison
-    - Direct execution without complex validation
-    - Silent failures that don't break workflow
+    Returns
+    -------
+    str
+        Raw JSON text from cache file, empty string if not found.
     """
+    cache_path = _get_cache_path()
     
-    if namespace is None:
-        namespace = globals()
-
-    # Fast cache setup
-    if not os.path.isdir(CACHE_DIR):
-        try:
-            os.makedirs(CACHE_DIR)
-        except:
-            pass  # Continue even if cache dir creation fails
-
-    manifest = _read_manifest()
-    local_path = os.path.join(CACHE_DIR, local_name)
+    if not os.path.exists(cache_path):
+        return ""
     
-    need_download = True
-    data = b""
+    try:
+        with open(cache_path, "r") as fh:
+            return fh.read()
+    except IOError as e:
+        print("Failed to read cache text: {0}".format(e))
+        return ""
 
-    # Fast cache check
-    if os.path.exists(local_path):
-        try:
-            with open(local_path, 'rb') as fh:
-                data = fh.read()
-            
-            # Quick hash comparison
-            if manifest.get(local_name) == _md5(data):
-                need_download = False
-                print("[FDMA-cache] Using cached: {}".format(local_name))
-        except:
-            data = b""  # Force download on any error
 
-    # Fast download with minimal retries
-    if need_download:
-        try:
-            print("[FDMA-cache] Downloading: {}".format(raw_url))
-            response = urlopen(raw_url, timeout=15)
-            data = response.read()
-            
-            # Fast cache write
-            try:
-                with open(local_path, 'wb') as fh:
-                    fh.write(data)
-                
-                # Update manifest
-                manifest[local_name] = _md5(data)
-                _write_manifest(manifest)
-                
-                print("[FDMA-cache] Cached: {}".format(local_path))
-            except:
-                pass  # Continue even if caching fails
-                
-        except Exception as e:
-            print("[FDMA-cache] Download failed: {}".format(e))
-            if not data:
-                raise  # Only raise if we have no fallback data
-
-    # Fast execution
-    if sys.version_info[0] >= 3 and isinstance(data, bytes):
-        data = data.decode('utf-8')
+def get_config_hash(config_text):
+    """
+    Generate MD5 hash of configuration text for change detection.
     
-    exec(data, namespace)
+    Parameters
+    ----------
+    config_text : str
+        Configuration text to hash.
+        
+    Returns
+    -------
+    str
+        MD5 hash as hexadecimal string.
+    """
+    if not isinstance(config_text, str):
+        config_text = str(config_text)
+    
+    return hashlib.md5(config_text.encode("utf-8")).hexdigest()
 
-# ============================================================================
-# MINIMAL UTILITY FUNCTIONS
-# ============================================================================
 
 def clear_cache():
-    """Clear cache with minimal error handling"""
+    """
+    Delete the local cache file.
+    
+    Returns
+    -------
+    bool
+        True if deletion successful or file did not exist, False on error.
+    """
+    cache_path = _get_cache_path()
+    
+    if not os.path.exists(cache_path):
+        return True
+    
     try:
-        import shutil
-        if os.path.exists(CACHE_DIR):
-            shutil.rmtree(CACHE_DIR)
-            print("[FDMA-cache] Cache cleared")
-    except:
-        pass
+        os.remove(cache_path)
+        return True
+    except OSError as e:
+        print("Failed to delete cache file: {0}".format(e))
+        return False
+
 
 def get_cache_info():
-    """Get basic cache info for diagnostics"""
-    try:
-        manifest = _read_manifest()
-        cache_size = sum(os.path.getsize(os.path.join(CACHE_DIR, f)) 
-                        for f in os.listdir(CACHE_DIR) 
-                        if os.path.isfile(os.path.join(CACHE_DIR, f)))
-        return {
-            'cache_dir': CACHE_DIR,
-            'cached_files': len(manifest),
-            'cache_size_mb': round(cache_size / (1024 * 1024), 2)
-        }
-    except:
-        return {'error': 'Cache info unavailable'}
-
-# ============================================================================
-# MODULE INFO
-# ============================================================================
-
-if __name__ == "__main__":
-    print("FDMA 2530 GitHub Cache Loader v{} - Streamlined".format(__version__))
-    info = get_cache_info()
-    if 'error' not in info:
-        print("Cache: {} files, {:.1f}MB".format(info['cached_files'], info['cache_size_mb']))
+    """
+    Get information about the current cache state.
+    
+    Returns
+    -------
+    dict
+        Dictionary with cache file path, existence status, and size.
+    """
+    cache_path = _get_cache_path()
+    exists = os.path.exists(cache_path)
+    
+    size = 0
+    if exists:
+        try:
+            size = os.path.getsize(cache_path)
+        except OSError:
+            size = -1
+    
+    return {
+        "path": cache_path,
+        "exists": exists,
+        "size_bytes": size
+    }
