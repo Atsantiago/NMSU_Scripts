@@ -127,36 +127,30 @@ def _create_shelf(config, startup=False):
 
 
 def _build_button_command(item):
-    """Return a python string that will be executed when the button is pressed."""
-    
-    # Check if item has 'command' field (new JSON format)
-    if 'command' in item:
-        return item['command']
-    
-    # Fallback to old script_url format for backward compatibility
-    if item.get("label") == "Update":
-        # Update button points to updater inside main package
-        return (
-            "import fdma_shelf.utils.updater as _u; "
-            "_u.run_update()"
-        )
+    """
+    Return a Python command string for the shelf button.
+    Uses `command` if provided in JSON, else falls back to script_url logic.
+    """
+    # 1) If JSON includes a 'command', use it verbatim:
+    if "command" in item:
+        return item["command"]
 
-    # Regular tool button - try to use command first, fallback to script_url
-    if 'script_url' in item:
-        tool_import = item["script_url"]
-        return (
-            "import sys; "
-            "try: from urllib.request import urlopen; "
-            "except ImportError: from urllib2 import urlopen; "
-            "import types; "
-            "code = urlopen('{url}').read(); "
-            "if sys.version_info[0] >= 3 and isinstance(code, bytes): code = code.decode('utf-8'); "
-            "mod = types.ModuleType('temp_tool'); "
-            "exec(code, mod.__dict__); "
-            "func = getattr(mod, 'main', None) or getattr(mod, 'run', None); "
-            "func() if callable(func) else print('No main/run function found')"
-        ).format(url=tool_import)
+    # 2) Fallback for Update button (if you still use script_url):
+    if item.get("label") == "Update":
+        return "import fdma_shelf.utils.updater as _u; _u.run_update()"
     
+    # 3) Legacy script_url fallback for other tools
+    tool_url = item.get("script_url", "")
+    return (
+        "import sys, urllib.request; "
+        "from types import ModuleType; "
+        "code = urllib.request.urlopen('%s').read(); "
+        "code = code.decode('utf-8') if isinstance(code, bytes) else code; "
+        "mod = ModuleType('temp'); exec(code, mod.__dict__); "
+        "fn = getattr(mod, 'main', None) or getattr(mod, 'run', None); "
+        "fn() if callable(fn) else None"
+    ) % tool_url
+
     # Default fallback
     return "print('Button command not configured properly')"
 
