@@ -1,7 +1,7 @@
 {
   "shelf_info": {
     "name": "FDMA_2530",
-    "version": "1.2.4",
+    "version": "2.0.0",
     "description": "FDMA 2530 Student Modeling Shelf",
     "cell_width": 35,
     "cell_height": 35
@@ -11,44 +11,37 @@
       "type": "button",
       "label": "Checklist",
       "icon": "checkboxOn.png",
-      "annotation": "CMI Modeling Checklist v3.0",
-      "script_url": "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/core-scripts/cmi_modeling_checklist.py",
-      "width": 35,
-      "height": 35,
+      "annotation": "CMI Modeling Checklist v2.0.0",
+      "command": "import fdma_shelf.tools.checklist as t; t.main()",
       "enabled": true
     },
     {
-     "type": "separator",
-     "style": "shelf",
-     "horizontal": false,
-     "enabled": true
+      "type": "separator",
+      "style": "shelf",
+      "horizontal": false,
+      "enabled": true
     },
     {
       "type": "button",
       "label": "HumanBody",
       "icon": "HumanBody.png",
-      "annotation": "Import Human Body ",
-      "script_url": "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/core-scripts/TEMP_humanBody_import.py",
-      "width": 35,
-      "height": 35,
+      "annotation": "Import Human Body v0.1.0",
+      "command": "import fdma_shelf.tools.TEMP_humanBody_import as h; h.main()",
       "enabled": true
     },
     {
-     "type": "separator",
-     "style": "shelf",
-     "horizontal": false,
-     "enabled": true
+      "type": "separator",
+      "style": "shelf",
+      "horizontal": false,
+      "enabled": true
     },
     {
-      "type": "button", 
+      "type": "button",
       "label": "Update",
       "icon": "updateApp.png",
-      "annotation": "FDMA 2530 Shelf Updater v1.2.1",
-      "script_url": "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf-button-scripts/update_shelf.py",
-      "width": 28,
-      "height": 28,
+      "annotation": "FDMA 2530 Shelf Updater v2.0.0",
+      "command": "import fdma_shelf.utils.updater as u; u.run_update()",
       "enabled": true
     }
   ]
 }
-
