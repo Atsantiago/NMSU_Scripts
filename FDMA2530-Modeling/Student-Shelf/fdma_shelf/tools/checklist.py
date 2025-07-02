@@ -157,7 +157,7 @@ def build_gui_ats_cmi_modeling_checklist():
         mxb=False,
         s=True,
         resizeToFitChildren=True,
-        width=600,
+        width=420,
         height=800
     )
 
@@ -345,7 +345,7 @@ def build_gui_ats_cmi_modeling_checklist():
 
     # Show window and set size (resizable)
     cmds.showWindow(window_name)
-    cmds.window(window_name, e=True, width=420, height=650)
+    cmds.window(window_name, e=True, width=420, height=800)
     
     # Set Window Icon
     _set_window_icon(window_name)

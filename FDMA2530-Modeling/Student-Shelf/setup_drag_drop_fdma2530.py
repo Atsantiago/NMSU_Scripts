@@ -391,7 +391,7 @@ def show_install_dialog():
         cancelButton="Cancel"
     )
     
-    if choice == "Install Module":
+    if choice == "Install":
         if install_permanent():
             cmds.confirmDialog(
                 title="Success",
