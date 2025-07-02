@@ -33,11 +33,11 @@ Key improvements:
 import copy
 import sys
 # Version information
-__version__ = "3.0"
+__version__ = "2.0.0"
 
 # Script Information  
 SCRIPT_NAME = "CMI Modeling Checklist"
-SCRIPT_VERSION = __version__  # Will be "3.0"
+SCRIPT_VERSION = __version__ 
 PYTHON_VERSION = sys.version_info.major
 
 # Maya imports  
