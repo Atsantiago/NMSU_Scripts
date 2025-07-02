@@ -1,26 +1,49 @@
+"""
+Temporary Human Body Import Tool v0.1.0
+=======================================
+
+Temporary tool for importing the HumanBody.ma example file into the current Maya scene.
+
+Created by: Alexander T. Santiago  
+Contact: asanti89@nmsu.edu
+"""
+
 import maya.cmds as cmds
-import sys4# Version information
-__version__ = "1.1.0"
+import sys
+import os
 
-# Determine Python version
-python_version = sys.version_info[0]
+__version__ = "0.1.0"
 
-# Base path for Maya content, adjust if your installation path differs
-base_path = "C:/Program Files/Autodesk/"
+def main():
+    """
+    Locate the HumanBody.ma example asset under Maya's Examples folder
+    and import it into the current scene.
+    """
+    # Determine Maya install directory and current version
+    maya_version = cmds.about(version=True)
+    maya_install = cmds.internalVar(mayaInstallDir=True)
+    # Construct path: <MAYA_INSTALL>/Examples/Modeling/Sculpting_Base_Meshes/Bipeds/HumanBody.ma
+    examples_dir = os.path.join(
+        maya_install, "Examples", "Modeling",
+        "Sculpting_Base_Meshes", "Bipeds"
+    )
+    file_path = os.path.join(examples_dir, "HumanBody.ma")
 
-# Determine Maya version and construct the file path
-if python_version == 3:
-    # This is for newer versions of Maya with Python 3
-    maya_version = cmds.about(version=True)  # Automatically gets the Maya version
-    file_path = f"{base_path}Maya{maya_version}/Examples/Modeling/Sculpting_Base_Meshes/Bipeds/HumanBody.ma"
-else:
-    # This is for older versions of Maya with Python 2
-    maya_version = cmds.about(version=True)  # Automatically gets the Maya version
-    file_path = "{base_path}Maya{}/Examples/Modeling/Sculpting_Base_Meshes/Bipeds/HumanBody.ma".format(maya_version)
+    # Verify the file exists
+    if not os.path.isfile(file_path):
+        cmds.warning(f"HumanBody.ma not found at {file_path}")
+        return
 
-# Import the "HumanBody.ma" file into the current scene
-try:
-    cmds.file(file_path, i=True, force=False)  # Use 'i=True' for import
-    print("Successfully imported: " + file_path)
-except Exception as e:
-    print("Failed to import the file. Error: " + str(e))
+    # Import the MA file
+    try:
+        cmds.file(file_path, i=True, force=False)
+        print(f"Successfully imported: {file_path}")
+    except Exception as e:
+        cmds.warning(f"Failed to import file: {e}")
+
+def run():
+    """Alias entry point for shelf button commands."""
+    main()
+
+if __name__ == "__main__":
+    main()
