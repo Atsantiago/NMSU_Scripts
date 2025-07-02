@@ -128,24 +128,37 @@ def _create_shelf(config, startup=False):
 
 def _build_button_command(item):
     """Return a python string that will be executed when the button is pressed."""
+    
+    # Check if item has 'command' field (new JSON format)
+    if 'command' in item:
+        return item['command']
+    
+    # Fallback to old script_url format for backward compatibility
     if item.get("label") == "Update":
         # Update button points to updater inside main package
         return (
-            "import fdma_shelf.utils.updater as _u;"
+            "import fdma_shelf.utils.updater as _u; "
             "_u.run_update()"
         )
 
-    # Regular tool button imports and runs tool main entry if present
-    tool_import = item["script_url"]
-    return (
-        "import sys, urllib.request, importlib, types; "
-        "code = urllib.request.urlopen('{url}').read().decode('utf-8'); "
-        "mod = types.ModuleType('temp_tool'); "
-        "exec(code, mod.__dict__); "
-        "func = getattr(mod, 'main', None) or getattr(mod, 'run', None); "
-        "func() if callable(func) else None"
-    ).format(url=tool_import)
-
+    # Regular tool button - try to use command first, fallback to script_url
+    if 'script_url' in item:
+        tool_import = item["script_url"]
+        return (
+            "import sys; "
+            "try: from urllib.request import urlopen; "
+            "except ImportError: from urllib2 import urlopen; "
+            "import types; "
+            "code = urlopen('{url}').read(); "
+            "if sys.version_info[0] >= 3 and isinstance(code, bytes): code = code.decode('utf-8'); "
+            "mod = types.ModuleType('temp_tool'); "
+            "exec(code, mod.__dict__); "
+            "func = getattr(mod, 'main', None) or getattr(mod, 'run', None); "
+            "func() if callable(func) else print('No main/run function found')"
+        ).format(url=tool_import)
+    
+    # Default fallback
+    return "print('Button command not configured properly')"
 
 def build_shelf(startup=False):
     """

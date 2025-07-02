@@ -25,7 +25,7 @@
       "type": "button",
       "label": "HumanBody",
       "icon": "HumanBody.png",
-      "annotation": "Import Human Body v0.1.0",
+      "annotation": "Import Human Body v1.0.0",
       "command": "import fdma_shelf.tools.TEMP_humanBody_import as h; h.main()",
       "enabled": true
     },

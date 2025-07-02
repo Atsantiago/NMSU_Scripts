@@ -1,49 +1,37 @@
 """
-FDMA 2530 Shelf Package
-=======================
+FDMA 2530 Shelf Package v2.0.0
+==============================
 
-Root package for the FDMA 2530 student tool-set.
+Root package for FDMA 2530 student shelf system.
+Uses Maya module system for clean installation.
 
-* Provides a one-click shelf for novice users.
-* Uses semantic versioning (MAJOR.MINOR.PATCH).
-
-Author:  Alexander T. Santiago
-Version: 2.0.0  – first release under new package layout
+Created by: Alexander T. Santiago
+Contact: asanti89@nmsu.edu
 """
 
-# ----------------------------------------------------------------------
-# Public package metadata
-# ----------------------------------------------------------------------
-__version__: str = "2.0.0"           # MAJOR change: new folder structure
-__author__:  str = "Alexander T. Santiago"
-__all__ = ["build_shelf"]            # what `from fdma_shelf import *` exposes
+__version__ = "2.0.0"
+__author__ = "Alexander T. Santiago"
 
-# ----------------------------------------------------------------------
-# Lazy shelf builder import
-# ----------------------------------------------------------------------
-def build_shelf(startup: bool = False) -> None:
-    """
-    Build (or rebuild) the FDMA 2530 shelf from the local JSON
-    configuration.  Wrapped in a short stub so we do not import heavy
-    modules until this function is called.
-
-    Parameters
-    ----------
-    startup : bool, optional
-        If True the function is being called during Maya startup;
-        suppresses heavy pop-ups or view-port alerts.
-    """
-    # Local import keeps initial package import light-weight
+def build_shelf(startup=False):
+    """Build the FDMA 2530 shelf from configuration"""
     from .shelf.builder import build_shelf as _real_builder
     _real_builder(startup=startup)
 
-# ----------------------------------------------------------------------
-# Automatic shelf creation at Maya launch
-# ----------------------------------------------------------------------
+# Automatic shelf creation when module loads (only in Maya)
 try:
-    # Only runs when inside Maya
     import maya.utils as _mu
-    _mu.executeDeferred(lambda: build_shelf(startup=True))
+    import maya.cmds as _cmds
+    
+    # Only auto-create on startup, not on manual imports
+    def _startup_shelf():
+        # Small delay to ensure Maya UI is ready
+        _mu.executeDeferred(lambda: build_shelf(startup=True))
+    
+    # Schedule startup shelf creation
+    _startup_shelf()
+    
 except ImportError:
-    # Not running inside Maya – ignore
+    # Not in Maya - skip startup creation
     pass
+
+__all__ = ["build_shelf"]
