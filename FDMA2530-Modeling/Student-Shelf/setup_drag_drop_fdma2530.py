@@ -1,16 +1,17 @@
 """
-FDMA 2530 Shelf Installer v1.2.4 - JSON CONFIGURATION APPROACH
-================================================================
-Dynamic shelf creation from JSON configuration on GitHub
+FDMA 2530 Shelf Installer v2.0.0 - GT TOOLS STYLE APPROACH
+===========================================================
+Drag-and-drop installer for FDMA 2530 student shelf system.
+Follows GT Tools architecture for reliable installation and updates.
+
 Cross-platform compatible: Windows, macOS, Linux
 Maya versions: 2016-2025+ | Python 2/3 compatible
 """
 
 import os
 import sys
+import shutil
 import tempfile
-import importlib
-import json
 
 try:
     from urllib.request import urlopen
@@ -20,450 +21,280 @@ except ImportError:
 import maya.cmds as cmds
 import maya.mel as mel
 
-__version__ = "1.2.4"
+__version__ = "2.0.0"
 
-# Configuration URLs
+# Configuration URLs - GitHub repository paths
 REPO_RAW = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/"
-CONFIG_URL = REPO_RAW + "FDMA2530-Modeling/Student-Shelf/shelf_config.json"
-LOADER_URL = REPO_RAW + "FDMA2530-Modeling/Student-Shelf/utilities/cache_loader.py"
-SHELF_NAME = "FDMA_2530"
+PACKAGE_BASE_URL = REPO_RAW + "FDMA2530-Modeling/Student-Shelf/"
 
-# Visual status button colors (Maya RGB values)
-BUTTON_COLORS = {
-    'up_to_date': [0.5, 0.5, 0.5],        # Gray
-    'updates_available': [0.2, 0.8, 0.2], # Green
-    'update_failed': [0.8, 0.2, 0.2],     # Red
-    'checking': [0.8, 0.8, 0.2]           # Yellow
+# Files to download and install
+REQUIRED_FILES = {
+    "fdma_shelf/__init__.py": PACKAGE_BASE_URL + "fdma_shelf/__init__.py",
+    "fdma_shelf/shelf/__init__.py": PACKAGE_BASE_URL + "fdma_shelf/shelf/__init__.py", 
+    "fdma_shelf/shelf/builder.py": PACKAGE_BASE_URL + "fdma_shelf/shelf/builder.py",
+    "fdma_shelf/utils/__init__.py": PACKAGE_BASE_URL + "fdma_shelf/utils/__init__.py",
+    "fdma_shelf/utils/cache.py": PACKAGE_BASE_URL + "fdma_shelf/utils/cache.py",
+    "fdma_shelf/utils/downloader.py": PACKAGE_BASE_URL + "fdma_shelf/utils/downloader.py",
+    "fdma_shelf/utils/system_utils.py": PACKAGE_BASE_URL + "fdma_shelf/utils/system_utils.py",
+    "fdma_shelf/utils/updater.py": PACKAGE_BASE_URL + "fdma_shelf/utils/updater.py",
+    "fdma_shelf/tools/__init__.py": PACKAGE_BASE_URL + "fdma_shelf/tools/__init__.py",
+    "fdma_shelf/tools/checklist.py": PACKAGE_BASE_URL + "fdma_shelf/tools/checklist.py",
+    "fdma_shelf/tools/TEMP_humanBody_import.py": PACKAGE_BASE_URL + "fdma_shelf/tools/TEMP_humanBody_import.py",
+    "shelf_config.json": PACKAGE_BASE_URL + "shelf_config.json"
 }
 
-def safe_download(url):
+def safe_download(url, timeout=15):
     """Download content from URL with error handling"""
     try:
-        response = urlopen(url, timeout=15)
+        response = urlopen(url, timeout=timeout)
         content = response.read()
         if sys.version_info[0] >= 3 and isinstance(content, bytes):
             content = content.decode("utf-8")
         return content
     except Exception as e:
-        cmds.warning("Download failed: " + str(e))
+        print("Download failed for {0}: {1}".format(url, e))
         return None
 
-def safe_write(path, content):
+def safe_write_file(path, content):
     """Write content to file with directory creation"""
-    directory = os.path.dirname(path)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    
-    if sys.version_info[0] >= 3:
-        with open(path, 'w', encoding='utf-8') as f:
-            f.write(content)
-    else:
-        import codecs
-        with codecs.open(path, 'w', encoding='utf-8') as f:
-            f.write(content)
-
-def update_button_visual_status(label, status):
-    """Set backgroundColor on the first shelfButton whose label matches *label*"""
     try:
-        if not cmds.shelfLayout(SHELF_NAME, exists=True):
-            return
-        for btn in cmds.shelfLayout(SHELF_NAME, q=True, childArray=True) or []:
-            if cmds.objectTypeUI(btn) == 'shelfButton' and cmds.shelfButton(btn, q=True, label=True) == label:
-                cmds.shelfButton(btn, e=True, backgroundColor=BUTTON_COLORS.get(status, [0.5, 0.5, 0.5]))
-                break
-    except RuntimeError:
-        pass
-
-def viewport_yellow_alert(msg):
-    """Single-shot yellow banner in lower-left of viewport"""
-    if not hasattr(viewport_yellow_alert, '_fired'):
-        viewport_yellow_alert._fired = False
-    
-    if not viewport_yellow_alert._fired:
-        cmds.inViewMessage(
-            amg='<span style="color:#FFF00">{}</span>'.format(msg),
-            pos='botLeft',
-            fade=True,
-            alpha=0.95,
-            dragKill=False,
-            fadeStayTime=3000
-        )
-        viewport_yellow_alert._fired = True
-
-def download_json_config():
-    """Download and parse the JSON configuration file"""
-    try:
-        print("Downloading shelf configuration from GitHub...")
-        config_content = safe_download(CONFIG_URL)
-        if not config_content:
-            return None
+        directory = os.path.dirname(path)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
         
-        # Parse JSON configuration
-        config = json.loads(config_content)
-        print("Configuration loaded successfully. Version: " + config['shelf_info']['version'])
-        return config
-        
-    except Exception as e:
-        cmds.warning("Failed to load configuration: " + str(e))
-        return None
-
-def cleanup_existing_shelf(shelf_name):
-    """Clean up existing shelf"""
-    try:
-        if cmds.shelfLayout(shelf_name, exists=True):
-            cmds.deleteUI(shelf_name, layout=True)
-            print("Removed existing shelf: " + shelf_name)
-        return True
-    except Exception as e:
-        print("Shelf cleanup warning: " + str(e))
-        return True
-
-def create_button_command(script_url):
-    """Create a self-contained button command that downloads and executes a script"""
-    command_template = '''
-# Auto-generated button command for: {script_url}
-import sys
-import tempfile
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib2 import urlopen
-
-def execute_script():
-    """Download and execute script with proper namespace handling"""
-    try:
-        url = "{script_url}"
-        response = urlopen(url, timeout=15)
-        content = response.read()
-        if sys.version_info[0] >= 3 and isinstance(content, bytes):
-            content = content.decode("utf-8")
-        
-        # Create a proper execution namespace that persists in Maya
-        execution_namespace = globals().copy()
-        execution_namespace.update(locals())
-        
-        # Execute the script in the correct namespace
-        exec(content, execution_namespace, execution_namespace)
-        
-        # Try to call common entry point functions
-        for func_name in ['build_gui_ats_cmi_modeling_checklist', 'main', 'run', 'start']:
-            if func_name in execution_namespace:
-                execution_namespace[func_name]()
-                print("Script executed successfully via: " + func_name)
-                return
-        
-        print("Script executed successfully!")
-        
-    except Exception as e:
-        import maya.cmds as cmds
-        cmds.warning("Failed to execute script: " + str(e))
-        import traceback
-        print(traceback.format_exc())
-
-execute_script()
-'''
-    return command_template.format(script_url=script_url)
-
-def create_update_button_command(script_url):
-    """Specialized command for the Update button with correct deferred rebuild."""
-    return '''
-import sys, hashlib, os, json, tempfile
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib2 import urlopen
-
-import maya.cmds as cmds
-import maya.utils
-
-# Helper to change button color
-update_button_visual_status = globals().get('update_button_visual_status')
-
-label = "Update"
-if update_button_visual_status:
-    update_button_visual_status(label, "checking")
-
-def safe_download(url):
-    try:
-        data = urlopen(url, timeout=15).read()
-        if sys.version_info[0] >= 3 and isinstance(data, bytes):
-            data = data.decode("utf-8")
-        return data
-    except Exception as e:
-        cmds.warning("Download failed: " + str(e))
-        return None
-
-def show_up_to_date_message():
-    cmds.inViewMessage(
-        amg='<span style="color:#FFCC00">You are already on the latest version</span>',
-        pos='botLeft', fade=True, alpha=0.9, dragKill=False, fadeStayTime=3000
-    )
-
-def show_update_confirmation_dialog():
-    choice = cmds.confirmDialog(
-        title='New Updates Available',
-        message='New Updates Available. Would you like to update the shelf?',
-        button=['Yes', 'No'], defaultButton='Yes', cancelButton='No'
-    )
-    return choice == 'Yes'
-
-def rebuild_shelf(latest_config):
-    """Deferred function to safely delete and recreate the shelf."""
-    try:
-        # Parse new config
-        config = json.loads(latest_config)
-        shelf_name = config['shelf_info']['name']
-
-        # Delete old shelf
-        if cmds.shelfLayout(shelf_name, exists=True):
-            cmds.deleteUI(shelf_name, layout=True)
-
-        # Dynamically load and run the installer script
-        installer_url = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/setup_drag_drop_fdma2530.py"
-        installer_code = safe_download(installer_url)
-        if installer_code:
-            exec(installer_code, globals())
-            # Recreate permanently-installed shelf
-            install_permanent()
-
-    except Exception as e:
-        cmds.warning("Deferred shelf rebuild failed: " + str(e))
-        if update_button_visual_status:
-            update_button_visual_status(label, "update_failed")
-        return
-
-    # On success, update cache and button color
-    cache_path = os.path.join(cmds.internalVar(userScriptDir=True), "shelf_config_cache.json")
-    with open(cache_path, "w") as f:
-        f.write(latest_config)
-    if update_button_visual_status:
-        update_button_visual_status(label, "up_to_date")
-
-# Main update logic
-try:
-    config_url = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/FDMA2530-Modeling/Student-Shelf/shelf_config.json"
-    latest = safe_download(config_url)
-    if not latest:
-        raise RuntimeError("No data")
-
-    # Load installed config
-    cache_path = os.path.join(cmds.internalVar(userScriptDir=True), "shelf_config_cache.json")
-    installed = ""
-    if os.path.exists(cache_path):
-        with open(cache_path, 'r') as f:
-            installed = f.read()
-
-    # Compare hashes
-    upd_needed = hashlib.md5(latest.encode("utf-8")).hexdigest() != hashlib.md5(installed.encode("utf-8")).hexdigest()
-
-    if upd_needed:
-        if update_button_visual_status:
-            update_button_visual_status(label, "updates_available")
-        if show_update_confirmation_dialog():
-            # Defer the actual shelf delete/create to avoid crashes
-            maya.utils.executeDeferred(lambda: rebuild_shelf(latest))
+        if sys.version_info[0] >= 3:
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(content)
         else:
-            # Keep green as reminder
+            import codecs
+            with codecs.open(path, 'w', encoding='utf-8') as f:
+                f.write(content)
+        return True
+    except Exception as e:
+        print("Failed to write file {0}: {1}".format(path, e))
+        return False
+
+def get_scripts_directory():
+    """Get Maya user scripts directory"""
+    return cmds.internalVar(userScriptDir=True)
+
+def download_package_files(target_dir, use_temp=False):
+    """Download all package files to target directory"""
+    print("Downloading FDMA 2530 shelf package files...")
+    
+    failed_downloads = []
+    
+    for relative_path, url in REQUIRED_FILES.items():
+        print("Downloading: {0}".format(relative_path))
+        content = safe_download(url)
+        
+        if content is None:
+            failed_downloads.append(relative_path)
+            continue
+        
+        full_path = os.path.join(target_dir, relative_path)
+        if not safe_write_file(full_path, content):
+            failed_downloads.append(relative_path)
+    
+    if failed_downloads:
+        print("Failed to download: {0}".format(", ".join(failed_downloads)))
+        return False
+    
+    print("Package download completed successfully!")
+    return True
+
+def modify_user_setup(scripts_dir):
+    """Add or update userSetup.py to bootstrap shelf creation"""
+    user_setup_path = os.path.join(scripts_dir, "userSetup.py")
+    
+    # Bootstrap code to add
+    bootstrap_code = """
+# FDMA 2530 Shelf Auto-Loader v2.0.0
+try:
+    import fdma_shelf
+    print("FDMA 2530 shelf system loaded successfully")
+except ImportError as e:
+    print("FDMA 2530 shelf system failed to load: {0}".format(e))
+"""
+    
+    # Read existing userSetup.py if it exists
+    existing_content = ""
+    if os.path.exists(user_setup_path):
+        try:
+            with open(user_setup_path, 'r') as f:
+                existing_content = f.read()
+        except Exception:
             pass
-    else:
-        show_up_to_date_message()
-        if update_button_visual_status:
-            update_button_visual_status(label, "up_to_date")
-
-except Exception as err:
-    cmds.warning("Update check failed: " + str(err))
-    if update_button_visual_status:
-        update_button_visual_status(label, "update_failed")
-'''.format(script_url)
-
-
-def create_shelf_from_json_config(config, use_temp=False):
-    """Create shelf dynamically from JSON configuration"""
+    
+    # Check if our bootstrap is already present
+    if "FDMA 2530 Shelf Auto-Loader" in existing_content:
+        print("userSetup.py already contains FDMA 2530 shelf bootstrap")
+        return True
+    
+    # Add bootstrap to existing content
+    updated_content = existing_content + bootstrap_code
+    
+    # Write updated userSetup.py
     try:
-        # Get shelf configuration
-        shelf_info = config['shelf_info']
-        shelf_name = shelf_info['name']
+        with open(user_setup_path, 'w') as f:
+            f.write(updated_content)
+        print("Updated userSetup.py with FDMA 2530 shelf bootstrap")
+        return True
+    except Exception as e:
+        print("Failed to update userSetup.py: {0}".format(e))
+        return False
+
+def remove_user_setup_bootstrap(scripts_dir):
+    """Remove FDMA 2530 bootstrap from userSetup.py"""
+    user_setup_path = os.path.join(scripts_dir, "userSetup.py")
+    
+    if not os.path.exists(user_setup_path):
+        return True
+    
+    try:
+        with open(user_setup_path, 'r') as f:
+            content = f.read()
         
-        # Get the shelf top level using Python
-        gShelfTopLevel = mel.eval('global string $gShelfTopLevel; $temp = $gShelfTopLevel')
+        # Remove our bootstrap section
+        lines = content.split('\n')
+        filtered_lines = []
+        skip_section = False
         
-        # If still empty, force UI refresh and try again
-        if not gShelfTopLevel:
-            cmds.refresh(force=True)
-            try:
-                import maya.utils
-                maya.utils.processIdleEvents()
-            except:
-                pass
-            gShelfTopLevel = mel.eval('global string $gShelfTopLevel; $temp = $gShelfTopLevel')
+        for line in lines:
+            if "FDMA 2530 Shelf Auto-Loader" in line:
+                skip_section = True
+                continue
+            elif skip_section and line.strip().startswith("except"):
+                skip_section = False
+                continue
+            elif not skip_section:
+                filtered_lines.append(line)
         
-        if not gShelfTopLevel:
-            cmds.warning("Maya shelf system not ready")
-            return False
+        updated_content = '\n'.join(filtered_lines)
         
-        print("Using shelf parent: " + gShelfTopLevel)
+        with open(user_setup_path, 'w') as f:
+            f.write(updated_content)
         
-        # Remove existing shelf
-        cleanup_existing_shelf(shelf_name)
-        
-        # Create new shelf with JSON configuration
-        shelf = cmds.shelfLayout(
-            shelf_name, 
-            parent=gShelfTopLevel, 
-            cellWidth=shelf_info.get('cell_width', 35),
-            cellHeight=shelf_info.get('cell_height', 35)
-        )
-        print("Created shelf layout: " + shelf)
-        
-        # Make status functions available to button commands
-        import __main__
-        __main__.update_button_visual_status = update_button_visual_status
-        __main__.viewport_yellow_alert = viewport_yellow_alert
-        
-        # Create buttons and separators from JSON configuration
-        for item in config['buttons']:
-            if not item.get('enabled', True):
-                continue  # Skip disabled items
-                
-            if item['type'] == 'separator':
-                cmds.separator(
-                    parent=shelf,
-                    style=item.get('style', 'shelf'),
-                    hr=not item.get('horizontal', False)
-                    )
-                print("Added separator")
-                
-            elif item['type'] == 'button':
-                # Create button command - special handling for Update button
-                if item['label'] == 'Update':
-                    button_command = create_update_button_command(item['script_url'])
-                else:
-                    button_command = create_button_command(item['script_url'])
-                
-                # Create the button
-                button = cmds.shelfButton(
-                    parent=shelf,
-                    label=item['label'],
-                    image1=item['icon'],
-                    annotation=item['annotation'],
-                    command=button_command,
-                    width=item.get('width', 35),
-                    height=item.get('height', 35)
-                )
-                print("Added button: " + item['label'])
-        
-        # Activate the shelf
-        if cmds.control(gShelfTopLevel, exists=True) and cmds.control(shelf, exists=True):
-            cmds.tabLayout(gShelfTopLevel, edit=True, selectTab=shelf)
-            print("Shelf activated successfully: " + shelf_name)
-        
+        print("Removed FDMA 2530 bootstrap from userSetup.py")
         return True
         
     except Exception as e:
-        cmds.warning("Failed to create shelf from JSON: " + str(e))
-        import traceback
-        print(traceback.format_exc())
+        print("Failed to update userSetup.py: {0}".format(e))
         return False
 
-def cache_json_config(config, use_temp=False):
-    """Cache the JSON configuration for offline use and version comparison"""
-    try:
-        if use_temp:
-            cache_dir = tempfile.gettempdir()
-        else:
-            cache_dir = cmds.internalVar(userScriptDir=True)
-        
-        config_cache_path = os.path.join(cache_dir, "shelf_config_cache.json")
-        
-        # Save the configuration with pretty formatting
-        with open(config_cache_path, 'w') as f:
-            json.dump(config, f, indent=2, sort_keys=True)
-        
-        print("Configuration cached at: " + config_cache_path)
-        return config_cache_path
-        
-    except Exception as e:
-        print("Failed to cache configuration: " + str(e))
-        return None
-
-def install_cache_system(use_temp=False):
-    """Download and install the cache system (optional)"""
-    try:
-        if use_temp:
-            install_dir = tempfile.gettempdir()
-            if install_dir not in sys.path:
-                sys.path.insert(0, install_dir)
-        else:
-            install_dir = cmds.internalVar(userScriptDir=True)
-        
-        utilities_dir = os.path.join(install_dir, "utilities")
-        if not os.path.exists(utilities_dir):
-            os.makedirs(utilities_dir)
-        
-        loader_content = safe_download(LOADER_URL)
-        if loader_content:
-            loader_path = os.path.join(utilities_dir, "cache_loader.py")
-            safe_write(loader_path, loader_content)
-            
-            init_path = os.path.join(utilities_dir, "__init__.py")
-            safe_write(init_path, "# Utilities package\n")
-            
-            print("Cache system installed at: " + utilities_dir)
-            return True
-        return False
-        
-    except Exception as e:
-        print("Cache system installation failed: " + str(e))
-        return False
+def remove_package(scripts_dir):
+    """Remove FDMA 2530 package from scripts directory"""
+    package_path = os.path.join(scripts_dir, "fdma_shelf")
+    config_path = os.path.join(scripts_dir, "shelf_config.json")
+    
+    removed_items = []
+    
+    # Remove package directory
+    if os.path.exists(package_path):
+        try:
+            shutil.rmtree(package_path)
+            removed_items.append("fdma_shelf package")
+        except Exception as e:
+            print("Failed to remove package: {0}".format(e))
+            return False
+    
+    # Remove config file
+    if os.path.exists(config_path):
+        try:
+            os.remove(config_path)
+            removed_items.append("shelf_config.json")
+        except Exception as e:
+            print("Failed to remove config: {0}".format(e))
+    
+    if removed_items:
+        print("Removed: {0}".format(", ".join(removed_items)))
+    
+    return True
 
 def install_permanent():
-    """Install shelf permanently with JSON configuration"""
+    """Install FDMA 2530 shelf system permanently"""
+    scripts_dir = get_scripts_directory()
+    print("Installing to: {0}".format(scripts_dir))
+    
+    # Download package files
+    if not download_package_files(scripts_dir):
+        return False
+    
+    # Update userSetup.py
+    if not modify_user_setup(scripts_dir):
+        print("Warning: userSetup.py modification failed")
+    
+    # Import and create shelf immediately
     try:
-        # Download JSON configuration
-        config = download_json_config()
-        if not config:
-            return False
+        # Add scripts dir to path if not already there
+        if scripts_dir not in sys.path:
+            sys.path.insert(0, scripts_dir)
         
-        # Install cache system (optional)
-        install_cache_system(use_temp=False)
+        # Import and build shelf
+        import fdma_shelf
+        fdma_shelf.build_shelf(startup=False)
         
-        # Cache the configuration
-        cache_json_config(config, use_temp=False)
-        
-        # Create shelf from JSON configuration
-        return create_shelf_from_json_config(config, use_temp=False)
+        print("FDMA 2530 shelf created successfully!")
+        return True
         
     except Exception as e:
-        cmds.warning("Installation failed: " + str(e))
+        print("Failed to create shelf: {0}".format(e))
         return False
 
 def install_temporary():
-    """Install shelf temporarily with JSON configuration"""
+    """Install FDMA 2530 shelf system temporarily (session only)"""
+    temp_dir = tempfile.mkdtemp(prefix="fdma_shelf_")
+    print("Installing temporarily to: {0}".format(temp_dir))
+    
+    # Download package files to temp directory
+    if not download_package_files(temp_dir):
+        return False
+    
     try:
-        # Download JSON configuration
-        config = download_json_config()
-        if not config:
-            return False
+        # Add temp dir to Python path
+        if temp_dir not in sys.path:
+            sys.path.insert(0, temp_dir)
         
-        # Install cache system to temp (optional)
-        install_cache_system(use_temp=True)
+        # Import and build shelf
+        import fdma_shelf
+        fdma_shelf.build_shelf(startup=False)
         
-        # Cache the configuration
-        cache_json_config(config, use_temp=True)
-        
-        # Create shelf from JSON configuration
-        return create_shelf_from_json_config(config, use_temp=True)
+        print("FDMA 2530 shelf created temporarily!")
+        return True
         
     except Exception as e:
-        cmds.warning("Temporary installation failed: " + str(e))
+        print("Failed to create temporary shelf: {0}".format(e))
         return False
 
+def uninstall():
+    """Uninstall FDMA 2530 shelf system"""
+    scripts_dir = get_scripts_directory()
+    
+    # Remove shelf from Maya if it exists
+    try:
+        if cmds.shelfLayout("FDMA_2530", exists=True):
+            cmds.deleteUI("FDMA_2530", layout=True)
+            print("Removed FDMA_2530 shelf from Maya")
+    except Exception:
+        pass
+    
+    # Remove package files
+    if not remove_package(scripts_dir):
+        return False
+    
+    # Remove userSetup.py bootstrap
+    if not remove_user_setup_bootstrap(scripts_dir):
+        print("Warning: userSetup.py cleanup failed")
+    
+    print("FDMA 2530 shelf system uninstalled successfully!")
+    return True
+
 def show_install_dialog():
-    """Show installation dialog with JSON configuration info"""
+    """Show installation dialog"""
     choice = cmds.confirmDialog(
-        title="FDMA 2530 Shelf Installer v{}".format(__version__),
-        message="Choose installation type:\n\nInstall Shelf \nRun Only (Temporary) ",
-        button=["Install Shelf", "Load Once", "Cancel"],
+        title="FDMA 2530 Shelf Installer v{0}".format(__version__),
+        message="GT Tools-Style Installation\n\nChoose installation type:\n\nInstall Shelf: Permanent installation with auto-startup\nLoad Once: Temporary installation (session only)\nUninstall: Remove FDMA 2530 shelf system",
+        button=["Install Shelf", "Load Once", "Uninstall", "Cancel"],
         defaultButton="Install Shelf",
         cancelButton="Cancel"
     )
@@ -471,41 +302,60 @@ def show_install_dialog():
     if choice == "Install Shelf":
         if install_permanent():
             cmds.confirmDialog(
-                title="Success", 
-                message="Shelf installed successfully!", 
+                title="Success",
+                message="FDMA 2530 shelf installed successfully!\n\nThe shelf will automatically load when Maya starts.\nUse the Update button to check for new tools and features.",
                 button=["OK"]
             )
         else:
-            cmds.confirmDialog(title="Error", message="Installation failed.", button=["OK"])
+            cmds.confirmDialog(
+                title="Error", 
+                message="Installation failed. Check the Script Editor for details.",
+                button=["OK"]
+            )
+    
     elif choice == "Load Once":
         if install_temporary():
             cmds.confirmDialog(
-                title="Success", 
-                message="Shelf loaded temporarily!", 
+                title="Success",
+                message="FDMA 2530 shelf loaded temporarily!\n\nThe shelf will be removed when Maya closes.\nFor permanent installation, run the installer again.",
                 button=["OK"]
             )
         else:
-            cmds.confirmDialog(title="Error", message="Temporary load failed.", button=["OK"])
-
-def force_reload_self():
-    """Force reload this module to handle Maya's caching issue"""
-    try:
-        current_module = __name__
-        if current_module in sys.modules:
-            if sys.version_info[0] >= 3:
-                importlib.reload(sys.modules[current_module])
+            cmds.confirmDialog(
+                title="Error",
+                message="Temporary installation failed. Check the Script Editor for details.",
+                button=["OK"]
+            )
+    
+    elif choice == "Uninstall":
+        confirm = cmds.confirmDialog(
+            title="Confirm Uninstall",
+            message="This will remove the FDMA 2530 shelf system completely.\n\nAre you sure you want to continue?",
+            button=["Yes", "No"],
+            defaultButton="No",
+            cancelButton="No"
+        )
+        
+        if confirm == "Yes":
+            if uninstall():
+                cmds.confirmDialog(
+                    title="Uninstalled",
+                    message="FDMA 2530 shelf system has been removed successfully.",
+                    button=["OK"]
+                )
             else:
-                reload(sys.modules[current_module])
-    except:
-        pass
+                cmds.confirmDialog(
+                    title="Error",
+                    message="Uninstall failed. Check the Script Editor for details.",
+                    button=["OK"]
+                )
 
 def onMayaDroppedPythonFile(*args):
-    """Maya's drag-and-drop entry point"""
+    """Maya drag-and-drop entry point"""
     try:
-        force_reload_self()
         show_install_dialog()
     except Exception as e:
-        cmds.warning("Installer error: " + str(e))
+        cmds.warning("Installer error: {0}".format(e))
         import traceback
         print(traceback.format_exc())
 

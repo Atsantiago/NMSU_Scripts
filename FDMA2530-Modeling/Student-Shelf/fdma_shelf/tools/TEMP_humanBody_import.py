@@ -1,5 +1,6 @@
 import maya.cmds as cmds
-import sys
+import sys4# Version information
+__version__ = "1.1.0"
 
 # Determine Python version
 python_version = sys.version_info[0]
