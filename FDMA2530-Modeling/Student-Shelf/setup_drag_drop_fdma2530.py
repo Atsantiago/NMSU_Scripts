@@ -385,9 +385,9 @@ def show_install_dialog():
     """Show installation dialog"""
     choice = cmds.confirmDialog(
         title="CMI Tools Installer v{0}".format(__version__),
-        message="CMI Tools Module Installation\n\nChoose installation type:\n\nInstall Module: Permanent installation using Maya modules\nLoad Once: Temporary installation (session only)\nUninstall: Remove CMI Tools module system",
-        button=["Install Module", "Load Once", "Uninstall", "Cancel"],
-        defaultButton="Install Module",
+        message="CMI Tools Installation\n\nChoose installation type:\n\nInstall Tools: Permanent installation using Maya modules\nLoad Once: Temporary installation (session only)\nUninstall: Remove CMI Tools",
+        button=["Install", "Load Once", "Uninstall", "Cancel"],
+        defaultButton="Install",
         cancelButton="Cancel"
     )
     
@@ -395,7 +395,7 @@ def show_install_dialog():
         if install_permanent():
             cmds.confirmDialog(
                 title="Success",
-                message="CMI Tools module installed successfully!\n\nThe shelf will automatically load when Maya starts.\nFiles installed to Maya cmi-tools directory.\nNo userSetup.py modifications required.\n\nCreated by: Alexander T. Santiago",
+                message="CMI Tools - FDMA 2530 Shelf installed successfully!\n\nThe shelf will automatically load when Maya starts.\n\nCreated by: Alexander T. Santiago",
                 button=["OK"]
             )
         else:
@@ -409,7 +409,7 @@ def show_install_dialog():
         if install_temporary():
             cmds.confirmDialog(
                 title="Success", 
-                message="CMI Tools shelf loaded temporarily!\n\nShelf will be removed when Maya closes.\nFor permanent installation, run installer again.",
+                message="CMI Tools - FDMA 2530 shelf loaded temporarily!\n\nShelf will be removed when Maya closes.\nFor permanent installation, run installer again.",
                 button=["OK"]
             )
         else:
@@ -422,7 +422,7 @@ def show_install_dialog():
     elif choice == "Uninstall":
         confirm = cmds.confirmDialog(
             title="Confirm Uninstall",
-            message="Remove CMI Tools module completely?\n\nThis will delete the cmi-tools folder and module file.",
+            message="Remove CMI Tools completely?",
             button=["Yes", "No"],
             defaultButton="No"
         )
@@ -431,7 +431,7 @@ def show_install_dialog():
             if uninstall():
                 cmds.confirmDialog(
                     title="Uninstalled",
-                    message="CMI Tools module removed successfully.",
+                    message="CMI Tools removed successfully.",
                     button=["OK"]
                 )
 
