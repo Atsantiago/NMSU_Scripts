@@ -1,0 +1,1 @@
+###holds __version__ and triggers startup check_startup_updates() (was your old top-level __init__.py; just move its contents)
