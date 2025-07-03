@@ -21,7 +21,7 @@ try:
 except ImportError:
     MAYA_AVAILABLE = False
 
-# Import prof-tools modules
+# Import prof-tools modules - centralized versioning from prof/__init__.py
 try:
     from prof.core import (
         PACKAGE_NAME, PACKAGE_MAIN_MODULE, PACKAGE_ENTRY_LINE,
@@ -30,6 +30,7 @@ try:
         SCRIPTS_FOLDER_NAME, USERSETUP_FILE_NAME,
         log_info, log_warning, log_error
     )
+    # Import version from single source of truth
     from prof import __version__
 except ImportError:
     # Fallback constants if imports fail
@@ -43,61 +44,66 @@ except ImportError:
     PREFS_FOLDER_NAME = "prefs"
     SCRIPTS_FOLDER_NAME = "scripts"
     USERSETUP_FILE_NAME = "userSetup.mel"
-    __version__ = "0.1.0"
-
+    # Remove hard-coded version - will cause error if prof package unavailable
+    # This ensures we always use the centralized version from prof/__init__.py
+    
     logging.basicConfig()
     logger = logging.getLogger(__name__)
-
+    
     def log_info(msg): logger.info(msg)
     def log_warning(msg): logger.warning(msg)
     def log_error(msg): logger.error(msg)
-
+    
+    # If prof package is unavailable, we cannot determine version
+    raise ImportError("Prof-tools package must be available to determine version")
 
 class ProfToolsSetup(object):
     """
     Main setup class for prof-tools installation and management.
     """
+    
     def __init__(self):
         self.package_name = PACKAGE_NAME
         self.main_module = PACKAGE_MAIN_MODULE
         self.entry_line = PACKAGE_ENTRY_LINE
         self.install_dir = INSTALL_DIRECTORY_NAME
         self.install_package = INSTALL_PACKAGE_NAME
+        # Use centralized version from prof/__init__.py
         self.version = __version__
-
+        
         self.platform = sys.platform
         self.is_windows = self.platform.startswith('win')
         self.is_mac = self.platform.startswith('darwin')
         self.is_linux = self.platform.startswith('linux')
-
+        
         log_info("ProfToolsSetup initialized for platform: {}".format(self.platform))
-
+    
     def get_maya_documents_path(self):
         if self.is_windows or self.is_mac:
             return os.path.join(os.path.expanduser("~"), DOCUMENTS_FOLDER_NAME, MAYA_FOLDER_NAME)
         else:
             return os.path.join(os.path.expanduser("~"), MAYA_FOLDER_NAME)
-
+    
     def get_installation_path(self):
         return os.path.join(self.get_maya_documents_path(), self.install_dir)
-
+    
     def get_usersetup_path(self):
         maya_docs = self.get_maya_documents_path()
         return os.path.join(maya_docs, PREFS_FOLDER_NAME, SCRIPTS_FOLDER_NAME, USERSETUP_FILE_NAME)
-
+    
     def install_package(self):
         try:
             log_info("Starting prof-tools installation...")
             source_path = self._get_source_path()
             install_path = self.get_installation_path()
-
+            
             log_info("Source path: {}".format(source_path))
             log_info("Install path: {}".format(install_path))
-
+            
             os.makedirs(install_path, exist_ok=True)
             self._copy_package_files(source_path, install_path)
             self._update_usersetup_mel()
-
+            
             log_info("Prof-tools installation completed successfully")
             if MAYA_AVAILABLE:
                 cmds.confirmDialog(
@@ -106,28 +112,28 @@ class ProfToolsSetup(object):
                     button=["OK"]
                 )
             return True
-
+            
         except Exception as e:
             error_msg = "Installation failed: {}".format(e)
             log_error(error_msg)
             if MAYA_AVAILABLE:
                 cmds.confirmDialog(title="Installation Error", message=error_msg, button=["OK"])
             return False
-
+    
     def uninstall_package(self):
         try:
             log_info("Starting prof-tools uninstallation...")
-
-            # 1. Remove installation directory
+            
+            # Remove installation directory
             install_path = self.get_installation_path()
             if os.path.exists(install_path):
                 shutil.rmtree(install_path)
                 log_info("Removed installation directory: {}".format(install_path))
-
-            # 2. Clean userSetup.mel
+            
+            # Clean userSetup.mel
             self._clean_usersetup_mel()
-
-            # 3. Remove Prof-Tools menu from Maya UI
+            
+            # Remove Prof-Tools menu from Maya UI
             try:
                 if MAYA_AVAILABLE:
                     top = mel.eval('global string $gMainWindow; $tmp = $gMainWindow;')
@@ -136,7 +142,7 @@ class ProfToolsSetup(object):
                         log_info("Deleted Prof-Tools menu from Maya UI")
             except Exception:
                 pass
-
+            
             log_info("Prof-tools uninstallation completed successfully")
             if MAYA_AVAILABLE:
                 cmds.confirmDialog(
@@ -145,14 +151,14 @@ class ProfToolsSetup(object):
                     button=["OK"]
                 )
             return True
-
+            
         except Exception as e:
             error_msg = "Uninstallation failed: {}".format(e)
             log_error(error_msg)
             if MAYA_AVAILABLE:
                 cmds.confirmDialog(title="Uninstallation Error", message=error_msg, button=["OK"])
             return False
-
+    
     def run_only(self):
         try:
             log_info("Running prof-tools in temporary mode...")
@@ -178,10 +184,10 @@ class ProfToolsSetup(object):
             if MAYA_AVAILABLE:
                 cmds.confirmDialog(title="Run Only Error", message=error_msg, button=["OK"])
             return False
-
+    
     def _get_source_path(self):
         return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+    
     def _copy_package_files(self, source_path, install_path):
         prof_source = os.path.join(source_path, self.install_package)
         prof_dest = os.path.join(install_path, self.install_package)
@@ -189,17 +195,17 @@ class ProfToolsSetup(object):
             shutil.rmtree(prof_dest)
         shutil.copytree(prof_source, prof_dest)
         log_info("Copied package files from {} to {}".format(prof_source, prof_dest))
-
+    
     def _update_usersetup_mel(self):
         usersetup_path = self.get_usersetup_path()
         scripts_dir = os.path.dirname(usersetup_path)
         os.makedirs(scripts_dir, exist_ok=True)
-
+        
         existing = ""
         if os.path.exists(usersetup_path):
             with open(usersetup_path, 'r') as f:
                 existing = f.read()
-
+        
         if self.entry_line not in existing:
             with open(usersetup_path, 'a') as f:
                 if existing and not existing.endswith('\n'):
@@ -207,7 +213,7 @@ class ProfToolsSetup(object):
                 f.write('// Prof-Tools Auto-Generated Entry\n')
                 f.write(self.entry_line + '\n')
             log_info("Updated userSetup.mel with prof-tools entry")
-
+    
     def _clean_usersetup_mel(self):
         usersetup_path = self.get_usersetup_path()
         if not os.path.exists(usersetup_path):
@@ -229,7 +235,6 @@ class ProfToolsSetup(object):
         with open(usersetup_path, 'w') as f:
             f.writelines(cleaned)
         log_info("Cleaned userSetup.mel of prof-tools entries")
-
 
 def launcher_entry_point():
     """
@@ -259,7 +264,6 @@ def launcher_entry_point():
         log_error(error_msg)
         if MAYA_AVAILABLE:
             cmds.confirmDialog(title="Setup Error", message=error_msg, button=["OK"])
-
 
 if __name__ == "__main__":
     setup = ProfToolsSetup()

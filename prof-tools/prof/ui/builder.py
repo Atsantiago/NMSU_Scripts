@@ -1,175 +1,131 @@
 """
-Maya Menu Builder - Creates Prof-Tools menu in Maya
-Builds the main Prof-Tools dropdown menu with grading tool sections.
-Following GT-Tools patterns with MIT license compatibility.
+Prof-Tools Menu Builder
+
+Creates the Prof-Tools dropdown menu in Maya, with sections for grading
+tools and a Help menu for version info and update checking.
 """
 
+from __future__ import absolute_import, division, print_function
+
+import logging
 import maya.cmds as cmds
 import maya.mel as mel
-import logging
-from prof import __version__
 
-# Configure logging
+from prof import __version__
+from prof.core.updater import check_for_updates
+
+# Set up logging for this module
 logging.basicConfig()
 logger = logging.getLogger("prof_menu_builder")
+logger.setLevel(logging.INFO)
 
-# Menu constants
-MENU_NAME = "ProfTools"
-MENU_LABEL = "Prof-Tools"
+# Menu labels
+MENU_NAME      = "ProfTools"
+MENU_LABEL     = "Prof-Tools"
+GRADING_LABEL  = "Grading Tools"
+HELP_LABEL     = "Help"
 
 def build_menu():
     """
-    Creates the main Prof-Tools menu in Maya's menu bar.
-    Safely rebuilds the menu if it already exists.
-    
-    Returns:
-        str: The menu path of the created menu, or empty string if failed
+    Create or rebuild the Prof-Tools menu in Maya's main window.
     """
-    try:
-        # Delete existing menu if it exists (singleton pattern)
-        delete_menu()
-        
-        # Get Maya main window
-        try:
-            main_window = mel.eval('global string $gMainWindow; $tmp = $gMainWindow;')
-        except Exception as e:
-            logger.warning(f"Unable to find Maya main window: {e}")
-            cmds.warning("Unable to find Maya Window. Menu creation was ignored.")
-            return ""
-        
-        # Create main menu
-        menu_path = cmds.menu(
-            MENU_NAME,
-            label=MENU_LABEL,
-            parent=main_window,
-            tearOff=True
-        )
-        
-        # Add version information
-        cmds.menuItem(
-            divider=True,
-            parent=menu_path
-        )
-        cmds.menuItem(
-            label=f"Version: {__version__}",
-            enable=False,
-            parent=menu_path
-        )
-        cmds.menuItem(
-            divider=True,
-            parent=menu_path
-        )
-        
-        # Create Grading Tools section
-        _build_grading_section(menu_path)
-        
-        logger.info(f"Prof-Tools menu created successfully: {menu_path}")
-        return menu_path
-        
-    except Exception as e:
-        logger.error(f"Failed to create Prof-Tools menu: {e}")
-        cmds.warning(f"Failed to create Prof-Tools menu: {e}")
-        return ""
+    _delete_existing_menu()
+
+    # Get Maya main window for parenting
+    main_win = mel.eval('global string $gMainWindow; $tmp = $gMainWindow;')
+
+    # Create the top-level Prof-Tools menu
+    menu = cmds.menu(MENU_NAME, label=MENU_LABEL, parent=main_win, tearOff=True)
+
+    _build_grading_section(menu)   # add grading tools section
+    _build_help_section(menu)      # add help section
+
+    logger.info("Prof-Tools menu created")
+
+def _delete_existing_menu():
+    """
+    Remove any existing Prof-Tools menu before rebuilding.
+    """
+    if cmds.menu(MENU_NAME, exists=True):
+        cmds.deleteUI(MENU_NAME)
+        logger.debug("Removed existing Prof-Tools menu")
 
 def _build_grading_section(parent_menu):
     """
-    Builds the Grading Tools section of the menu.
-    
-    Args:
-        parent_menu (str): Path to the parent menu
+    Add the 'Grading Tools' submenu with empty placeholders for each class.
     """
-    # Create Grading Tools submenu
-    grading_menu = cmds.menuItem(
-        label="Grading Tools",
+    grading = cmds.menuItem(
+        label=GRADING_LABEL,
         subMenu=True,
         tearOff=True,
         parent=parent_menu
     )
-    
-    # FDMA 1510 submenu
-    fdma1510_menu = cmds.menuItem(
+
+    # Placeholder for FDMA 1510 tools
+    cmds.menuItem(
         label="FDMA 1510",
         subMenu=True,
         tearOff=True,
-        parent=grading_menu
+        parent=grading
     )
-    
-    # Placeholder for FDMA 1510 tools (empty for now)
     cmds.menuItem(
-        label="No tools available yet",
+        label="(no tools yet)",
         enable=False,
-        parent=fdma1510_menu
+        parent="{}|FDMA 1510".format(grading)
     )
-    
-    # FDMA 2530 submenu
-    fdma2530_menu = cmds.menuItem(
+    cmds.setParent('..', menu=True)
+
+    # Placeholder for FDMA 2530 tools
+    cmds.menuItem(
         label="FDMA 2530",
         subMenu=True,
         tearOff=True,
-        parent=grading_menu
+        parent=grading
     )
-    
-    # Placeholder for FDMA 2530 tools (empty for now)
     cmds.menuItem(
-        label="No tools available yet",
+        label="(no tools yet)",
         enable=False,
-        parent=fdma2530_menu
+        parent="{}|FDMA 2530".format(grading)
     )
-    
-    # Close submenus properly
-    cmds.setParent('..', menu=True)  # Close grading_menu
-    cmds.setParent('..', menu=True)  # Close parent_menu
+    cmds.setParent('..', menu=True)
 
-def delete_menu():
-    """
-    Deletes the Prof-Tools menu if it exists.
-    Safe to call even if menu doesn't exist.
-    """
-    try:
-        if cmds.menu(MENU_NAME, exists=True):
-            cmds.menu(MENU_NAME, edit=True, deleteAllItems=True)
-            cmds.deleteUI(MENU_NAME)
-            logger.info("Existing Prof-Tools menu deleted")
-    except Exception as e:
-        logger.debug(f"Menu deletion failed (may not exist): {e}")
+    cmds.setParent('..', menu=True)
 
-def menu_exists():
+def _build_help_section(parent_menu):
     """
-    Checks if the Prof-Tools menu currently exists.
-    
-    Returns:
-        bool: True if menu exists, False otherwise
+    Add the 'Help' submenu showing version and update option.
     """
-    try:
-        return cmds.menu(MENU_NAME, exists=True)
-    except Exception:
-        return False
+    help_menu = cmds.menuItem(
+        label=HELP_LABEL,
+        subMenu=True,
+        tearOff=True,
+        parent=parent_menu
+    )
 
-def refresh_menu():
-    """
-    Refreshes the Prof-Tools menu by rebuilding it.
-    Useful for development and updates.
-    
-    Returns:
-        str: The menu path of the refreshed menu
-    """
-    logger.info("Refreshing Prof-Tools menu...")
-    return build_menu()
+    # Divider before version
+    cmds.menuItem(divider=True, parent=help_menu)
 
-# Development and testing functions
-def main():
-    """
-    Main function for testing the menu builder.
-    Can be called directly for testing purposes.
-    """
-    print("Building Prof-Tools menu...")
-    result = build_menu()
-    if result:
-        print(f"Menu created successfully: {result}")
-    else:
-        print("Menu creation failed")
+    # Display current version
+    cmds.menuItem(
+        label="Version: {}".format(__version__),
+        enable=False,
+        parent=help_menu
+    )
+
+    # Divider before update option
+    cmds.menuItem(divider=True, parent=help_menu)
+
+    # Command to check for updates
+    cmds.menuItem(
+        label="Check for Updates…",
+        parent=help_menu,
+        command=lambda *args: check_for_updates()
+    )
+
+    cmds.setParent('..', menu=True)
+    cmds.setParent('..', menu=True)
 
 if __name__ == "__main__":
-    # Enable debug logging for development
+    # When run directly in Maya script editor, build the menu
     logger.setLevel(logging.DEBUG)
-    main()
+    build_menu()
