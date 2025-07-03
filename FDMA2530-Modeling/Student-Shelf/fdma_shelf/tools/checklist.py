@@ -3198,6 +3198,332 @@ def check_textures_color_space():
             bgc=exception_color
         )
         return f"Error checking {item_name}: {e}"
+# Item 17 - AI Shadow Casting Lights
+def check_ai_shadow_casting_lights():
+    """Validate AI shadow casting lights setup."""
+    item_name = checklist_items.get(17)[0]
+    item_id = item_name.lower().replace(" ", "_").replace("-", "_")
+    expected_value = checklist_items.get(17)[1]
+    
+    try:
+        issues_found = 0
+        offending_lights = []
+        skydome_lights = []
+        key_lights = []
+        shadow_casting_lights = []
+        
+        # Light types to check
+        maya_light_types = ['pointLight', 'directionalLight', 'spotLight', 'areaLight', 'volumeLight', 'ambientLight']
+        arnold_light_types = ['aiAreaLight', 'aiSkyDomeLight', 'aiPhotometricLight', 'aiMeshLight', 'aiLightPortal']
+        
+        all_lights = []
+        for light_type in maya_light_types + arnold_light_types:
+            all_lights.extend(cmds.ls(type=light_type) or [])
+        
+        if len(all_lights) == 0:
+            cmds.button(
+                "status_" + item_id,
+                e=True,
+                bgc=pass_color,
+                l='',
+                c=lambda args: print_message('No lights found in scene.')
+            )
+            cmds.text("output_" + item_id, e=True, l="0")
+            return f'\n*** {item_name} ***\n0 issues found. No lights in scene.'
+        
+        # Check each light
+        for light in all_lights:
+            light_type = cmds.nodeType(light)
+            
+            # Check if it's a skydome
+            if light_type == 'aiSkyDomeLight':
+                skydome_lights.append(light)
+            
+            # Check if it's a key light (case insensitive)
+            if 'key' in light.lower():
+                key_lights.append(light)
+            
+            # Check shadow casting
+            casts_shadows = False
+            try:
+                if light_type.startswith('ai'):
+                    # Arnold light - check aiCastShadows first, then castShadows
+                    if cmds.attributeQuery('aiCastShadows', node=light, exists=True):
+                        casts_shadows = cmds.getAttr(light + '.aiCastShadows')
+                    else:
+                        casts_shadows = cmds.getAttr(light + '.castShadows')
+                else:
+                    # Maya light
+                    casts_shadows = cmds.getAttr(light + '.castShadows')
+                
+                if casts_shadows:
+                    shadow_casting_lights.append(light)
+            except Exception:
+                continue
+        
+        # Validate requirements
+        error_messages = []
+        
+        # Must have exactly one skydome
+        if len(skydome_lights) == 0:
+            error_messages.append("No aiSkyDomeLight found in scene")
+            issues_found += 1
+        elif len(skydome_lights) > 1:
+            error_messages.append(f"Multiple aiSkyDomeLights found: {skydome_lights}")
+            issues_found += 1
+        
+        # Check shadow casting rules
+        allowed_shadow_casters = skydome_lights + key_lights
+        for light in shadow_casting_lights:
+            if light not in allowed_shadow_casters:
+                offending_lights.append(light)
+                issues_found += 1
+        
+        # Only skydome + one key light should cast shadows
+        key_shadow_casters = [light for light in key_lights if light in shadow_casting_lights]
+        if len(key_shadow_casters) > 1:
+            error_messages.append(f"Multiple key lights casting shadows: {key_shadow_casters}")
+            issues_found += 1
+        
+        # Update UI
+        if issues_found == 0:
+            cmds.button(
+                "status_" + item_id,
+                e=True,
+                bgc=pass_color,
+                l='',
+                c=lambda args: print_message(
+                    f'Light setup is correct. Skydome: {len(skydome_lights)}, '
+                    f'Key lights: {len(key_lights)}, Shadow casters: {len(shadow_casting_lights)}'
+                )
+            )
+        else:
+            cmds.button(
+                "status_" + item_id,
+                e=True,
+                bgc=error_color,
+                l='?',
+                c=lambda args: warning_ai_shadow_casting_lights()
+            )
+        
+        cmds.text("output_" + item_id, e=True, l=str(issues_found))
+        
+        # Patch Function
+        def warning_ai_shadow_casting_lights():
+            """Display AI shadow casting lights warning dialog."""
+            message_parts = []
+            message_parts.extend(error_messages)
+            if offending_lights:
+                message_parts.append(f"Lights incorrectly casting shadows: {offending_lights}")
+            
+            patch_message = '\n'.join(message_parts) if message_parts else "Light setup issues found."
+            patch_message += '\n\n(Generate full report for complete details)'
+            
+            user_input = cmds.confirmDialog(
+                title=item_name,
+                message=patch_message,
+                button=['OK', 'Select Lights', 'Ignore Issue'],
+                defaultButton='OK',
+                cancelButton='Ignore Issue',
+                dismissString='Ignore Issue',
+                icon="warning"
+            )
+            
+            if user_input == 'Select Lights':
+                try:
+                    if offending_lights:
+                        cmds.select(offending_lights)
+                    else:
+                        cmds.select(clear=True)
+                        print("No specific lights to select")
+                except Exception:
+                    print("Could not select lights")
+            elif user_input == 'Ignore Issue':
+                cmds.button("status_" + item_id, e=True, l='')
+        
+        # Return string for report
+        if issues_found > 0:
+            string_status = f'{issues_found} {"issue" if issues_found == 1 else "issues"} found.\n'
+            string_status += f'Skydome lights: {len(skydome_lights)}\n'
+            string_status += f'Key lights: {len(key_lights)}\n'
+            string_status += f'Shadow casting lights: {len(shadow_casting_lights)}\n'
+            for msg in error_messages:
+                string_status += f'{msg}\n'
+            if offending_lights:
+                string_status += f'Offending lights: {offending_lights}\n'
+            string_status = string_status.rstrip('\n')
+        else:
+            string_status = (
+                f'0 issues found. Light setup is correct.\n'
+                f'Skydome lights: {len(skydome_lights)}, '
+                f'Key lights: {len(key_lights)}, '
+                f'Shadow casting lights: {len(shadow_casting_lights)}'
+            )
+        
+        return f'\n*** {item_name} ***\n{string_status}'
+        
+    except Exception as e:
+        cmds.button(
+            "status_" + item_id,
+            e=True,
+            bgc=exception_color
+        )
+        return f"Error checking {item_name}: {e}"
+
+# Item 18 - Camera Aspect Ratio
+def check_camera_aspect_ratio():
+    """Validate camera aspect ratios."""
+    item_name = checklist_items.get(18)[0]
+    item_id = item_name.lower().replace(" ", "_").replace("-", "_")
+    expected_values = checklist_items.get(18)[1]
+    
+    try:
+        issues_found = 0
+        offending_cameras = []
+        default_cameras = ['persp', 'top', 'front', 'side']
+        
+        # Get all cameras excluding defaults
+        all_cameras = cmds.ls(type='camera') or []
+        user_cameras = []
+        
+        for cam in all_cameras:
+            # Get transform node
+            transform = cmds.listRelatives(cam, parent=True)[0] if cmds.listRelatives(cam, parent=True) else cam
+            if transform not in default_cameras:
+                user_cameras.append(transform)
+        
+        if len(user_cameras) == 0:
+            cmds.button(
+                "status_" + item_id,
+                e=True,
+                bgc=pass_color,
+                l='',
+                c=lambda args: print_message('No user cameras found in scene.')
+            )
+            cmds.text("output_" + item_id, e=True, l="0")
+            return f'\n*** {item_name} ***\n0 issues found. No user cameras in scene.'
+        
+        # Get render resolution
+        render_width = cmds.getAttr("defaultResolution.width")
+        render_height = cmds.getAttr("defaultResolution.height")
+        render_aspect = render_width / render_height if render_height > 0 else 0
+        
+        # Check each user camera
+        for cam_transform in user_cameras:
+            try:
+                # Get camera shape
+                cam_shape = cmds.listRelatives(cam_transform, shapes=True, type='camera')[0]
+                
+                # Get film aperture
+                h_aperture = cmds.getAttr(cam_shape + '.horizontalFilmAperture')
+                v_aperture = cmds.getAttr(cam_shape + '.verticalFilmAperture')
+                
+                if v_aperture > 0:
+                    film_aspect = h_aperture / v_aperture
+                    
+                    # Check if film aspect is exactly 1.77 or 1.78
+                    film_aspect_rounded = round(film_aspect, 2)
+                    if film_aspect_rounded not in [1.77, 1.78]:
+                        offending_cameras.append(cam_transform)
+                        issues_found += 1
+                    
+                    # Also check if it matches render aspect (with tolerance)
+                    render_aspect_rounded = round(render_aspect, 2)
+                    if render_aspect_rounded not in [1.77, 1.78]:
+                        if cam_transform not in offending_cameras:
+                            offending_cameras.append(cam_transform)
+                            issues_found += 1
+                else:
+                    offending_cameras.append(cam_transform)
+                    issues_found += 1
+                    
+            except Exception:
+                offending_cameras.append(cam_transform)
+                issues_found += 1
+        
+        # Update UI
+        if issues_found == 0:
+            cmds.button(
+                "status_" + item_id,
+                e=True,
+                bgc=pass_color,
+                l='',
+                c=lambda args: print_message(
+                    f'All {len(user_cameras)} user cameras have correct 16:9 aspect ratio.'
+                )
+            )
+        else:
+            cmds.button(
+                "status_" + item_id,
+                e=True,
+                bgc=error_color,
+                l='?',
+                c=lambda args: warning_camera_aspect_ratio()
+            )
+        
+        cmds.text("output_" + item_id, e=True, l=str(issues_found))
+        
+        # Patch Function
+        def warning_camera_aspect_ratio():
+            """Display camera aspect ratio warning dialog."""
+            if len(offending_cameras) == 1:
+                patch_message = f'1 camera does not have correct 16:9 aspect ratio (1.77 or 1.78).'
+            else:
+                patch_message = f'{len(offending_cameras)} cameras do not have correct 16:9 aspect ratio (1.77 or 1.78).'
+            
+            patch_message += f'\nRender resolution: {render_width}x{render_height} (aspect: {render_aspect:.2f})'
+            patch_message += '\n\n(Generate full report for complete details)'
+            
+            user_input = cmds.confirmDialog(
+                title=item_name,
+                message=patch_message,
+                button=['OK', 'Select Cameras', 'Ignore Issue'],
+                defaultButton='OK',
+                cancelButton='Ignore Issue',
+                dismissString='Ignore Issue',
+                icon="warning"
+            )
+            
+            if user_input == 'Select Cameras':
+                try:
+                    if offending_cameras:
+                        cmds.select(offending_cameras)
+                    else:
+                        cmds.select(clear=True)
+                except Exception:
+                    print("Could not select cameras")
+            elif user_input == 'Ignore Issue':
+                cmds.button("status_" + item_id, e=True, l='')
+        
+        # Return string for report
+        if issues_found > 0:
+            string_status = f'{issues_found} {"issue" if issues_found == 1 else "issues"} found.\n'
+            string_status += f'Render resolution: {render_width}x{render_height} (aspect: {render_aspect:.2f})\n'
+            for cam in offending_cameras:
+                try:
+                    cam_shape = cmds.listRelatives(cam, shapes=True, type='camera')[0]
+                    h_aperture = cmds.getAttr(cam_shape + '.horizontalFilmAperture')
+                    v_aperture = cmds.getAttr(cam_shape + '.verticalFilmAperture')
+                    film_aspect = h_aperture / v_aperture if v_aperture > 0 else 0
+                    string_status += f'"{cam}" film aspect: {film_aspect:.2f} (should be 1.77 or 1.78)\n'
+                except Exception:
+                    string_status += f'"{cam}" has aspect ratio issues\n'
+            string_status = string_status.rstrip('\n')
+        else:
+            string_status = (
+                f'0 issues found. All {len(user_cameras)} user cameras have correct 16:9 aspect ratio.\n'
+                f'Render resolution: {render_width}x{render_height} (aspect: {render_aspect:.2f})'
+            )
+        
+        return f'\n*** {item_name} ***\n{string_status}'
+        
+    except Exception as e:
+        cmds.button(
+            "status_" + item_id,
+            e=True,
+            bgc=exception_color
+        )
+        return f"Error checking {item_name}: {e}"
 
 
 # ==============================================================================
