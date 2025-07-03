@@ -20,10 +20,10 @@ logger = logging.getLogger("prof_menu_builder")
 logger.setLevel(logging.INFO)
 
 # Menu labels
-MENU_NAME      = "ProfTools"
-MENU_LABEL     = "Prof-Tools"
-GRADING_LABEL  = "Grading Tools"
-HELP_LABEL     = "Help"
+MENU_NAME     = "ProfTools"
+MENU_LABEL    = "Prof-Tools"
+GRADING_LABEL = "Grading Tools"
+HELP_LABEL    = "Help"
 
 def build_menu():
     """
@@ -54,6 +54,7 @@ def _build_grading_section(parent_menu):
     """
     Add the 'Grading Tools' submenu with empty placeholders for each class.
     """
+    # Open Grading Tools submenu
     grading = cmds.menuItem(
         label=GRADING_LABEL,
         subMenu=True,
@@ -61,40 +62,33 @@ def _build_grading_section(parent_menu):
         parent=parent_menu
     )
 
-    # Placeholder for FDMA 1510 tools
-    cmds.menuItem(
+    # FDMA 1510 placeholder
+    fdma1510 = cmds.menuItem(
         label="FDMA 1510",
         subMenu=True,
         tearOff=True,
         parent=grading
     )
-    cmds.menuItem(
-        label="(no tools yet)",
-        enable=False,
-        parent="{}|FDMA 1510".format(grading)
-    )
-    cmds.setParent('..', menu=True)
+    cmds.menuItem(label="(no tools yet)", enable=False, parent=fdma1510)
+    cmds.setParent('..', menu=True)  # close FDMA 1510 submenu
 
-    # Placeholder for FDMA 2530 tools
-    cmds.menuItem(
+    # FDMA 2530 placeholder
+    fdma2530 = cmds.menuItem(
         label="FDMA 2530",
         subMenu=True,
         tearOff=True,
         parent=grading
     )
-    cmds.menuItem(
-        label="(no tools yet)",
-        enable=False,
-        parent="{}|FDMA 2530".format(grading)
-    )
-    cmds.setParent('..', menu=True)
+    cmds.menuItem(label="(no tools yet)", enable=False, parent=fdma2530)
+    cmds.setParent('..', menu=True)  # close FDMA 2530 submenu
 
-    cmds.setParent('..', menu=True)
+    cmds.setParent('..', menu=True)    # close Grading Tools submenu
 
 def _build_help_section(parent_menu):
     """
     Add the 'Help' submenu showing version and update option.
     """
+    # Open Help submenu
     help_menu = cmds.menuItem(
         label=HELP_LABEL,
         subMenu=True,
@@ -122,8 +116,8 @@ def _build_help_section(parent_menu):
         command=lambda *args: check_for_updates()
     )
 
-    cmds.setParent('..', menu=True)
-    cmds.setParent('..', menu=True)
+    cmds.setParent('..', menu=True)  # close Help submenu
+    cmds.setParent('..', menu=True)  # close main Prof-Tools menu
 
 if __name__ == "__main__":
     # When run directly in Maya script editor, build the menu
