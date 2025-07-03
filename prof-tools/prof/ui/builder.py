@@ -41,6 +41,7 @@ def build_menu():
     _build_help_section(menu)      # add help section
 
     logger.info("Prof-Tools menu created")
+    return True  # <— Add this line
 
 def _delete_existing_menu():
     """

@@ -160,30 +160,37 @@ class ProfToolsSetup(object):
             return False
     
     def run_only(self):
-        try:
-            log_info("Running prof-tools in temporary mode...")
-            source_path = self._get_source_path()
-            if source_path not in sys.path:
-                sys.path.insert(0, source_path)
-            from prof.ui import builder
-            result = builder.build_menu()
-            if result:
-                log_info("Prof-tools menu created successfully in temporary mode")
-                if MAYA_AVAILABLE:
-                    cmds.confirmDialog(
-                        title="Run Only Mode",
-                        message="Prof-tools is now running in temporary mode!\n\nThe tools will be available until Maya is closed.",
-                        button=["OK"]
-                    )
-                return True
-            else:
-                raise Exception("Failed to create menu")
-        except Exception as e:
-            error_msg = "Run Only mode failed: {}".format(e)
-            log_error(error_msg)
+    """
+    Run prof-tools without installation (temporary mode)
+    """
+    try:
+        log_info("Running prof-tools in temporary mode...")
+        source_path = self._get_source_path()
+        if source_path not in sys.path:
+            sys.path.insert(0, source_path)
+        from prof.ui import builder
+        result = builder.build_menu()  # now returns True
+        if result:
+            log_info("Prof-tools menu created successfully in temporary mode")
             if MAYA_AVAILABLE:
-                cmds.confirmDialog(title="Run Only Error", message=error_msg, button=["OK"])
-            return False
+                cmds.confirmDialog(
+                    title="Run Only Mode",
+                    message="Prof-tools is now running in temporary mode!\n\nThe tools will be available until Maya is closed.",
+                    button=["OK"]
+                )
+            return True
+        else:
+            raise Exception("Failed to create menu")
+    except Exception as e:
+        error_msg = "Run Only mode failed: {}".format(str(e))
+        log_error(error_msg)
+        if MAYA_AVAILABLE:
+            cmds.confirmDialog(
+                title="Run Only Error",
+                message=error_msg,
+                button=["OK"]
+            )
+        return False
     
     def _get_source_path(self):
         return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
