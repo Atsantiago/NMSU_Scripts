@@ -31,15 +31,15 @@ if sys.version_info.major < 3:
     raise ImportError(error)
 
 # Package metadata and versioning
-__version_tuple__ = (0, 1, 0)      # MAJOR, MINOR, PATCH
-__version_suffix__ = ''            # e.g. '-alpha', '-beta', '-rc1'
-__version__ = '.'.join(map(str, __version_tuple__)) + __version_suffix__
+__version_tuple__  = (0, 1, 0)   # MAJOR, MINOR, PATCH
+__version_suffix__ = ''         # e.g. '-alpha', '-beta', '-rc1'
+__version__        = '.'.join(map(str, __version_tuple__)) + __version_suffix__
 
-__title__ = 'Prof-Tools'
-__author__ = 'Alexander T. Santiago - https://github.com/Atsantiago'
+__title__       = 'Prof-Tools'
+__author__      = 'Alexander T. Santiago - https://github.com/Atsantiago'
 __description__ = 'Maya instructor tools for grading and assignment management'
-__license__ = 'MIT'
-__url__ = 'https://github.com/Atsantiago/NMSU_Scripts'
+__license__     = 'MIT'
+__url__         = 'https://github.com/Atsantiago/NMSU_Scripts'  # for updater
 
 # Public API
 __all__ = [
@@ -49,11 +49,14 @@ __all__ = [
     '__author__',
     '__description__',
     '__license__',
-    '__url__',
+    '__url__',             # expose URL for updater
     'get_version',
     'get_version_info',
     'get_package_path',
-    'is_maya_available'
+    'is_maya_available',
+    'get_maya_version',
+    'get_python_version',
+    'get_system_info'
 ]
 
 # Configure package logging
@@ -133,52 +136,9 @@ def get_python_version():
         'micro': sys.version_info.micro
     }
 
-def check_python_compatibility():
-    """
-    Checks if the current Python version is compatible with prof-tools.
-    Returns:
-        bool: True if compatible, False otherwise
-    """
-    if sys.version_info.major < 3:
-        user_version = "{}.{}.{}".format(
-            sys.version_info.major,
-            sys.version_info.minor,
-            sys.version_info.micro
-        )
-        error_msg = (
-            "Incompatible Python Version. Expected Python 3+. "
-            "Found: " + user_version + "."
-        )
-        logger.error(error_msg)
-        return False
-    return True
-
-def check_maya_compatibility():
-    """
-    Checks if Maya is available and compatible.
-    Returns:
-        bool: True if Maya is available and compatible, False otherwise
-    """
-    if not is_maya_available():
-        logger.warning(
-            "Maya Python modules not available. Some features may be limited."
-        )
-        return False
-    try:
-        maya_version = get_maya_version()
-        if maya_version:
-            logger.info("Maya version detected: {}".format(maya_version))
-            return True
-        else:
-            logger.warning("Could not determine Maya version.")
-            return False
-    except Exception as e:
-        logger.error("Error checking Maya compatibility: {}".format(e))
-        return False
-
 def get_system_info():
     """
-    Returns system information for debugging and support.
+    Returns system and environment information for debugging.
     Returns:
         dict: Dictionary containing system information
     """
@@ -197,12 +157,14 @@ def _initialize_package():
     Called automatically on import.
     """
     try:
-        if not check_python_compatibility():
-            raise ImportError("Python version incompatibility detected")
-        check_maya_compatibility()
-        logger.info("Prof-Tools package initialized successfully (v{})".format(__version__))
+        # Verify Python version
+        # (ImportError would have been raised above if <3)
+        logger.info("Prof-Tools version %s initialization", __version__)
+        # Warn if Maya not available
+        if not is_maya_available():
+            logger.warning("Maya modules not found; UI features will be limited.")
     except Exception as e:
-        logger.error("Failed to initialize prof-tools package: {}".format(e))
+        logger.error("Failed to initialize prof-tools package: %s", e)
         raise
 
 # Automatic initialization when package is imported
