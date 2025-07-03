@@ -138,7 +138,7 @@ def build_gui_ats_cmi_modeling_checklist():
         s=True,
         resizeToFitChildren=True,
         width=420,
-        height=800
+        height=810
     )
 
     # Add scroll layout wrapper
@@ -325,7 +325,7 @@ def build_gui_ats_cmi_modeling_checklist():
 
     # Show window and set size (resizable)
     cmds.showWindow(window_name)
-    cmds.window(window_name, e=True, width=420, height=800)
+    cmds.window(window_name, e=True, width=420, height=810)
     
     # Set Window Icon
     _set_window_icon(window_name)
