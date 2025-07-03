@@ -4,36 +4,16 @@ A comprehensive checklist tool for validating 3D models in Maya
 
 The UI and a majority of the code used for this script was repourposed 
 from a previous script from: 
-@Guilherme Trevisan - TrevisanGMW@gmail.com - 2020-07-25 - github.com/TrevisanGMW
-https://github.com/TrevisanGMW/maya-scripts/blob/master/vancouver_film_school/vfs_m1_kitchen_checklist.py
+@Guilherme Trevisan - TrevisanGMW@gmail.com - github.com/TrevisanGMW
 
-Atsantiago Updates
-Updates by Alexander T. Santiago - github.com/atsantiago
-
-2.0 - 2023-07-06
-Updated to fit NMSU courses for a general modeling checklist for students. 
-This should work for most assignments.
-Changed wording to fit CMI course.
-Removed Checklist Item 10 - RS Cast Lighting
-
-3.0 - 2025-06-12
-Optimized for performance and usability
-
-Key improvements:
-- Performance optimized using Maya API where possible
-- Scene data caching to minimize repeated queries
-- Resizable window with proper constraints
-- Modular design with error handling
-- Batch UI updates for better responsiveness
-- Added Light checks and Camera Aspect Ratio checks
-- Follows PEP 8 coding standards
+Updates and changes by Alexander T. Santiago - github.com/atsantiago
 """
 
 # Standard library imports
 import copy
 import sys
 # Version information
-__version__ = "2.0.0"
+__version__ = "2.0.1"
 
 # Script Information  
 SCRIPT_NAME = "CMI Modeling Checklist"
@@ -69,7 +49,7 @@ except ImportError:
 
 # Script Information
 SCRIPT_NAME = "CMI Modeling Checklist"
-SCRIPT_VERSION = "3.0"
+SCRIPT_VERSION = "2.0.1"
 PYTHON_VERSION = sys.version_info.major
 
 # UI Colors
@@ -3207,10 +3187,9 @@ def check_ai_shadow_casting_lights():
     
     try:
         issues_found = 0
-        offending_lights = []
-        skydome_lights = []
-        key_lights = []
-        shadow_casting_lights = []
+        warnings_found = 0
+        error_messages = []
+        warning_messages = []
         
         # Light types to check
         maya_light_types = ['pointLight', 'directionalLight', 'spotLight', 'areaLight', 'volumeLight', 'ambientLight']
@@ -3231,7 +3210,17 @@ def check_ai_shadow_casting_lights():
             cmds.text("output_" + item_id, e=True, l="0")
             return f'\n*** {item_name} ***\n0 issues found. No lights in scene.'
         
-        # Check each light
+        # Check total light count (warning if > 4)
+        if len(all_lights) > 4:
+            warnings_found += 1
+            warning_messages.append(f"Scene has {len(all_lights)-4} lights (more than the recommended for 3-point setup)")
+        
+        # Categorize lights
+        skydome_lights = []
+        key_lights = []
+        shadow_casting_lights = []
+        non_key_shadow_casters = []
+        
         for light in all_lights:
             light_type = cmds.nodeType(light)
             
@@ -3240,31 +3229,31 @@ def check_ai_shadow_casting_lights():
                 skydome_lights.append(light)
             
             # Check if it's a key light (case insensitive)
-            if 'key' in light.lower():
+            is_key_light = 'key' in light.lower()
+            if is_key_light:
                 key_lights.append(light)
             
-            # Check shadow casting
+            # Check shadow casting (check both castShadows and aiCastShadows for all lights)
             casts_shadows = False
             try:
-                if light_type.startswith('ai'):
-                    # Arnold light - check aiCastShadows first, then castShadows
-                    if cmds.attributeQuery('aiCastShadows', node=light, exists=True):
-                        casts_shadows = cmds.getAttr(light + '.aiCastShadows')
-                    else:
-                        casts_shadows = cmds.getAttr(light + '.castShadows')
+                # Check aiCastShadows first (for Arnold)
+                if cmds.attributeQuery('aiCastShadows', node=light, exists=True):
+                    casts_shadows = cmds.getAttr(light + '.aiCastShadows')
                 else:
-                    # Maya light
+                    # Fallback to regular castShadows
                     casts_shadows = cmds.getAttr(light + '.castShadows')
                 
                 if casts_shadows:
                     shadow_casting_lights.append(light)
+                    # Non-key lights casting shadows should be warned
+                    if not is_key_light and light_type != 'aiSkyDomeLight':
+                        non_key_shadow_casters.append(light)
             except Exception:
                 continue
         
-        # Validate requirements
-        error_messages = []
+        # Validation checks
         
-        # Must have exactly one skydome
+        # 1. Must have exactly one skydome
         if len(skydome_lights) == 0:
             error_messages.append("No aiSkyDomeLight found in scene")
             issues_found += 1
@@ -3272,32 +3261,30 @@ def check_ai_shadow_casting_lights():
             error_messages.append(f"Multiple aiSkyDomeLights found: {skydome_lights}")
             issues_found += 1
         
-        # Check shadow casting rules
-        allowed_shadow_casters = skydome_lights + key_lights
-        for light in shadow_casting_lights:
-            if light not in allowed_shadow_casters:
-                offending_lights.append(light)
-                issues_found += 1
-        
-        # Only skydome + one key light should cast shadows
-        key_shadow_casters = [light for light in key_lights if light in shadow_casting_lights]
-        if len(key_shadow_casters) > 1:
-            error_messages.append(f"Multiple key lights casting shadows: {key_shadow_casters}")
+        # 2. Should have exactly 1 key light
+        if len(key_lights) == 0:
+            error_messages.append("No 'key' light found for 3-point light setup")
+            issues_found += 1
+        elif len(key_lights) > 1:
+            error_messages.append(f"There should only be 1 key light for the 3-point light setup (found {len(key_lights)})")
             issues_found += 1
         
-        # Update UI
-        if issues_found == 0:
-            cmds.button(
-                "status_" + item_id,
-                e=True,
-                bgc=pass_color,
-                l='',
-                c=lambda args: print_message(
-                    f'Light setup is correct. Skydome: {len(skydome_lights)}, '
-                    f'Key lights: {len(key_lights)}, Shadow casters: {len(shadow_casting_lights)}'
-                )
-            )
-        else:
+        # 3. Only skydome and key lights should cast shadows
+        if len(non_key_shadow_casters) > 0:
+            warnings_found += 1
+            warning_messages.append(f"Non-key lights casting shadows: {non_key_shadow_casters}")
+        
+        # 4. Check total shadow casters (should be max 2: skydome + 1 key)
+        max_allowed_shadow_casters = 2
+        if len(shadow_casting_lights) > max_allowed_shadow_casters:
+            if len(shadow_casting_lights) == 1:
+                error_messages.append("Only one light should be casting shadows")
+            else:
+                error_messages.append(f"Only {max_allowed_shadow_casters} lights should be casting shadows (found {len(shadow_casting_lights)})")
+            issues_found += 1
+        
+        # Update UI based on results
+        if issues_found > 0:
             cmds.button(
                 "status_" + item_id,
                 e=True,
@@ -3305,34 +3292,56 @@ def check_ai_shadow_casting_lights():
                 l='?',
                 c=lambda args: warning_ai_shadow_casting_lights()
             )
+        elif warnings_found > 0:
+            cmds.button(
+                "status_" + item_id,
+                e=True,
+                bgc=warning_color,
+                l='!',
+                c=lambda args: warning_ai_shadow_casting_lights()
+            )
+        else:
+            cmds.button(
+                "status_" + item_id,
+                e=True,
+                bgc=pass_color,
+                l='',
+                c=lambda args: print_message(
+                    f'Light setup is correct. Total lights: {len(all_lights)}, '
+                    f'Skydome: {len(skydome_lights)}, Key lights: {len(key_lights)}, '
+                    f'Shadow casters: {len(shadow_casting_lights)}'
+                )
+            )
         
-        cmds.text("output_" + item_id, e=True, l=str(issues_found))
+        cmds.text("output_" + item_id, e=True, l=str(issues_found + warnings_found))
         
         # Patch Function
         def warning_ai_shadow_casting_lights():
             """Display AI shadow casting lights warning dialog."""
-            message_parts = []
-            message_parts.extend(error_messages)
-            if offending_lights:
-                message_parts.append(f"Lights incorrectly casting shadows: {offending_lights}")
+            all_messages = []
+            all_messages.extend(error_messages)
+            all_messages.extend(warning_messages)
             
-            patch_message = '\n'.join(message_parts) if message_parts else "Light setup issues found."
+            patch_message = '\n'.join(all_messages) if all_messages else "Light setup issues found."
             patch_message += '\n\n(Generate full report for complete details)'
+            
+            button_text = 'Select Problem Lights' if non_key_shadow_casters else 'OK'
+            buttons = ['OK', button_text, 'Ignore Issue'] if non_key_shadow_casters else ['OK', 'Ignore Issue']
             
             user_input = cmds.confirmDialog(
                 title=item_name,
                 message=patch_message,
-                button=['OK', 'Select Lights', 'Ignore Issue'],
+                button=buttons,
                 defaultButton='OK',
                 cancelButton='Ignore Issue',
                 dismissString='Ignore Issue',
-                icon="warning"
+                icon="warning" if issues_found > 0 else "information"
             )
             
-            if user_input == 'Select Lights':
+            if user_input == 'Select Problem Lights':
                 try:
-                    if offending_lights:
-                        cmds.select(offending_lights)
+                    if non_key_shadow_casters:
+                        cmds.select(non_key_shadow_casters)
                     else:
                         cmds.select(clear=True)
                         print("No specific lights to select")
@@ -3342,22 +3351,25 @@ def check_ai_shadow_casting_lights():
                 cmds.button("status_" + item_id, e=True, l='')
         
         # Return string for report
-        if issues_found > 0:
-            string_status = f'{issues_found} {"issue" if issues_found == 1 else "issues"} found.\n'
+        total_issues = issues_found + warnings_found
+        if total_issues > 0:
+            string_status = f'{issues_found} {"issue" if issues_found == 1 else "issues"} found,\n{warnings_found} {"warning" if warnings_found == 1 else "warnings"} found.\n'
+            string_status += f'Total lights in scene: {len(all_lights)}\n'
             string_status += f'Skydome lights: {len(skydome_lights)}\n'
             string_status += f'Key lights: {len(key_lights)}\n'
-            string_status += f'Shadow casting lights: {len(shadow_casting_lights)}\n'
+            string_status += f'Shadow casting lights: {len(shadow_casting_lights)}, {shadow_casting_lights}\n'
+            
             for msg in error_messages:
-                string_status += f'{msg}\n'
-            if offending_lights:
-                string_status += f'Offending lights: {offending_lights}\n'
+                string_status += f'Issues: {msg}\n'
+            for msg in warning_messages:
+                string_status += f'Warning: {msg}\n'
+            
             string_status = string_status.rstrip('\n')
         else:
             string_status = (
                 f'0 issues found. Light setup is correct.\n'
-                f'Skydome lights: {len(skydome_lights)}, '
-                f'Key lights: {len(key_lights)}, '
-                f'Shadow casting lights: {len(shadow_casting_lights)}'
+                f'Total lights: {len(all_lights)}, Skydome: {len(skydome_lights)}, '
+                f'Key lights: {len(key_lights)}, Shadow casters: {len(shadow_casting_lights)} {shadow_casting_lights}'
             )
         
         return f'\n*** {item_name} ***\n{string_status}'
