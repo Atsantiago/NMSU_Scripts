@@ -160,9 +160,9 @@ class ProfToolsSetup(object):
             return False
     
     def run_only(self):
-    """
-    Run prof-tools without installation (temporary mode)
-    """
+        """
+        Run prof-tools without installation (temporary mode)
+        """
     try:
         log_info("Running prof-tools in temporary mode...")
         source_path = self._get_source_path()
