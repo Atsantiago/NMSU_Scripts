@@ -388,7 +388,7 @@ def get_manifest_data():
         return _VERSION_CACHE['manifest']
     
     logger.warning("All manifest read methods failed")
-    return manifest_data
+    return None
 
 
 @handle_version_errors()

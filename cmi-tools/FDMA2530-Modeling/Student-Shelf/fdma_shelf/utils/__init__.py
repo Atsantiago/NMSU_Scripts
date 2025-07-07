@@ -22,9 +22,20 @@ from .cache import (
 # Re-export downloader function
 from .downloader import download_raw
 
-# Expose updater and system utils if desired
-from .system_utils import is_windows, is_macos, is_linux, get_os_name, get_platform_info
-from .updater import run_update, startup_check, check_for_updates
+# Re-export system utility functions
+from .system_utils import (
+    is_windows,
+    is_macos,
+    is_linux,
+    get_os_name,
+    get_platform_info,
+)
+
+# Expose updater API
+from .updater import (
+    run_update,
+    startup_check,
+)
 
 __all__ = [
     "read_local_config",
@@ -40,5 +51,4 @@ __all__ = [
     "get_platform_info",
     "run_update",
     "startup_check",
-    "check_for_updates",
 ]

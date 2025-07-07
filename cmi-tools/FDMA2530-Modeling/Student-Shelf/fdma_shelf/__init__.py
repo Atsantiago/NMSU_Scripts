@@ -7,63 +7,52 @@ Provides a single entry point to build or rebuild the shelf
 and automatically creates the shelf at Maya startup.
 
 Created by: Alexander T. Santiago
-Version: Dynamic (Read from releases.json)
+Version: Dynamic (Read from releases.json or persisted install)
 License: MIT
 Repository: https://github.com/Atsantiago/NMSU_Scripts
 """
 
-# Try to get version from manifest via version_utils, fall back to static version
-try:
-    from .utils.version_utils import get_fdma2530_version
-    __version__ = get_fdma2530_version()
-except (ImportError, Exception):
-    # Fallback version if version utils are unavailable or fail
-    __version__ = "2.0.1"
+# Try to get version from persisted install, then manifest via version_utils, then fallback
+from maya.utils import executeDeferred as _defer
+import maya.cmds as _cmds
 
 __author__ = "Alexander T. Santiago"
-__all__ = ["build_shelf"]
 
+# Expose build_shelf and updater APIs
+__all__ = ["build_shelf", "startup_check", "run_update"]
+
+# Version resolution
+try:
+    # Prefer persisted installed version, else manifest
+    from .utils.updater import _local_version as get_installed_version
+    __version__ = get_installed_version()
+except Exception:
+    try:
+        from .utils.version_utils import get_fdma2530_version
+        __version__ = get_fdma2530_version()
+    except Exception:
+        __version__ = "2.0.1"
+
+# Build functions
 def build_shelf(startup: bool = False) -> None:
     """
     Build or rebuild the FDMA 2530 shelf from the local JSON config.
 
-    This function serves as the main entry point for creating or rebuilding
-    the Maya shelf interface for FDMA 2530 tools. It handles both startup
-    initialization and manual rebuild scenarios.
-
     Parameters
     ----------
     startup : bool, optional
-        If True, the shelf is being built on Maya startup; suppresses
-        interactive messages and error dialogs to avoid disrupting the
-        Maya startup process. Defaults to False.
-        
-    Notes
-    -----
-    The shelf builder will:
-    - Read configuration from the local shelf_config.json file
-    - Create shelf buttons for each configured tool
-    - Set up proper icons, labels, and command callbacks
-    - Handle Maya-specific shelf creation and management
-    
-    Examples
-    --------
-    Manual shelf rebuild:
-    >>> import fdma_shelf
-    >>> fdma_shelf.build_shelf()
-    
-    Startup shelf creation (suppresses messages):
-    >>> fdma_shelf.build_shelf(startup=True)
+        If True, suppresses interactive messages and error dialogs.
     """
     from .shelf.builder import build_shelf as _real_builder
     _real_builder(startup=startup)
 
-# Automatically build the shelf at Maya startup
+# Import updater API functions
+from .utils.updater import startup_check, run_update  # noqa: F401
+
+# Automatically build the shelf at Maya startup and check for updates
 try:
-    import maya.utils as _mu
-    _mu.executeDeferred(lambda: build_shelf(startup=True))
-except ImportError:
-    # Not running inside Maya; do nothing
-    # This allows the package to be imported in other contexts
-    # without Maya dependencies
+    _defer(lambda: build_shelf(startup=True))
+    _defer(startup_check)
+except Exception:
+    # Not running inside Maya; ignore
     pass
