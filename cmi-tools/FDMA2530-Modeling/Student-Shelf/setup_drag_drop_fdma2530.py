@@ -76,7 +76,6 @@ def get_modules_dir():
 # Download / extract helpers
 # ---------------------------------------------------------------------------
 
-
 def safe_download(url, timeout=30):
     """Return raw bytes from *url* or None on failure."""
     try:
@@ -86,14 +85,12 @@ def safe_download(url, timeout=30):
         LOG.error("Download failed: %s", exc)
         return None
 
-
 def _find_repo_root(extract_dir):
     """Return the …/NMSU_Scripts-xxxx root inside *extract_dir*."""
     for name in os.listdir(extract_dir):
         if name.startswith("NMSU_Scripts-"):
             return os.path.join(extract_dir, name)
     return None
-
 
 def _read_manifest_version(manifest_path):
     """Return *current_version* from a manifest JSON file."""
@@ -105,6 +102,50 @@ def _read_manifest_version(manifest_path):
         LOG.warning("Could not read manifest version: %s", exc)
         return FALLBACK_VERSION
 
+def get_version_from_repo():
+    """
+    Download repo and read version from manifest without installing.
+    Used to show correct version in dialog title.
+    """
+    global CURRENT_VERSION
+    
+    zip_bytes = safe_download(REPO_ZIP_URL)
+    if not zip_bytes:
+        return FALLBACK_VERSION
+
+    tmp_zip = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
+    tmp_zip.write(zip_bytes)
+    tmp_zip.close()
+
+    try:
+        with zipfile.ZipFile(tmp_zip.name, "r") as zf:
+            extract_dir = tempfile.mkdtemp(prefix="cmi_version_check_")
+            zf.extractall(extract_dir)
+
+        repo_root = _find_repo_root(extract_dir)
+        if not repo_root:
+            return FALLBACK_VERSION
+
+        manifest_path = os.path.join(
+            repo_root, "cmi-tools", "FDMA2530-Modeling", "releases.json"
+        )
+        
+        if os.path.exists(manifest_path):
+            version = _read_manifest_version(manifest_path)
+            CURRENT_VERSION = version
+            return version
+        
+        return FALLBACK_VERSION
+        
+    except Exception as exc:
+        LOG.warning("Failed to read version from repo: %s", exc)
+        return FALLBACK_VERSION
+    finally:
+        # Cleanup temp files
+        if os.path.exists(tmp_zip.name):
+            os.unlink(tmp_zip.name)
+        if os.path.exists(extract_dir):
+            shutil.rmtree(extract_dir, ignore_errors=True)
 
 def download_and_extract_package(target_dir):
     """
@@ -142,6 +183,17 @@ def download_and_extract_package(target_dir):
             repo_root, "cmi-tools", "FDMA2530-Modeling", "releases.json"
         )
 
+        # Verify all required files exist
+        if not os.path.exists(src_pkg):
+            LOG.error("fdma_shelf package not found at %s", src_pkg)
+            return False
+        if not os.path.exists(src_cfg):
+            LOG.error("shelf_config.json not found at %s", src_cfg)
+            return False
+        if not os.path.exists(src_manifest):
+            LOG.error("releases.json not found at %s", src_manifest)
+            return False
+
         # Destination folders
         scripts_dir = os.path.join(target_dir, "scripts")
         icons_dir = os.path.join(target_dir, "icons")
@@ -178,14 +230,12 @@ def download_and_extract_package(target_dir):
         if os.path.exists(extract_dir):
             shutil.rmtree(extract_dir, ignore_errors=True)
 
-
 # ---------------------------------------------------------------------------
 # Module / README creation
 # ---------------------------------------------------------------------------
 
-
 def create_module_file():
-    """Write a cmi-tools.mod file for Maya’s module system."""
+    """Write a cmi-tools.mod file for Maya's module system."""
     try:
         mod_path = os.path.join(get_modules_dir(), "cmi-tools.mod")
         cmi_root = get_cmi_root()
@@ -202,7 +252,6 @@ def create_module_file():
     except Exception as exc:
         LOG.error("Failed to create .mod file: %s", exc)
         return False
-
 
 def create_readme_file(target_dir):
     """Generate a small README including the correct version."""
@@ -223,11 +272,9 @@ def create_readme_file(target_dir):
         LOG.warning("README creation failed: %s", exc)
         return False
 
-
 # ---------------------------------------------------------------------------
 # Shelf creation
 # ---------------------------------------------------------------------------
-
 
 def _import_and_build_shelf():
     """
@@ -247,11 +294,9 @@ def _import_and_build_shelf():
         LOG.error("Failed to build shelf: %s", exc, exc_info=True)
         return False
 
-
 # ---------------------------------------------------------------------------
 # High-level install / remove
 # ---------------------------------------------------------------------------
-
 
 def install_permanent():
     """Download, copy, write .mod, build shelf."""
@@ -273,7 +318,6 @@ def install_permanent():
 
     return _import_and_build_shelf()
 
-
 def install_temporary():
     """Same as permanent but into a temp location (session only)."""
     temp_root = tempfile.mkdtemp(prefix="cmi_temp_")
@@ -286,7 +330,6 @@ def install_temporary():
         sys.path.insert(0, scripts_dir)
 
     return _import_and_build_shelf()
-
 
 def uninstall():
     """Remove shelf, module file and entire cmi-tools folder."""
@@ -312,16 +355,17 @@ def uninstall():
     )
     return True
 
-
 # ---------------------------------------------------------------------------
 # Maya UI
 # ---------------------------------------------------------------------------
 
-
 def show_install_dialog():
     """Simple confirmDialog with permanent / temp / uninstall options."""
+    # Get the actual version from repo before showing dialog
+    actual_version = get_version_from_repo()
+    
     choice = cmds.confirmDialog(
-        title="CMI Tools Installer v{}".format(CURRENT_VERSION),
+        title="CMI Tools Installer v{}".format(actual_version),
         message=(
             "Install FDMA 2530 Tools\n\n"
             "• Install – permanent (Maya modules)\n"
@@ -383,11 +427,9 @@ def show_install_dialog():
                 button=["OK"],
             )
 
-
 # Maya drag-and-drop entry point
 def onMayaDroppedPythonFile(*_):
     show_install_dialog()
-
 
 # When run standalone
 if __name__ == "__main__":
