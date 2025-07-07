@@ -236,17 +236,24 @@ def _download_and_unpack(zip_url):
 
 def _finalize_update(new_version):
     """
-    Clear cached modules, rebuild shelf,
-    persist version, update UI feedback.
+    After files are copied:
+    - Clear all fdma_shelf modules from sys.modules
+    - Persist the new version
+    - Rebuild the shelf (calls builder + checklist code fresh)
+    - Update UI
     """
-    # Remove old modules
+    # 1) Remove cached modules
     for mod in [m for m in sys.modules if m.startswith("fdma_shelf")]:
         sys.modules.pop(mod, None)
+    # 2) Persist version
+    _persist_local_version(new_version)
+    # 3) Re-import package and rebuild
     import fdma_shelf
     mu.executeDeferred(lambda: fdma_shelf.build_shelf(startup=False))
-    _persist_local_version(new_version)
+    # 4) Update UI feedback
     _update_button_color("up_to_date")
     _show_message(f"You’re now on version {new_version}")
+
 
 # ------------------------------------------------------------------
 # Public API
@@ -267,31 +274,59 @@ def startup_check():
 
 def run_update():
     """
-    Called by the Update button: compare, prompt, download, install.
+    On-demand update: first check for newer version, then prompt.
+    If no update, show message. If update available:
+    - Clicking "Yes" installs and rebuilds.
+    - Clicking "No" leaves button green to indicate available update.
     """
+    # 1) Indicate checking
     _update_button_color("checking")
+
     try:
+        # 2) Get versions
         local = _local_version()
         remote, zip_url = _get_latest_release()
-        if _is_newer(remote, local):
-            _update_button_color("updates_available")
-            if cmds.confirmDialog(
-                title="CMI Tools Update",
-                message=f"New release {remote} available. Install now?",
-                button=["Yes", "No"],
-                defaultButton="Yes",
-                cancelButton="No"
-            ) == "Yes":
-                try:
-                    _download_and_unpack(zip_url)
-                    _finalize_update(remote)
-                except Exception as err:
-                    print(f"Update failed: {err}")
-                    _update_button_color("update_failed")
-                    _show_message("Update failed. See script editor.", "#FF5555")
-        else:
+
+        # 3) No update available
+        if not _is_newer(remote, local):
             _update_button_color("up_to_date")
-            _show_message(f"You are on the latest version: {local}")
+            _show_message(f"You are on the current version of CMI Tools: {local}")
+            return
+
+        # 4) Update is available: color button green
+        _update_button_color("updates_available")
+
+        # 5) Prompt user
+        answer = cmds.confirmDialog(
+            title="CMI Tools Update Available",
+            message=(
+                f"A new version of CMI Tools is available.\n\n"
+                f"Current Version: {local}\n"
+                f"New Version: {remote}\n\n"
+                "Would you like to update the shelf now?"
+            ),
+            button=["Yes", "No"],
+            defaultButton="Yes",
+            cancelButton="No",
+            dismissString="No"
+        )
+
+        if answer != "Yes":
+            # Leave button green; user can update later
+            return
+
+        # 6) User chose Yes: perform download & install
+        _update_button_color("checking")
+        _download_and_unpack(zip_url)
+        _finalize_update(remote)
+        # Notify success
+        cmds.confirmDialog(
+            title="Update Complete",
+            message=f"CMI Tools successfully updated to version {remote}.",
+            button=["OK"],
+            defaultButton="OK"
+        )
+
     except Exception as e:
         print(f"Update process error: {e}")
         _update_button_color("update_failed")
