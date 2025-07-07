@@ -25,6 +25,8 @@ logging.basicConfig()
 
 # GitHub API endpoint for latest release info
 MANIFEST_URL = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/prof-tools/releases.json"
+_HTTP_TIMEOUT = 10  # seconds
+
 
 def _get_releases_manifest():
     """
@@ -33,7 +35,7 @@ def _get_releases_manifest():
     """
     try:
         req = Request(MANIFEST_URL, headers={'User-Agent': 'Prof-Tools-Updater'})
-        resp = urlopen(req, timeout=5)
+        resp = urlopen(req, timeout=_HTTP_TIMEOUT)
         data = json.loads(resp.read().decode('utf-8'))
         return data
     except Exception as e:

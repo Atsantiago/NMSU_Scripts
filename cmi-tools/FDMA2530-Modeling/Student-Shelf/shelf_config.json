@@ -1,7 +1,6 @@
 {
   "shelf_info": {
     "name": "FDMA_2530",
-    "version": "2.0.0",
     "description": "FDMA 2530 Student Modeling Shelf",
     "cell_width": 35,
     "cell_height": 35
@@ -11,7 +10,7 @@
       "type": "button",
       "label": "Checklist",
       "icon": "checkboxOn.png",
-      "annotation": "CMI Modeling Checklist v2.0.0",
+      "annotation": "CMI Modeling Checklist v{version}",
       "command": "import fdma_shelf.tools.checklist as t; t.main()",
       "enabled": true
     },
@@ -25,7 +24,7 @@
       "type": "button",
       "label": "Update",
       "icon": "updateApp.png",
-      "annotation": "FDMA 2530 Shelf Updater v2.0.0",
+      "annotation": "FDMA 2530 Shelf Updater v{version}",
       "command": "import fdma_shelf.utils.updater as u; u.run_update()",
       "enabled": true
     }

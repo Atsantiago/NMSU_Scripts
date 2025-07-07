@@ -3,6 +3,7 @@ Builds or rebuilds the FDMA 2530 shelf from a local JSON config.
 
 This module provides a clean, GT-Tools–inspired approach for
 loading the shelf configuration regardless of Maya version.
+Now includes dynamic version substitution from releases.json manifest.
 """
 
 from __future__ import absolute_import, print_function
@@ -14,7 +15,7 @@ import hashlib
 import maya.cmds as cmds
 import maya.mel as mel
 import maya.utils as mu
-
+from fdma_shelf import __version__
 
 # ----------------------------------------------------------------------
 # Constants
@@ -22,6 +23,7 @@ import maya.utils as mu
 
 _CONFIG_FILE = "shelf_config.json"
 _SHELF_NAME = "FDMA_2530"
+VERSION_TOKEN = "{version}"
 
 # Directory containing this builder.py
 _BUILDER_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -61,6 +63,40 @@ def _delete_shelf(name):
 def _hash_text(text):
     """Return MD5 hash of text for change detection."""
     return hashlib.md5(text.encode("utf-8")).hexdigest()
+
+
+def _expand_version_tokens(obj):
+    """
+    Recursively expand all {version} tokens in the configuration data.
+    
+    This function traverses the entire configuration structure (dictionaries,
+    lists, and strings) and replaces any occurrence of {version} with the
+    actual version number from the fdma_shelf package.
+    
+    Args:
+        obj: The configuration object to process (dict, list, str, or other)
+    
+    Returns:
+        The same object with all {version} tokens replaced with actual version
+    
+    Examples:
+        >>> _expand_version_tokens("Tool v{version}")
+        'Tool v2.0.1'
+        >>> _expand_version_tokens({"annotation": "Update v{version}"})
+        {'annotation': 'Update v2.0.1'}
+    """
+    if isinstance(obj, str):
+        # Replace all occurrences of {version} with the actual version
+        return obj.replace(VERSION_TOKEN, __version__)
+    elif isinstance(obj, dict):
+        # Recursively process all dictionary values
+        return {key: _expand_version_tokens(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        # Recursively process all list items
+        return [_expand_version_tokens(item) for item in obj]
+    else:
+        # Return unchanged for other types (int, bool, None, etc.)
+        return obj
 
 
 # ----------------------------------------------------------------------
@@ -165,6 +201,10 @@ def build_shelf(startup=False):
     """
     Public entry point. Reads config and schedules shelf creation.
 
+    This function now includes dynamic version substitution, automatically
+    replacing {version} tokens in the shelf configuration with the actual
+    version number from the fdma_shelf package.
+
     Parameters
     ----------
     startup : bool
@@ -174,6 +214,10 @@ def build_shelf(startup=False):
     if not cfg:
         cmds.warning("FDMA shelf config not found at {}".format(_CONFIG_PATH))
         return
+
+    # ──── NEW: Expand all {version} tokens with the actual version ────────
+    cfg = _expand_version_tokens(cfg)
+    # ──────────────────────────────────────────────────────────────────────
 
     # Defer UI creation to avoid call-stack issues
     mu.executeDeferred(lambda: _create_shelf(cfg, startup=startup))

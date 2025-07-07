@@ -1,15 +1,25 @@
 """
-FDMA 2530 Shelf Package v2.0.1
-==============================
+FDMA 2530 Shelf Package v2.0.1+
+===============================
 
 Root package for the FDMA 2530 student shelf system.
 Provides a single entry point to build or rebuild the shelf
 and automatically creates the shelf at Maya startup.
 
 Created by: Alexander T. Santiago
+Version: Dynamic (Read from releases.json)
+License: MIT
+Repository: https://github.com/Atsantiago/NMSU_Scripts
 """
 
-__version__ = "2.0.1"
+# Try to get version from manifest via version_utils, fall back to static version
+try:
+    from .utils.version_utils import get_fdma2530_version
+    __version__ = get_fdma2530_version()
+except (ImportError, Exception):
+    # Fallback version if version utils are unavailable or fail
+    __version__ = "2.0.1"
+
 __author__ = "Alexander T. Santiago"
 __all__ = ["build_shelf"]
 
@@ -17,11 +27,33 @@ def build_shelf(startup: bool = False) -> None:
     """
     Build or rebuild the FDMA 2530 shelf from the local JSON config.
 
+    This function serves as the main entry point for creating or rebuilding
+    the Maya shelf interface for FDMA 2530 tools. It handles both startup
+    initialization and manual rebuild scenarios.
+
     Parameters
     ----------
     startup : bool, optional
         If True, the shelf is being built on Maya startup; suppresses
-        interactive messages.
+        interactive messages and error dialogs to avoid disrupting the
+        Maya startup process. Defaults to False.
+        
+    Notes
+    -----
+    The shelf builder will:
+    - Read configuration from the local shelf_config.json file
+    - Create shelf buttons for each configured tool
+    - Set up proper icons, labels, and command callbacks
+    - Handle Maya-specific shelf creation and management
+    
+    Examples
+    --------
+    Manual shelf rebuild:
+    >>> import fdma_shelf
+    >>> fdma_shelf.build_shelf()
+    
+    Startup shelf creation (suppresses messages):
+    >>> fdma_shelf.build_shelf(startup=True)
     """
     from .shelf.builder import build_shelf as _real_builder
     _real_builder(startup=startup)
@@ -32,4 +64,6 @@ try:
     _mu.executeDeferred(lambda: build_shelf(startup=True))
 except ImportError:
     # Not running inside Maya; do nothing
+    # This allows the package to be imported in other contexts
+    # without Maya dependencies
     pass
