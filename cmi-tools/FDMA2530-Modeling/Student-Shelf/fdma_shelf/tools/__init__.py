@@ -39,7 +39,9 @@ __author__  = "Alexander T. Santiago"
 #  3. Remove its name from __all__.
 # ----------------------------------------------------------------------
 
-__all__ = []  # Tools exported when using `from fdma_shelf.tools import *`
+__all__ = [
+    "checklist"
+]  # Tools exported when using `from fdma_shelf.tools import *`
 
 # Import checklist tool
 try:
@@ -49,7 +51,7 @@ except ImportError:
     # checklist.py missing or had import errors
     pass
 
-
+"""
 # Import temporary human body import tool
 try:
     from . import TEMP_humanBody_import
@@ -57,7 +59,8 @@ try:
 except ImportError:
     # TEMP_humanBody_import.py missing or had import errors
     pass
-
+"""
+    
 # ----------------------------------------------------------------------
 # Helper functions for tool discovery (optional)
 # ----------------------------------------------------------------------
