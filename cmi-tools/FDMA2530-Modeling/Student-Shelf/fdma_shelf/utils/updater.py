@@ -151,7 +151,7 @@ def _get_cmi_tools_root():
     return os.path.join(maya_app, "cmi-tools").replace("\\", "/")
 
 def _download_and_extract(zip_url):
-    """Download release ZIP and extract fdma_shelf and shelf_config.json."""
+    """Download release ZIP and extract fdma_shelf, shelf_config.json, and releases.json."""
     cmi_root = _get_cmi_tools_root()
     scripts_dir = os.path.join(cmi_root, "scripts")
     # Download ZIP
@@ -172,7 +172,9 @@ def _download_and_extract(zip_url):
     )
 
     src = os.path.join(repo_root, "cmi-tools", "FDMA2530-Modeling", "Student-Shelf")
-    # Overwrite package
+    manifest_src = os.path.join(repo_root, "cmi-tools", "FDMA2530-Modeling", "releases.json")
+    
+    # Overwrite package and config files
     for name in ("fdma_shelf", "shelf_config.json"):
         source = os.path.join(src, name)
         dest = os.path.join(scripts_dir, name)
@@ -182,6 +184,15 @@ def _download_and_extract(zip_url):
             shutil.copytree(source, dest)
         elif os.path.isfile(source):
             shutil.copy2(source, dest)
+    
+    # Copy releases.json manifest
+    if os.path.exists(manifest_src):
+        manifest_dest = os.path.join(scripts_dir, "releases.json")
+        shutil.copy2(manifest_src, manifest_dest)
+        print("Copied releases.json manifest")
+    else:
+        print("Warning: releases.json not found in update")
+    
     # Cleanup
     os.unlink(tmp.name)
     shutil.rmtree(extract_dir)
@@ -195,7 +206,7 @@ def _perform_release_update(body):
     # Rebuild shelf
     mu.executeDeferred(lambda: fdma_shelf.build_shelf(startup=False))
     _update_button_color("up_to_date")
-    _show_viewport_message("CMI Tools updated to the latest version: {fdma_shelf.__version__}")
+    _show_viewport_message(f"CMI Tools updated to the latest version: {fdma_shelf.__version__}")
 
 # ------------------------------------------------------------------
 # Public API
