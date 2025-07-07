@@ -255,8 +255,10 @@ def run_update():
     """
     _update_button_color("checking")
     try:
+        print("Starting update check...")  # Debug line
         local = _local_version()
         remote, zip_url = _get_latest_release()
+        print(f"Local version: {local}, Remote version: {remote}")  # Debug line
 
         if not _is_newer(remote, local):
             _update_button_color("up_to_date")
@@ -264,6 +266,7 @@ def run_update():
             return
 
         _update_button_color("updates_available")
+        print("Showing update dialog...")  # Debug line
         ans = cmds.confirmDialog(
             title="CMI Tools Update Available",
             message=(
@@ -277,10 +280,13 @@ def run_update():
             cancelButton="No",
             dismissString="No"
         )
+        
+        print(f"User choice: {ans}")  # Debug line
         if ans != "Yes":
             return
 
         _update_button_color("checking")
+        print("Downloading and installing update...")  # Debug line
         _download_and_unpack(zip_url)
         _finalize_update(remote)
         cmds.confirmDialog(
@@ -291,5 +297,8 @@ def run_update():
         )
     except Exception as e:
         print(f"Update process error: {e}")
+        import traceback
+        traceback.print_exc()  # Print full stack trace for debugging
         _update_button_color("update_failed")
         _show_message("Update check failed. See script editor.", "#FF5555")
+

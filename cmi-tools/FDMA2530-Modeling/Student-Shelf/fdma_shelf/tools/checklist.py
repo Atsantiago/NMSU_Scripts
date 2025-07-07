@@ -3620,8 +3620,12 @@ except ImportError:
 
 # Main execution
 def main():
-    build_gui_ats_cmi_modeling_checklist()
+    """Main entry point with better error handling"""
+    try:
+        build_gui_ats_cmi_modeling_checklist()
+    except Exception as e:
+        import traceback
+        print(f"Error loading CMI Modeling Checklist: {e}")
+        traceback.print_exc()
+        cmds.warning(f"CMI Modeling Checklist failed to load: {e}")
 
-# If run as a script, launch the GUI
-if __name__ == "__main__":
-    main()
