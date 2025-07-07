@@ -170,7 +170,7 @@ def _download_and_extract(zip_url):
         for d in os.listdir(extract_dir)
         if d.startswith("NMSU_Scripts-")
     )
-    # FIXED: Include cmi-tools directory level
+
     src = os.path.join(repo_root, "cmi-tools", "FDMA2530-Modeling", "Student-Shelf")
     # Overwrite package
     for name in ("fdma_shelf", "shelf_config.json"):
@@ -195,7 +195,7 @@ def _perform_release_update(body):
     # Rebuild shelf
     mu.executeDeferred(lambda: fdma_shelf.build_shelf(startup=False))
     _update_button_color("up_to_date")
-    _show_viewport_message("CMI Tools updated!\n" + body[:200])
+    _show_viewport_message("CMI Tools updated to the latest version: {fdma_shelf.__version__}")
 
 # ------------------------------------------------------------------
 # Public API
@@ -253,7 +253,7 @@ def check_for_updates():
     try:
         latest = download_raw(
             "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/"
-            "cmi-tools/FDMA2530-Modeling/Student-Shelf/shelf_config.json", timeout=10
+            "cmi-tools/FDMA2530-Modeling/Student-Shelf/shelf_config.json", timeout=_HTTP_TIMEOUT
         )
         if not latest:
             return False

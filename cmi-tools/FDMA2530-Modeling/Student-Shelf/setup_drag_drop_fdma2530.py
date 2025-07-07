@@ -83,15 +83,23 @@ def download_and_extract_package(target_dir):
                     print("Could not find extracted repository")
                     return False
                 
+                # ----------------------------------------------------------
                 # Source paths
-                student_shelf_path = os.path.join(extracted_repo, "cmi-tools", "FDMA2530-Modeling", "Student-Shelf")
-                source_package = os.path.join(student_shelf_path, "fdma_shelf")
-                source_config = os.path.join(student_shelf_path, "shelf_config.json")
+                # ----------------------------------------------------------
+                student_shelf_path = os.path.join(
+                    extracted_repo, "cmi-tools", "FDMA2530-Modeling", "Student-Shelf"
+                )
+                source_package  = os.path.join(student_shelf_path, "fdma_shelf")
+                source_config   = os.path.join(student_shelf_path, "shelf_config.json")
+                source_manifest = os.path.join(
+                    extracted_repo, "cmi-tools", "FDMA2530-Modeling", "releases.json"
+                )  # ← NEW: manifest file
+                # ----------------------------------------------------------
                 
                 # Create cmi-tools directory structure
-                scripts_dir = os.path.join(target_dir, "scripts")
-                icons_dir = os.path.join(target_dir, "icons") 
-                shelves_dir = os.path.join(target_dir, "shelves")
+                scripts_dir  = os.path.join(target_dir, "scripts")
+                icons_dir    = os.path.join(target_dir, "icons") 
+                shelves_dir  = os.path.join(target_dir, "shelves")
                 
                 for dir_path in [scripts_dir, icons_dir, shelves_dir]:
                     if not os.path.exists(dir_path):
@@ -115,6 +123,15 @@ def download_and_extract_package(target_dir):
                 else:
                     print("Warning: shelf_config.json not found in repository")
                 
+                # ------------------------ NEW ----------------------------
+                # Copy releases.json so version_utils can locate it
+                if os.path.exists(source_manifest):
+                    shutil.copy2(source_manifest, scripts_dir)
+                    print("Copied releases.json to scripts/")
+                else:
+                    print("Warning: releases.json not found in repository")
+                # ---------------------------------------------------------
+                
                 # Clean up temp extraction
                 shutil.rmtree(temp_extract_dir)
             
@@ -128,321 +145,3 @@ def download_and_extract_package(target_dir):
         import traceback
         print(traceback.format_exc())
         return False
-
-def create_module_file():
-    """Create cmi-tools.mod file in Maya modules directory"""
-    try:
-        modules_dir = get_modules_dir()
-        mod_file_path = os.path.join(modules_dir, "cmi-tools.mod")
-        cmi_root = get_cmi_tools_root()
-        
-        mod_content = """+ cmi-tools 2.0.1 {cmi_root}
-scripts: scripts
-icons: icons
-shelves: shelves
-""".format(cmi_root=cmi_root)
-        
-        with open(mod_file_path, 'w') as f:
-            f.write(mod_content)
-        
-        print("Created cmi-tools.mod in modules directory")
-        return True
-        
-    except Exception as e:
-        print("Failed to create module file: {0}".format(e))
-        return False
-
-def create_readme_file(target_dir):
-    """Create README.md explaining the cmi-tools folder"""
-    readme_content = """# CMI Tools for Maya - FDMA 2530 Shelf System
-
-This folder contains the FDMA 2530 student modeling shelf system for Maya.
-
-## Author & Creator
-
-**Alexander T. Santiago**  
-Email: asanti89@nmsu.edu  
-Institution: New Mexico State University - Creative Media Institute  
-Course: FDMA 2530 - 3D Modeling Fundamentals  
-
-## About This System
-
-The CMI Tools shelf system was designed specifically for FDMA 2530 students to provide:
-- Streamlined modeling workflow tools
-- Educational validation systems  
-- Professional-grade tool organization
-- Industry-standard Maya integration
-
-## Folder Structure
-
-- **scripts/**: Python packages and modules (fdma_shelf)
-- **icons/**: Shelf button icons and UI graphics  
-- **shelves/**: MEL shelf files (if any)
-- **README.md**: This documentation file
-
-## What This System Provides
-
-The FDMA 2530 shelf includes tools for students:
-- **CMI Modeling Checklist**: Comprehensive project validation system
-- **Import Tools**: Reference geometry and asset management
-- **Update System**: Automatic tool updates from GitHub
-- **Educational Workflow**: Designed for Maya learning progression
-
-## How It Works
-
-This system uses Maya's professional module system to:
-1. Add scripts/ to Maya's Python path automatically
-2. Add icons/ to Maya's icon search path  
-3. Load the shelf on Maya startup without userSetup.py modifications
-4. Provide clean, professional tool organization
-
-## For Students: Adding Personal Tools
-
-To customize this system with your own tools:
-1. Create new .py file in scripts/fdma_shelf/tools/
-2. Add import to scripts/fdma_shelf/tools/__init__.py
-3. Update scripts/shelf_config.json with new button configuration
-4. Use semantic versioning for your tool versions
-
-## Updating the System
-
-The shelf includes an Update button that:
-- Checks GitHub for new tool versions
-- Downloads updates automatically
-- Rebuilds the shelf without requiring Maya restart
-- Preserves your personal customizations
-
-## Uninstalling
-
-To remove this system completely:
-1. Delete this entire cmi-tools folder
-2. Delete the cmi-tools.mod file from Maya's modules directory
-3. Restart Maya
-
-## Technical Details
-
-- **Version**: 2.0.1
-- **Compatibility**: Maya 2016-2025+
-- **Platforms**: Windows, macOS, Linux
-- **Architecture**: GT Tools-inspired professional structure
-- **License**: Educational use for FDMA 2530 students
-
-## Support
-
-For technical support or feature requests:
-- Check Maya Script Editor for detailed error messages
-- Contact course instructor: Alexander T. Santiago
-- Email: asanti89@nmsu.edu
-
-## Acknowledgments
-
-This system follows professional Maya tool development patterns
-inspired by industry-standard tools like GT Tools while being
-specifically designed for educational use in 3D modeling courses.
-
----
-Created with care for FDMA 2530 students at NMSU Creative Media Institute.
-"""
-    
-    try:
-        readme_path = os.path.join(target_dir, "README.md")
-        with open(readme_path, 'w') as f:
-            f.write(readme_content)
-        print("Created README.md in cmi-tools directory")
-        return True
-    except Exception as e:
-        print("Failed to create README: {0}".format(e))
-        return False
-
-def create_shelf_safely():
-    """Import and create the shelf after module installation"""
-    try:
-        # Clear any existing fdma_shelf imports to ensure fresh load
-        modules_to_clear = [name for name in sys.modules.keys() if name.startswith('fdma_shelf')]
-        for module_name in modules_to_clear:
-            del sys.modules[module_name]
-        
-        # Import the package (should now be in Maya's Python path via module)
-        import fdma_shelf
-        
-        # Debug: Check what attributes are available
-        print("fdma_shelf attributes: {0}".format(dir(fdma_shelf)))
-        
-        # Verify build_shelf exists
-        if not hasattr(fdma_shelf, 'build_shelf'):
-            print("Error: fdma_shelf.build_shelf not found")
-            print("Available attributes: {0}".format([attr for attr in dir(fdma_shelf) if not attr.startswith('_')]))
-            
-            # Try importing builder directly as fallback
-            try:
-                from fdma_shelf.shelf.builder import build_shelf
-                print("Successfully imported build_shelf directly from builder")
-                build_shelf(startup=False)
-                print("Shelf created successfully via direct import!")
-                return True
-            except ImportError as ie:
-                print("Direct import also failed: {0}".format(ie))
-                return False
-        
-        # Create the shelf using package function
-        print("Creating FDMA 2530 shelf...")
-        fdma_shelf.build_shelf(startup=False)
-        print("Shelf created successfully!")
-        return True
-        
-    except ImportError as e:
-        print("Failed to import fdma_shelf: {0}".format(e))
-        import traceback
-        print(traceback.format_exc())
-        return False
-    except Exception as e:
-        print("Failed to create shelf: {0}".format(e))
-        import traceback
-        print(traceback.format_exc())
-        return False
-
-def install_permanent():
-    """Install cmi-tools module permanently"""
-    cmi_root = get_cmi_tools_root()
-    print("Installing to cmi-tools directory: {0}".format(cmi_root))
-    
-    # Create cmi-tools directory
-    if not os.path.exists(cmi_root):
-        os.makedirs(cmi_root)
-    
-    # Download and extract package
-    if not download_and_extract_package(cmi_root):
-        return False
-    
-    # Create module file
-    if not create_module_file():
-        return False
-    
-    # Create documentation
-    if not create_readme_file(cmi_root):
-        print("Warning: README creation failed")
-    
-    # Add scripts directory to Python path for immediate use
-    scripts_dir = os.path.join(cmi_root, "scripts")
-    if scripts_dir not in sys.path:
-        sys.path.insert(0, scripts_dir)
-    
-    # Create shelf immediately
-    return create_shelf_safely()
-
-def install_temporary():
-    """Install temporarily (just create shelf from temp location)"""
-    temp_dir = tempfile.mkdtemp(prefix="cmi_temp_")
-    print("Installing temporarily to: {0}".format(temp_dir))
-    
-    # Download to temp location
-    if not download_and_extract_package(temp_dir):
-        return False
-    
-    # Add temp scripts to Python path
-    temp_scripts = os.path.join(temp_dir, "scripts")
-    if temp_scripts not in sys.path:
-        sys.path.insert(0, temp_scripts)
-    
-    # Create shelf
-    return create_shelf_safely()
-
-def uninstall():
-    """Remove cmi-tools module system"""
-    cmi_root = get_cmi_tools_root()
-    modules_dir = get_modules_dir()
-    mod_file = os.path.join(modules_dir, "cmi-tools.mod")
-    
-    # Remove shelf from Maya
-    try:
-        if cmds.shelfLayout("FDMA_2530", exists=True):
-            cmds.deleteUI("FDMA_2530", layout=True)
-            print("Removed FDMA_2530 shelf")
-    except Exception:
-        pass
-    
-    # Remove cmi-tools directory
-    if os.path.exists(cmi_root):
-        try:
-            shutil.rmtree(cmi_root)
-            print("Removed cmi-tools directory")
-        except Exception as e:
-            print("Failed to remove cmi-tools: {0}".format(e))
-            return False
-    
-    # Remove module file
-    if os.path.exists(mod_file):
-        try:
-            os.remove(mod_file)
-            print("Removed cmi-tools.mod")
-        except Exception as e:
-            print("Failed to remove module file: {0}".format(e))
-    
-    print("CMI Tools uninstalled successfully!")
-    return True
-
-def show_install_dialog():
-    """Show installation dialog"""
-    choice = cmds.confirmDialog(
-        title="CMI Tools Installer v{0}".format(__version__),
-        message="CMI Tools Installation\n\nChoose installation type:\n\nInstall Tools: Permanent installation using Maya modules\nLoad Once: Temporary installation (session only)\nUninstall: Remove CMI Tools",
-        button=["Install", "Load Once", "Uninstall", "Cancel"],
-        defaultButton="Install",
-        cancelButton="Cancel"
-    )
-    
-    if choice == "Install":
-        if install_permanent():
-            cmds.confirmDialog(
-                title="Success",
-                message="CMI Tools - FDMA 2530 Shelf installed successfully!\n\nThe shelf will automatically load when Maya starts.\n\nCreated by: Alexander T. Santiago",
-                button=["OK"]
-            )
-        else:
-            cmds.confirmDialog(
-                title="Error",
-                message="Installation failed. Check Script Editor for details.",
-                button=["OK"]
-            )
-    
-    elif choice == "Load Once":
-        if install_temporary():
-            cmds.confirmDialog(
-                title="Success", 
-                message="CMI Tools - FDMA 2530 shelf loaded temporarily!\n\nShelf will be removed when Maya closes.\nFor permanent installation, run installer again.",
-                button=["OK"]
-            )
-        else:
-            cmds.confirmDialog(
-                title="Error",
-                message="Temporary installation failed. Check Script Editor for details.",
-                button=["OK"]
-            )
-    
-    elif choice == "Uninstall":
-        confirm = cmds.confirmDialog(
-            title="Confirm Uninstall",
-            message="Remove CMI Tools completely?",
-            button=["Yes", "No"],
-            defaultButton="No"
-        )
-        
-        if confirm == "Yes":
-            if uninstall():
-                cmds.confirmDialog(
-                    title="Uninstalled",
-                    message="CMI Tools removed successfully.",
-                    button=["OK"]
-                )
-
-def onMayaDroppedPythonFile(*args):
-    """Maya drag-and-drop entry point"""
-    try:
-        show_install_dialog()
-    except Exception as e:
-        cmds.warning("Installer error: {0}".format(e))
-        import traceback
-        print(traceback.format_exc())
-
-if __name__ == "__main__":
-    onMayaDroppedPythonFile()
