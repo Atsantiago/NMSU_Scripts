@@ -2,8 +2,11 @@
 FDMA2530 Shelf Updater v2.0.2
 
 Checks for updates via GitHub manifest, compares versions,
-and installs updates on demand.
+and installs updates on demand. Persists installed version,
+caches manifest on failure, and provides clear Maya UI feedback.
 """
+
+from __future__ import absolute_import, print_function
 
 import os
 import sys
@@ -13,6 +16,7 @@ import tempfile
 import zipfile
 import shutil
 import urllib.request
+import traceback
 
 import maya.cmds as cmds
 import maya.utils as mu
@@ -21,15 +25,20 @@ import maya.utils as mu
 # Configuration
 # ------------------------------------------------------------------
 
-_REPO_OWNER        = "Atsantiago"
-_REPO_NAME         = "NMSU_Scripts"
-_MANIFEST_URL      = (
+_REPO_OWNER   = "Atsantiago"
+_REPO_NAME    = "NMSU_Scripts"
+_MANIFEST_URL = (
     f"https://raw.githubusercontent.com/"
     f"{_REPO_OWNER}/{_REPO_NAME}/master/"
     "cmi-tools/FDMA2530-Modeling/releases.json"
 )
-_HTTP_TIMEOUT      = 10  # seconds
-_SHELF_NAME        = "FDMA_2530"
+_CACHE_FILE   = os.path.join(
+    cmds.internalVar(userAppDir=True),
+    "cmi-tools",
+    "releases_cache.json"
+)
+_HTTP_TIMEOUT = 10  # seconds
+_SHELF_NAME   = "FDMA_2530"
 
 # Button colors keyed by status
 _BUTTON_COLORS = {
@@ -39,8 +48,11 @@ _BUTTON_COLORS = {
     "checking":          [0.8, 0.8, 0.2],
 }
 
+# Maya optionVar name to persist installed version
+_OPTION_VAR = "fdma2530_installed_version"
+
 # ------------------------------------------------------------------
-# Helpers: UI feedback
+# UI Feedback Helpers
 # ------------------------------------------------------------------
 
 def _update_button_color(status):
@@ -49,7 +61,8 @@ def _update_button_color(status):
         if not cmds.shelfLayout(_SHELF_NAME, exists=True):
             return
         for btn in (cmds.shelfLayout(_SHELF_NAME, q=True, childArray=True) or []):
-            if cmds.objectTypeUI(btn) == "shelfButton" and cmds.shelfButton(btn, q=True, label=True) == "Update":
+            if (cmds.objectTypeUI(btn) == "shelfButton" and
+                    cmds.shelfButton(btn, q=True, label=True) == "Update"):
                 cmds.shelfButton(btn, e=True, backgroundColor=_BUTTON_COLORS[status])
                 return
     except Exception:
@@ -60,131 +73,218 @@ def _show_message(text, color="#FFCC00"):
     try:
         cmds.inViewMessage(
             amg=f'<span style="color:{color}">{text}</span>',
-            pos="botLeft", fade=True,
-            fadeStayTime=3000, fadeOutTime=500
+            pos="botLeft",
+            fade=True,
+            fadeStayTime=3000,
+            fadeOutTime=500
         )
     except Exception:
-        pass
+        print(text)
 
 # ------------------------------------------------------------------
-# Version logic
+# Manifest Fetching with Cache Fallback
 # ------------------------------------------------------------------
 
 def _fetch_manifest():
-    """Download and decode the releases.json manifest."""
-    ctx = ssl.create_default_context()
-    with urllib.request.urlopen(_MANIFEST_URL, timeout=_HTTP_TIMEOUT, context=ctx) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    """
+    Download and decode the releases.json manifest.
+    On failure, load from local cache.
+    After successful download, overwrite cache.
+    """
+    try:
+        ctx = ssl.create_default_context()
+        with urllib.request.urlopen(_MANIFEST_URL, timeout=_HTTP_TIMEOUT, context=ctx) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        # Ensure cache directory exists
+        cache_dir = os.path.dirname(_CACHE_FILE)
+        if not os.path.isdir(cache_dir):
+            os.makedirs(cache_dir)
+        # Write cache
+        with open(_CACHE_FILE, "w") as f:
+            json.dump(data, f)
+        return data
+    except Exception:
+        # Fallback to cache
+        try:
+            with open(_CACHE_FILE, "r") as f:
+                data = json.load(f)
+            _show_message("Using cached update data", "#FFCC00")
+            return data
+        except Exception:
+            traceback.print_exc()
+            raise RuntimeError("Could not load manifest or cache")
+
+# ------------------------------------------------------------------
+# Version Logic
+# ------------------------------------------------------------------
 
 def _get_latest_release():
     """
-    Return (latest_version, zip_url).
-    Assumes the first entry in "releases" is the most recent.
+    Return (latest_version, download_url).
+    Finds matching current_version entry first; else picks highest version.
     """
     data = _fetch_manifest()
-    if not data.get("releases"):
-        raise RuntimeError("No releases in manifest")
-    latest = data["releases"][0]
+    curr = data.get("current_version")
+    releases = data.get("releases", [])
+    # 1. Try to find manifest entry matching current_version
+    for entry in releases:
+        if entry.get("version") == curr:
+            return entry["version"], entry["download_url"]
+    # 2. Fallback: sort all releases descending by semantic tuple
+    def _ver_tuple(v):
+        return tuple(int(p) for p in v.split("."))
+    sorted_releases = sorted(
+        releases,
+        key=lambda e: _ver_tuple(e.get("version", "0.0.0")),
+        reverse=True
+    )
+    if not sorted_releases:
+        raise RuntimeError("No releases available in manifest")
+    latest = sorted_releases[0]
     return latest["version"], latest["download_url"]
 
 def _local_version():
-    """Get the local shelf version from manifest field or fallback."""
+    """
+    Return the installed version:
+      1. Maya optionVar if set
+      2. manifest 'current_version'
+      3. fallback to package __version__
+    """
     try:
-        return _fetch_manifest().get("current_version")
+        if cmds.optionVar(exists=_OPTION_VAR):
+            ver = cmds.optionVar(query=_OPTION_VAR)
+            return ver
     except Exception:
-        from fdma_shelf import __version__  # fallback
-        return __version__
+        pass
+    # manifest fallback
+    try:
+        data = _fetch_manifest()
+        if data.get("current_version"):
+            return data["current_version"]
+    except Exception:
+        pass
+    # package fallback
+    from fdma_shelf import __version__
+    return __version__
+
+def _persist_local_version(new_version):
+    """Store the installed version in Maya optionVar."""
+    try:
+        cmds.optionVar(stringValue=(_OPTION_VAR, new_version))
+    except Exception:
+        pass
 
 def _is_newer(remote, local):
-    """Return True if remote > local (semantic)."""
+    """Return True if semantic version remote > local."""
     try:
-        rv = tuple(map(int, remote.lstrip("v").split(".")))
-        lv = tuple(map(int, local.lstrip("v").split(".")))
+        rv = tuple(int(p) for p in remote.split("."))
+        lv = tuple(int(p) for p in local.split("."))
         return rv > lv
     except Exception:
         return False
 
 # ------------------------------------------------------------------
-# Update operations
+# Download & Install
 # ------------------------------------------------------------------
 
 def _download_and_unpack(zip_url):
-    """Download ZIP, unpack Student-Shelf, overwrite existing files."""
-    # Build paths
-    app_dir    = cmds.internalVar(userAppDir=True)
-    cmi_dir    = os.path.join(app_dir, "cmi-tools", "scripts")
-    ctx        = ssl.create_default_context()
+    """
+    Download the release ZIP, extract Student-Shelf,
+    and overwrite fdma_shelf package and shelf_config.json.
+    """
+    # Paths
+    app_dir = cmds.internalVar(userAppDir=True)
+    dest_dir = os.path.join(app_dir, "cmi-tools", "scripts")
+    ctx = ssl.create_default_context()
 
-    # Download to temp file
+    # Download ZIP to temp file
     with urllib.request.urlopen(zip_url, timeout=30, context=ctx) as resp:
         tmp_zip = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
         tmp_zip.write(resp.read())
         tmp_zip.close()
 
-    # Extract to temp folder
+    # Extract
     tmp_folder = tempfile.mkdtemp(prefix="cmi_update_")
     with zipfile.ZipFile(tmp_zip.name, "r") as zf:
         zf.extractall(tmp_folder)
 
-    # Find extracted repo root
-    root = next(d for d in os.listdir(tmp_folder) if d.startswith("NMSU_Scripts-"))
-    src = os.path.join(tmp_folder, root, "cmi-tools", "FDMA2530-Modeling", "Student-Shelf")
+    # Locate repo root
+    root_name = next(
+        d for d in os.listdir(tmp_folder) if d.startswith("NMSU_Scripts-")
+    )
+    src = os.path.join(
+        tmp_folder,
+        root_name,
+        "cmi-tools",
+        "FDMA2530-Modeling",
+        "Student-Shelf"
+    )
 
-    # Overwrite fdma_shelf package + config
-    for item in ("fdma_shelf", "shelf_config.json"):
-        s = os.path.join(src, item)
-        d = os.path.join(cmi_dir, item)
-        if os.path.isdir(s):
-            shutil.rmtree(d, ignore_errors=True)
-            shutil.copytree(s, d)
-        elif os.path.isfile(s):
-            shutil.copy2(s, d)
+    # Overwrite package and config
+    for name in ("fdma_shelf", "shelf_config.json"):
+        src_path = os.path.join(src, name)
+        dest_path = os.path.join(dest_dir, name)
+        if os.path.isdir(src_path):
+            shutil.rmtree(dest_path, ignore_errors=True)
+            shutil.copytree(src_path, dest_path)
+        elif os.path.isfile(src_path):
+            shutil.copy2(src_path, dest_path)
 
-    # Clean up
+    # Cleanup
     os.unlink(tmp_zip.name)
     shutil.rmtree(tmp_folder)
 
-def _finalize_update():
-    """Reload shelf and notify user."""
-    # Clear old modules
-    for m in [m for m in sys.modules if m.startswith("fdma_shelf")]:
-        sys.modules.pop(m)
+def _finalize_update(new_version):
+    """
+    Clear cached modules, rebuild shelf,
+    persist version, update UI feedback.
+    """
+    # Remove old modules
+    for mod in [m for m in sys.modules if m.startswith("fdma_shelf")]:
+        sys.modules.pop(mod, None)
     import fdma_shelf
     mu.executeDeferred(lambda: fdma_shelf.build_shelf(startup=False))
+    _persist_local_version(new_version)
     _update_button_color("up_to_date")
-    _show_message(f"You’re on the latest: {fdma_shelf.__version__}")
+    _show_message(f"You’re now on version {new_version}")
 
 # ------------------------------------------------------------------
 # Public API
 # ------------------------------------------------------------------
 
 def startup_check():
-    """Call at Maya startup to mark button if updates exist."""
+    """
+    On Maya startup, mark the button if updates exist;
+    otherwise show ‘up_to_date’ color.
+    """
     try:
         local = _local_version()
         remote, _ = _get_latest_release()
-        _update_button_color("updates_available" if _is_newer(remote, local) else "up_to_date")
+        status = "updates_available" if _is_newer(remote, local) else "up_to_date"
+        _update_button_color(status)
     except Exception:
         _update_button_color("up_to_date")
 
 def run_update():
-    """On-demand update: compare, prompt, download, install."""
+    """
+    Called by the Update button: compare, prompt, download, install.
+    """
     _update_button_color("checking")
     try:
         local = _local_version()
         remote, zip_url = _get_latest_release()
-
         if _is_newer(remote, local):
             _update_button_color("updates_available")
             if cmds.confirmDialog(
                 title="CMI Tools Update",
                 message=f"New release {remote} available. Install now?",
-                button=["Yes","No"],
-                defaultButton="Yes", cancelButton="No"
+                button=["Yes", "No"],
+                defaultButton="Yes",
+                cancelButton="No"
             ) == "Yes":
                 try:
                     _download_and_unpack(zip_url)
-                    _finalize_update()
+                    _finalize_update(remote)
                 except Exception as err:
                     print(f"Update failed: {err}")
                     _update_button_color("update_failed")
