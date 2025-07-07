@@ -12,7 +12,7 @@ Updates and changes by Alexander T. Santiago - github.com/atsantiago
 # Standard library imports
 import copy
 import sys
-# Version information
+#Tool Version information
 __version__ = "2.0.1"
 
 # Script Information  
@@ -121,6 +121,7 @@ DEFAULT_OBJECT_NAMES = [
 # ==============================================================================
 # MAIN GUI FUNCTION
 # ==============================================================================
+from fdma_shelf.utils.updater import _local_version as get_cmi_tools_version
 
 def build_gui_ats_cmi_modeling_checklist():
     """Build the main GUI window with improved layout and resizing."""
@@ -129,10 +130,17 @@ def build_gui_ats_cmi_modeling_checklist():
     if cmds.window(window_name, exists=True):
         cmds.deleteUI(window_name, window=True)
 
+    # Retrieve versions
+        tool_version = SCRIPT_VERSION
+        cmi_tools_version = get_cmi_tools_version()
+
     # Create window with resizing enabled and scroll support
     cmds.window(
         window_name,
-        title=f"{script_name}  v{script_version}",
+        title=(
+            f"{script_name}:v{script_version} -- "
+            f"CMI Tools:{cmi_tools_version}"
+        ),
         mnb=False,
         mxb=False,
         s=True,
