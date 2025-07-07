@@ -147,7 +147,7 @@ def build_gui_ats_cmi_modeling_checklist():
         resizeToFitChildren=True,
         width=420,
         height=810
-    )
+    )  
 
     # Add scroll layout wrapper
     scroll_layout = cmds.scrollLayout(

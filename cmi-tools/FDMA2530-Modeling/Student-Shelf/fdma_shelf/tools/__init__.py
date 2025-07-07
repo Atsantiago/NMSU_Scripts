@@ -1,27 +1,34 @@
 """
-FDMA 2530 Student Tools Package v2.0.1
-======================================
+FDMA 2530 Student Tools Package
 
 Collection of educational tools for FDMA 2530 modeling students.
 Each tool module provides specific functionality accessible through
 the shelf interface.
-
-Version
--------
-2.0.1
 """
 
 from __future__ import absolute_import
 
 # ----------------------------------------------------------------------
-# Package metadata
+# Dynamic Package Version Metadata
 # ----------------------------------------------------------------------
+from fdma_shelf.utils.updater import _fetch_manifest
 
-__version__ = "2.0.1"         # Update this when making a new package release
-__author__ = "Alexander T. Santiago"
+def _get_cmi_tools_version():
+    """
+    Read the current CMI Tools version from releases.json manifest.
+    """
+    try:
+        manifest = _fetch_manifest()
+        return manifest.get("current_version", "unknown")
+    except Exception:
+        return "unknown"
+
+__version__ = _get_cmi_tools_version()
+__author__  = "Alexander T. Santiago"
 
 # ----------------------------------------------------------------------
 # Import tool modules here
+
 # To add a new tool:
 #  1. Place its .py file in this folder (fdma_shelf/tools).
 #  2. Add an import block below.
@@ -57,36 +64,26 @@ except ImportError:
 
 def get_available_tools():
     """
-    Return a list of tool module names currently available.
-    Use this to dynamically build menus or validate tool presence.
+    Return a list of tool entry names currently available.
     """
     return list(__all__)
 
-
 def get_tool_info():
     """
-    Return detailed info for each tool, helpful for debugging
-    or building a Tools menu with annotations.
+    Return detailed info for each tool, helpful for debugging.
     Each entry contains:
-      - name: human-friendly name
-      - version: tool version string if defined, else 'unknown'
-      - description: docstring first line if present, else empty
+      - name: entry point name
+      - version: tool module __version__ or 'unknown'
+      - description: module docstring first line or empty
     """
     info = {}
-    for tool_name in __all__:
-        try:
-            mod = globals()[tool_name]
-            version = getattr(mod, "__version__", "unknown")
-            doc = (mod.__doc__ or "").strip().splitlines()[0]
-            info[tool_name] = {
-                "version": version,
-                "description": doc
-            }
-        except Exception:
-            info[tool_name] = {
-                "version": "error",
-                "description": ""
-            }
+    for entry in __all__:
+        fn = globals()[entry]
+        mod = __import__(fn.__module__, fromlist=[fn.__name__])
+        info[entry] = {
+            "version": getattr(mod, "__version__", "unknown"),
+            "description": (mod.__doc__ or "").strip().splitlines()[0]
+        }
     return info
 
 
@@ -95,11 +92,11 @@ def get_tool_info():
 # ----------------------------------------------------------------------
 
 if __name__ == "__main__":
-    print("FDMA 2530 Tools Package v{}".format(__version__))
+    print(f"FDMA 2530 Tools Package v{__version__}")
     tools = get_available_tools()
     if tools:
         print("Available tools:", ", ".join(tools))
         for name, data in get_tool_info().items():
-            print(" - {0}: v{1} — {2}".format(name, data["version"], data["description"]))
+            print(f" - {name}: v{data['version']} — {data['description']}")
     else:
         print("No tools are currently available.")
