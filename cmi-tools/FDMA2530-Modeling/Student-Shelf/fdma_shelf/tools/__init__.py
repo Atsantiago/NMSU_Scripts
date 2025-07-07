@@ -32,11 +32,9 @@ __author__ = "Alexander T. Santiago"
 # To add a new tool:
 # 1. Place its .py file in this folder (fdma_shelf/tools).
 # 2. Add an import block below.
-# 3. Add its name to __all__ if you want it available via wildcard import.
 # To remove a tool:
 # 1. Remove its .py file from this folder.
 # 2. Remove or comment out its import block below.
-# 3. Remove its name from __all__.
 # ----------------------------------------------------------------------------
 
 __all__ = []  # Start with empty list - tools will be added dynamically

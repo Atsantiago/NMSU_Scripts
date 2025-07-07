@@ -13,7 +13,6 @@ import os
 # Path to your shelf configuration JSON
 _CONFIG_PATH = os.path.join(
     os.path.dirname(__file__),
-    "config",
     "fdma_shelf_config.json"
 )
 
