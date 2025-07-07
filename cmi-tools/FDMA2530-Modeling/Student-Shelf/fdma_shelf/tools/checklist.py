@@ -134,13 +134,13 @@ def build_gui_ats_cmi_modeling_checklist():
         tool_version = SCRIPT_VERSION
         cmi_tools_version = get_cmi_tools_version()
 
+    # Title includes both versions
+    window_title = f"{SCRIPT_NAME}:v{tool_version}  --  CMI Tools:{cmi_tools_version}"
+
     # Create window with resizing enabled and scroll support
     cmds.window(
         window_name,
-        title=(
-            f"{script_name}:v{script_version} -- "
-            f"CMI Tools:{cmi_tools_version}"
-        ),
+        title=window_title
         mnb=False,
         mxb=False,
         s=True,
