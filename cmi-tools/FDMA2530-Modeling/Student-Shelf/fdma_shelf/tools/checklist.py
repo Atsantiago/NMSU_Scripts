@@ -13,7 +13,7 @@ Updates and changes by Alexander T. Santiago - github.com/atsantiago
 import copy
 import sys
 #Tool Version information
-__version__ = "2.0.1"
+__version__ = "2.0.2"
 
 # Script Information  
 SCRIPT_NAME = "CMI Modeling Checklist"
