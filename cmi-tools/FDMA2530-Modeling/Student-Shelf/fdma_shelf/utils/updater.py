@@ -154,36 +154,43 @@ def _download_and_extract(zip_url):
     """Download release ZIP and extract fdma_shelf, shelf_config.json, and releases.json."""
     cmi_root = _get_cmi_tools_root()
     scripts_dir = os.path.join(cmi_root, "scripts")
+    
     # Download ZIP
     ctx = ssl.create_default_context()
     with urllib.request.urlopen(zip_url, timeout=30, context=ctx) as resp:
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
         tmp.write(resp.read())
         tmp.close()
+    
     # Extract
     extract_dir = tempfile.mkdtemp(prefix="cmi_update_")
     with zipfile.ZipFile(tmp.name, "r") as zf:
         zf.extractall(extract_dir)
-    # Locate extracted Student-Shelf folder
+    
+    # Locate extracted repository root
     repo_root = next(
         os.path.join(extract_dir, d)
         for d in os.listdir(extract_dir)
         if d.startswith("NMSU_Scripts-")
     )
 
-    src = os.path.join(repo_root, "cmi-tools", "FDMA2530-Modeling", "Student-Shelf")
+    # Source paths - corrected for proper structure
+    student_shelf_src = os.path.join(repo_root, "cmi-tools", "FDMA2530-Modeling", "Student-Shelf")
     manifest_src = os.path.join(repo_root, "cmi-tools", "FDMA2530-Modeling", "releases.json")
     
-    # Overwrite package and config files
-    for name in ("fdma_shelf", "shelf_config.json"):
-        source = os.path.join(src, name)
-        dest = os.path.join(scripts_dir, name)
-        if os.path.isdir(source):
-            if os.path.exists(dest):
-                shutil.rmtree(dest)
-            shutil.copytree(source, dest)
-        elif os.path.isfile(source):
-            shutil.copy2(source, dest)
+    # Copy fdma_shelf package
+    fdma_shelf_src = os.path.join(student_shelf_src, "fdma_shelf")
+    fdma_shelf_dest = os.path.join(scripts_dir, "fdma_shelf")
+    if os.path.exists(fdma_shelf_dest):
+        shutil.rmtree(fdma_shelf_dest)
+    shutil.copytree(fdma_shelf_src, fdma_shelf_dest)
+    print("Copied fdma_shelf package")
+    
+    # Copy shelf_config.json
+    config_src = os.path.join(student_shelf_src, "shelf_config.json")
+    if os.path.exists(config_src):
+        shutil.copy2(config_src, scripts_dir)
+        print("Copied shelf_config.json")
     
     # Copy releases.json manifest
     if os.path.exists(manifest_src):
@@ -191,11 +198,12 @@ def _download_and_extract(zip_url):
         shutil.copy2(manifest_src, manifest_dest)
         print("Copied releases.json manifest")
     else:
-        print("Warning: releases.json not found in update")
+        print(f"Warning: releases.json not found at {manifest_src}")
     
     # Cleanup
     os.unlink(tmp.name)
     shutil.rmtree(extract_dir)
+
 
 def _perform_release_update(body):
     """Reload package, rebuild shelf, and notify user."""

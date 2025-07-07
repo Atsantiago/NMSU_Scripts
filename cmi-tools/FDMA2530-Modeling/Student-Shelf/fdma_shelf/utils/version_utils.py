@@ -285,14 +285,8 @@ def read_manifest_from_file():
     """
     Read and parse the releases.json manifest file from the local filesystem.
     
-    Provides the primary method for reading version information from the local
-    manifest file. Includes comprehensive error handling and validation.
-    
     Returns:
-        dict or None: Parsed manifest data if successful, None if file not found or invalid
-    
-    Raises:
-        Exception: Re-raised by decorator as fallback version
+        str: Current version string from manifest, not the full manifest
     """
     manifest_path = find_manifest_file()
     if not manifest_path:
@@ -309,7 +303,8 @@ def read_manifest_from_file():
                 raise ValueError(f"Invalid manifest: missing required field '{field}'")
         
         logger.debug(f"Successfully read manifest from: {manifest_path}")
-        return manifest_data
+        # Return ONLY the version string, not the full manifest
+        return manifest_data.get('current_version')
         
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON in manifest file: {e}")
@@ -317,32 +312,20 @@ def read_manifest_from_file():
         raise Exception(f"Failed to read manifest file: {e}")
 
 
+
 @handle_version_errors()
 def read_manifest_from_url(manifest_url=None):
     """
     Read and parse the releases.json manifest file from a remote URL.
     
-    Provides a fallback method for reading version information when local file
-    is not available. Useful for development scenarios or when tools are run
-    from different locations.
-    
-    Args:
-        manifest_url (str, optional): URL to the manifest file. If None, constructs
-                                    default GitHub raw content URL.
-    
     Returns:
-        dict or None: Parsed manifest data if successful, None if URL not accessible
-    
-    Raises:
-        Exception: Re-raised by decorator as fallback version
+        str: Current version string from manifest, not the full manifest
     """
     if manifest_url is None:
-        # Default GitHub raw content URL for FDMA2530 tools
         manifest_url = ("https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/"
                        "master/cmi-tools/FDMA2530-Modeling/releases.json")
     
     try:
-        # Create SSL context for HTTPS requests
         ctx = ssl.create_default_context()
         
         with urllib.request.urlopen(manifest_url, timeout=HTTP_TIMEOUT_SECONDS, context=ctx) as response:
@@ -358,7 +341,8 @@ def read_manifest_from_url(manifest_url=None):
                 raise ValueError(f"Invalid manifest: missing required field '{field}'")
         
         logger.debug(f"Successfully read manifest from URL: {manifest_url}")
-        return manifest_data
+        # Return ONLY the version string, not the full manifest
+        return manifest_data.get('current_version')
         
     except urllib.error.URLError as e:
         raise Exception(f"Failed to access manifest URL: {e}")
