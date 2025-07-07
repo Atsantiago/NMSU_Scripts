@@ -1,0 +1,50 @@
+{
+  "tool_name": "FDMA2530-Modeling",
+  "current_version": "2.0.1",
+  "description": "Maya shelf tools for FDMA 2530 - Introduction to 3D Modeling course at NMSU's Creative Media Institute",
+  "author": "Alexander T. Santiago",
+  "repository": "https://github.com/Atsantiago/NMSU_Scripts",
+  "target_course": "FDMA 2530 - Introduction to 3D Modeling",
+  "releases": [
+    {
+      "version": "2.0.2",
+      "date": "2025-07-06",
+      "commit_hash": "b3bb34f",
+      "description": "Fixed updater system for separate tool releases and implemented manifest-based updates",
+      "features": [
+        "Manifest-based updater system replacing GitHub Releases API",
+        "Independent versioning for FDMA2530 tools",
+        "Dynamic version management from releases.json",
+        "Improved update reliability and control",
+        "Enhanced student workflow with shelf-based interface"
+      ],
+      "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/b3bb34f.zip",
+      "directory_path": "cmi-tools/FDMA2530-Modeling",
+      "breaking_changes": false,
+      "requirements": {
+        "maya_version": "2020+",
+        "python_version": "3.x",
+        "platforms": ["Windows", "macOS", "Linux"]
+      },
+      "installation": {
+        "method": "drag_and_drop",
+        "installer_file": "setup_drag_drop_maya_fdma2530.py",
+        "target_location": "Maya shelf",
+        "shelf_name": "FDMA_2530"
+      }
+    }
+  ],
+  "update_system": {
+    "type": "manifest_based",
+    "manifest_url": "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/cmi-tools/FDMA2530-Modeling/releases.json",
+    "check_frequency": "on_startup",
+    "auto_update": false,
+    "user_confirmation_required": true,
+    "visual_feedback": {
+      "update_button_colors": true,
+      "viewport_messages": true,
+      "shelf_integration": true
+    }
+  },
+  "license": "MIT"
+}

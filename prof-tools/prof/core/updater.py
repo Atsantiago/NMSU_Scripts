@@ -24,24 +24,35 @@ logger = logging.getLogger(__name__)
 logging.basicConfig()
 
 # GitHub API endpoint for latest release info
-GITHUB_RELEASES_API = "https://api.github.com/repos/Atsantiago/NMSU_Scripts/releases/latest"
+MANIFEST_URL = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/prof-tools/releases.json"
 
+def _get_releases_manifest():
+    """
+    Fetch the releases manifest from GitHub.
+    Returns the manifest data or None on error.
+    """
+    try:
+        req = Request(MANIFEST_URL, headers={'User-Agent': 'Prof-Tools-Updater'})
+        resp = urlopen(req, timeout=5)
+        data = json.loads(resp.read().decode('utf-8'))
+        return data
+    except Exception as e:
+        logger.error("Failed to fetch releases manifest: %s", e)
+        return None
 
 def get_latest_version():
     """
-    Fetch the latest release tag from GitHub.
-    Returns the tag name (e.g. "v0.2.0") or None on error.
+    Fetch the latest release version from the manifest.
+    Returns the version string (e.g. "0.2.0") or None on error.
     """
     try:
-        # Send HTTP request with a User-Agent header
-        req = Request(GITHUB_RELEASES_API, headers={'User-Agent': 'Prof-Tools-Updater'})
-        resp = urlopen(req, timeout=5)
-        data = json.loads(resp.read().decode('utf-8'))
-        return data.get('tag_name')  # return tag_name field
+        manifest = _get_releases_manifest()
+        if not manifest:
+            return None
+        return manifest.get('current_version')
     except Exception as e:
-        logger.error("Failed to fetch latest version: %s", e)
+        logger.error("Failed to parse latest version: %s", e)
         return None
-
 
 def compare_versions(local, remote):
     """

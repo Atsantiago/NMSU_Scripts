@@ -48,8 +48,7 @@ from .downloader import download_raw
 
 _REPO_OWNER     = "Atsantiago"
 _REPO_NAME      = "NMSU_Scripts"
-_RELEASE_API    = f"https://api.github.com/repos/{_REPO_OWNER}/{_REPO_NAME}/releases/latest"
-_HTTP_TIMEOUT   = 10  # seconds
+_RELEASES_MANIFEST_URL    = f"https://raw.githubusercontent.com/{_REPO_OWNER}/{_REPO_NAME}/master/cmi-tools/FDMA2530-Modeling/releases.json"
 
 # Visual status colors for update button
 _BUTTON_COLORS = {
@@ -98,12 +97,34 @@ def _show_viewport_message(message, color="#FFCC00"):
 # GitHub Releases logic
 # ------------------------------------------------------------------
 
-def _get_latest_release_info():
-    """Return (tag_name, zipball_url, body) from the latest GitHub release."""
+def _get_releases_manifest():
+    """Return manifest data from the releases.json file."""
     ctx = ssl.create_default_context()
-    with urllib.request.urlopen(_RELEASE_API, timeout=_HTTP_TIMEOUT, context=ctx) as response:
+    with urllib.request.urlopen(_RELEASES_MANIFEST_URL, timeout=_HTTP_TIMEOUT, context=ctx) as response:
         data = json.loads(response.read().decode("utf-8"))
-    return data["tag_name"], data["zipball_url"], data.get("body", "")
+        return data
+
+def _get_latest_release_info():
+    """Return (version, download_url, description) from the manifest."""
+    manifest = _get_releases_manifest()
+    current_version = manifest["current_version"]
+    
+    # Find the release data for the current version
+    for release in manifest["releases"]:
+        if release["version"] == current_version:
+            return (
+                release["version"],
+                release["download_url"],
+                release["description"]
+            )
+    
+    # Fallback if current version not found in releases
+    if manifest["releases"]:
+        latest = manifest["releases"][0]
+        return latest["version"], latest["download_url"], latest["description"]
+    
+    raise ValueError("No releases found in manifest")
+
 
 def _is_newer(tag):
     """Compare semantic tag vX.Y.Z against local __version__."""

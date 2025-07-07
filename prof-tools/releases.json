@@ -1,0 +1,71 @@
+{
+  "tool_name": "prof-tools",
+  "current_version": "0.2.0",
+  "description": "Maya instructor tools for grading and managing student assignments across NMSU's FDMA courses for the Creative Media Institute (CMI)",
+  "author": "Alexander T. Santiago",
+  "repository": "https://github.com/Atsantiago/NMSU_Scripts",
+  "target_courses": [
+    "FDMA 1510 - Intro 3D Animation",
+    "FDMA 2530 - Introduction to Modeling"
+  ],
+  "releases": [
+    {
+      "version": "0.2.0",
+      "date": "2025-07-03",
+      "commit_hash": "6e22770",
+      "description": "Initial release of Prof-Tools framework with core functionality",
+      "features": [
+        "Project structure and architecture established",
+        "Basic menu system framework implemented",
+        "Core grading engine implementation",
+        "Rubric configuration system foundation",
+        "Drag-and-drop installer following GT-Tools pattern",
+        "Universal grading engine for consistent logic across courses",
+        "Configurable rubrics for class and assignment-specific criteria",
+        "Automated analysis capabilities for file validation and scene checks",
+        "Menu-based interface integrated into Maya's main interface"
+      ],
+      "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/6e22770.zip",
+      "directory_path": "prof-tools",
+      "breaking_changes": false,
+      "requirements": {
+        "maya_version": "2020+",
+        "python_version": "3.x",
+        "platforms": [
+          "Windows",
+          "macOS",
+          "Linux"
+        ]
+      },
+      "installation": {
+        "method": "drag_and_drop",
+        "installer_file": "setup_drag_drop_maya_prof-tools.py",
+        "target_location": "Maya menu bar"
+      }
+    }
+  ],
+  "update_system": {
+    "type": "manifest_based",
+    "manifest_url": "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/prof-tools/releases.json",
+    "check_frequency": "on_demand",
+    "auto_update": false,
+    "user_confirmation_required": true
+  },
+  "development_status": {
+    "phase": "Initial Development",
+    "roadmap": [
+      "Assignment-specific grading tools",
+      "Report generation system",
+      "Advanced rubric configurations",
+      "Integration with FDMA course workflows",
+      "Automated student file analysis",
+      "Grade export capabilities"
+    ]
+  },
+  "license": "MIT",
+  "support": {
+    "documentation": "https://github.com/Atsantiago/NMSU_Scripts/tree/master/prof-tools/docs",
+    "issues": "https://github.com/Atsantiago/NMSU_Scripts/issues",
+    "contact": "https://github.com/Atsantiago"
+  }
+}
