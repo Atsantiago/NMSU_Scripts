@@ -187,14 +187,6 @@ def _is_newer(remote, local):
 # Download & Install
 # ------------------------------------------------------------------
 
-<<<<<<< HEAD
-def _download_and_extract(zip_url):
-    """Download release ZIP and extract fdma_shelf, shelf_config.json, and releases.json."""
-    cmi_root = _get_cmi_tools_root()
-    scripts_dir = os.path.join(cmi_root, "scripts")
-    
-    # Download ZIP
-=======
 def _download_and_unpack(zip_url):
     """
     Download the release ZIP, extract Student-Shelf,
@@ -203,63 +195,10 @@ def _download_and_unpack(zip_url):
     # Paths
     app_dir = cmds.internalVar(userAppDir=True)
     dest_dir = os.path.join(app_dir, "cmi-tools", "scripts")
->>>>>>> dev-grader
     ctx = ssl.create_default_context()
 
     # Download ZIP to temp file
     with urllib.request.urlopen(zip_url, timeout=30, context=ctx) as resp:
-<<<<<<< HEAD
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
-        tmp.write(resp.read())
-        tmp.close()
-    
-    # Extract
-    extract_dir = tempfile.mkdtemp(prefix="cmi_update_")
-    with zipfile.ZipFile(tmp.name, "r") as zf:
-        zf.extractall(extract_dir)
-    
-    # Locate extracted repository root
-    repo_root = next(
-        os.path.join(extract_dir, d)
-        for d in os.listdir(extract_dir)
-        if d.startswith("NMSU_Scripts-")
-    )
-
-    # Source paths - corrected for proper structure
-    student_shelf_src = os.path.join(repo_root, "cmi-tools", "FDMA2530-Modeling", "Student-Shelf")
-    manifest_src = os.path.join(repo_root, "cmi-tools", "FDMA2530-Modeling", "releases.json")
-    
-    # Copy fdma_shelf package
-    fdma_shelf_src = os.path.join(student_shelf_src, "fdma_shelf")
-    fdma_shelf_dest = os.path.join(scripts_dir, "fdma_shelf")
-    if os.path.exists(fdma_shelf_dest):
-        shutil.rmtree(fdma_shelf_dest)
-    shutil.copytree(fdma_shelf_src, fdma_shelf_dest)
-    print("Copied fdma_shelf package")
-    
-    # Copy shelf_config.json
-    config_src = os.path.join(student_shelf_src, "shelf_config.json")
-    if os.path.exists(config_src):
-        shutil.copy2(config_src, scripts_dir)
-        print("Copied shelf_config.json")
-    
-    # Copy releases.json manifest
-    if os.path.exists(manifest_src):
-        manifest_dest = os.path.join(scripts_dir, "releases.json")
-        shutil.copy2(manifest_src, manifest_dest)
-        print("Copied releases.json manifest")
-    else:
-        print(f"Warning: releases.json not found at {manifest_src}")
-    
-    # Cleanup
-    os.unlink(tmp.name)
-    shutil.rmtree(extract_dir)
-
-
-def _perform_release_update(body):
-    """Reload package, rebuild shelf, and notify user."""
-    # Clear cached modules
-=======
         tmp_zip = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
         tmp_zip.write(resp.read())
         tmp_zip.close()
@@ -301,18 +240,13 @@ def _finalize_update(new_version):
     persist version, update UI feedback.
     """
     # Remove old modules
->>>>>>> dev-grader
     for mod in [m for m in sys.modules if m.startswith("fdma_shelf")]:
         sys.modules.pop(mod, None)
     import fdma_shelf
     mu.executeDeferred(lambda: fdma_shelf.build_shelf(startup=False))
     _persist_local_version(new_version)
     _update_button_color("up_to_date")
-<<<<<<< HEAD
-    _show_viewport_message(f"CMI Tools updated to the latest version: {fdma_shelf.__version__}")
-=======
     _show_message(f"You’re now on version {new_version}")
->>>>>>> dev-grader
 
 # ------------------------------------------------------------------
 # Public API
