@@ -1,223 +1,83 @@
+# builder.py
 """
-Builds or rebuilds the FDMA 2530 shelf from a local JSON config.
+FDMA 2530 Shelf Builder Module
 
-This module provides a clean, GT-Tools–inspired approach for
-loading the shelf configuration regardless of Maya version.
-Now includes dynamic version substitution from releases.json manifest.
+Defines the core function to construct the Maya shelf for FDMA 2530 tools.
 """
 
-from __future__ import absolute_import, print_function
-
+from maya import cmds
+import maya.utils as mu
 import json
 import os
-import hashlib
 
-import maya.cmds as cmds
-import maya.mel as mel
-import maya.utils as mu
-from fdma_shelf import __version__
-
-# ----------------------------------------------------------------------
-# Constants
-# ----------------------------------------------------------------------
-
-_CONFIG_FILE = "shelf_config.json"
-_SHELF_NAME = "FDMA_2530"
-VERSION_TOKEN = "{version}"
-
-# Directory containing this builder.py
-_BUILDER_DIR = os.path.dirname(os.path.abspath(__file__))
-# scripts/ directory where shelf_config.json resides
-_SCRIPTS_DIR = os.path.abspath(
-    os.path.join(_BUILDER_DIR, os.pardir, os.pardir)
+# Path to your shelf configuration JSON
+_CONFIG_PATH = os.path.join(
+    os.path.dirname(__file__),
+    "config",
+    "fdma_shelf_config.json"
 )
-# Full path to JSON config
-_CONFIG_PATH = os.path.join(_SCRIPTS_DIR, _CONFIG_FILE)
 
-
-# ----------------------------------------------------------------------
-# Helpers
-# ----------------------------------------------------------------------
 
 def _read_json(path):
-    """Read and return JSON object, or None on failure."""
+    """
+    Read and return JSON data from the given file path.
+    """
     try:
-        with open(path, "r") as fh:
-            return json.load(fh)
-    except Exception:
-        cmds.warning("Failed to read shelf config at {}".format(path))
+        with open(path, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        cmds.warning(f"Failed to read shelf config at {path}: {e}")
         return None
 
 
-def _shelf_exists(name):
-    """Return True if a shelf layout exists."""
-    return cmds.shelfLayout(name, q=True, ex=True)
-
-
-def _delete_shelf(name):
-    """Delete the shelf layout if it exists."""
-    if _shelf_exists(name):
-        cmds.deleteUI(name, layout=True)
-
-
-def _hash_text(text):
-    """Return MD5 hash of text for change detection."""
-    return hashlib.md5(text.encode("utf-8")).hexdigest()
-
-
-def _expand_version_tokens(obj):
+def _expand_version_tokens(cfg):
     """
-    Recursively expand all {version} tokens in the configuration data.
-    
-    This function traverses the entire configuration structure (dictionaries,
-    lists, and strings) and replaces any occurrence of {version} with the
-    actual version number from the fdma_shelf package.
-    
-    Args:
-        obj: The configuration object to process (dict, list, str, or other)
-    
-    Returns:
-        The same object with all {version} tokens replaced with actual version
-    
-    Examples:
-        >>> _expand_version_tokens("Tool v{version}")
-        'Tool v2.0.1'
-        >>> _expand_version_tokens({"annotation": "Update v{version}"})
-        {'annotation': 'Update v2.0.1'}
+    Replace version tokens in button labels or icons if needed.
     """
-    if isinstance(obj, str):
-        # Replace all occurrences of {version} with the actual version
-        return obj.replace(VERSION_TOKEN, __version__)
-    elif isinstance(obj, dict):
-        # Recursively process all dictionary values
-        return {key: _expand_version_tokens(value) for key, value in obj.items()}
-    elif isinstance(obj, list):
-        # Recursively process all list items
-        return [_expand_version_tokens(item) for item in obj]
-    else:
-        # Return unchanged for other types (int, bool, None, etc.)
-        return obj
+    version = cfg.get("version", "")
+    for btn in cfg.get("buttons", []):
+        if "{version}" in btn.get("annotation", ""):
+            btn["annotation"] = btn["annotation"].replace("{version}", version)
+    return cfg
 
 
-# ----------------------------------------------------------------------
-# Main builder
-# ----------------------------------------------------------------------
+def _create_shelf(cfg, startup=False):
+    """
+    Create Maya shelf and buttons based on the provided configuration.
+    """
+    shelf_name = cfg.get("shelfName", "FDMA_2530")
+    # Delete existing shelf if it exists
+    if cmds.shelfLayout(shelf_name, exists=True):
+        cmds.deleteUI(shelf_name, layout=True)
 
-def _create_shelf(config, startup=False):
-    """Create shelf UI according to config dict."""
-    shelf_info = config.get("shelf_info", {})
-    cell_w = int(shelf_info.get("cell_width", 35))
-    cell_h = int(shelf_info.get("cell_height", 35))
+    # Create new shelf
+    cmds.shelfLayout(shelf_name, parent="ShelfLayout")
 
-    # Get Maya's shelf parent
-    g_top = mel.eval("global string $gShelfTopLevel; $tmp=$gShelfTopLevel;")
-    if not g_top:
-        cmds.warning("Shelf parent not found")
-        return
+    for btn in cfg.get("buttons", []):
+        cmds.shelfButton(
+            label=btn.get("label", ""),
+            annotation=btn.get("annotation", ""),
+            command=btn.get("command", ""),
+            image=btn.get("icon", ""),
+            style="iconAndTextVertical"
+        )
 
-    # Remove existing shelf
-    _delete_shelf(_SHELF_NAME)
-
-    # Create new shelf layout
-    shelf = cmds.shelfLayout(
-        _SHELF_NAME,
-        parent=g_top,
-        cellWidth=cell_w,
-        cellHeight=cell_h,
-    )
-
-    # Populate buttons and separators
-    for item in config.get("buttons", []):
-        if not item.get("enabled", True):
-            continue
-
-        if item.get("type") == "separator":
-            cmds.separator(
-                parent=shelf,
-                style=item.get("style", "shelf"),
-                hr=not item.get("horizontal", False),
-                width=item.get("width", cell_w),
-                height=item.get("height", cell_h),
-            )
-            continue
-
-        if item.get("type") == "button":
-            cmd_str = _build_button_command(item)
-            cmds.shelfButton(
-                parent=shelf,
-                label=item.get("label", ""),
-                image1=item.get("icon", "commandButton.png"),
-                annotation=item.get("annotation", ""),
-                command=cmd_str,
-                width=int(item.get("width", cell_w)),
-                height=int(item.get("height", cell_h)),
-            )
-
-    # Activate the new shelf tab
-    if cmds.control(g_top, ex=True) and cmds.control(shelf, ex=True):
-        cmds.tabLayout(g_top, edit=True, tabLabel=(shelf, _SHELF_NAME))
-
-    if not startup:
+    if startup:
         cmds.inViewMessage(
-            amg="FDMA 2530 shelf rebuilt",
-            pos="botLeft",
+            amg=f"<hl>FDMA 2530 shelf built (v{cfg.get('version','unknown')})</hl>",
+            pos="topCenter",
             fade=True
         )
 
 
-def _build_button_command(item):
-    """
-    Return a Python command string for the shelf button.
-
-    Priority:
-    1. 'command' in JSON
-    2. Update button fallback
-    3. Legacy 'script_url' fallback
-    """
-    if "command" in item:
-        return item["command"]
-
-    label = item.get("label", "")
-    if label.lower() == "update":
-        return "import fdma_shelf.utils.updater as _u; _u.run_update()"
-
-    url = item.get("script_url", "")
-    if url:
-        return (
-            "import sys, urllib.request; "
-            "from types import ModuleType; "
-            "code = urllib.request.urlopen('{u}').read(); "
-            "code = code.decode('utf-8') if isinstance(code, bytes) else code; "
-            "mod = ModuleType('temp'); "
-            "exec(code, mod.__dict__); "
-            "fn = getattr(mod, 'main', None) or getattr(mod, 'run', None); "
-            "fn() if callable(fn) else None"
-        ).format(u=url)
-
-    return "print('Button command not configured properly')"
-
-
 def build_shelf(startup=False):
     """
-    Public entry point. Reads config and schedules shelf creation.
-
-    This function now includes dynamic version substitution, automatically
-    replacing {version} tokens in the shelf configuration with the actual
-    version number from the fdma_shelf package.
-
-    Parameters
-    ----------
-    startup : bool
-        If True, shelf is built at Maya startup (suppress messages).
+    Public entry point. Reads config and defers shelf creation.
     """
     cfg = _read_json(_CONFIG_PATH)
     if not cfg:
-        cmds.warning("FDMA shelf config not found at {}".format(_CONFIG_PATH))
         return
 
-    # ──── NEW: Expand all {version} tokens with the actual version ────────
     cfg = _expand_version_tokens(cfg)
-    # ──────────────────────────────────────────────────────────────────────
-
-    # Defer UI creation to avoid call-stack issues
+    # Defer actual UI creation until Maya is ready
     mu.executeDeferred(lambda: _create_shelf(cfg, startup=startup))
