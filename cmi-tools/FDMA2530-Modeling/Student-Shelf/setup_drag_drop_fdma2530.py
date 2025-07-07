@@ -84,7 +84,7 @@ def download_and_extract_package(target_dir):
                     return False
                 
                 # Source paths
-                student_shelf_path = os.path.join(extracted_repo, "cmi-toosl", "FDMA2530-Modeling", "Student-Shelf")
+                student_shelf_path = os.path.join(extracted_repo, "cmi-tools", "FDMA2530-Modeling", "Student-Shelf")
                 source_package = os.path.join(student_shelf_path, "fdma_shelf")
                 source_config = os.path.join(student_shelf_path, "shelf_config.json")
                 
