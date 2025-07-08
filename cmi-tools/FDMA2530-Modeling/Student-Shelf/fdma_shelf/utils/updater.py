@@ -122,10 +122,16 @@ def _download_and_extract(zip_url):
     shutil.rmtree(extract_dir)
 
 def _perform_release_update(new_version):
-    """Reload package, rebuild shelf, and notify user."""
+    """Reload package, clear version cache, rebuild shelf, and notify user."""
     # Clear cached modules
     for mod in [m for m in sys.modules if m.startswith("fdma_shelf")]:
         sys.modules.pop(mod)
+    # Clear version cache so get_fdma2530_version() reads the new manifest
+    try:
+        import fdma_shelf.utils.version_utils as vutils
+        vutils.clear_version_cache()
+    except Exception as e:
+        print("Warning: Could not clear version cache after update: {}".format(e))
     import fdma_shelf
     # Rebuild shelf
     if mu is not None:
