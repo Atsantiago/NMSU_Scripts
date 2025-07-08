@@ -369,7 +369,7 @@ def install_temporary():
     return create_shelf_safely()
 
 def uninstall():
-    """Remove cmi-tools module system and prevent shelf recreation on Maya restart."""
+    """Remove cmi-tools module system, MEL shelf, and prevent shelf recreation on Maya restart."""
     cmi_root = get_cmi_tools_root()
     modules_dir = get_modules_dir()
     mod_file = os.path.join(modules_dir, "cmi-tools.mod")
@@ -395,6 +395,25 @@ def uninstall():
             print("Removed cmi-tools.mod")
         except Exception as e:
             print("Failed to remove module file: {0}".format(e))
+    # Remove MEL shelf file from Maya user prefs (cross-platform)
+    try:
+        import getpass
+        user = getpass.getuser()
+        # Maya user prefs root
+        maya_root = os.path.expanduser('~/Documents/maya')
+        if not os.path.exists(maya_root):
+            maya_root = os.path.expanduser('~/maya')  # Linux/Mac alt
+        # Try all major Maya versions (2016-2025+)
+        for year in range(2016, 2030):
+            shelf_path = os.path.join(maya_root, str(year), 'prefs', 'shelves', 'shelf_FDMA_2530.mel')
+            if os.path.exists(shelf_path):
+                try:
+                    os.remove(shelf_path)
+                    print(f"Removed shelf MEL: {shelf_path}")
+                except Exception as e:
+                    print(f"Failed to remove shelf MEL: {shelf_path} ({e})")
+    except Exception as e:
+        print(f"Error searching for Maya shelf MEL files: {e}")
     # Create uninstall marker to prevent shelf recreation
     marker = os.path.expanduser('~/.fdma2530_uninstalled')
     try:
