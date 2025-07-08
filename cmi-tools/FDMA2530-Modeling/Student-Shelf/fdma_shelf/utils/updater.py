@@ -43,6 +43,7 @@ from .cache import (
     cache_exists
 )
 from .downloader import download_raw
+from fdma_shelf.utils.version_utils import get_fdma2530_version
 
 # ------------------------------------------------------------------
 # Configuration
@@ -143,11 +144,15 @@ def startup_check():
         if not cache_exists():
             return
         tag, _, _ = _get_latest_release_info()
+        local_version = get_fdma2530_version()
         if _is_newer(tag):
             _update_button_color("updates_available")
             _show_viewport_message("New CMI Tools release available!")
         else:
             _update_button_color("up_to_date")
+            _show_viewport_message(
+                f"You are already the latest version of CMI Tools! {local_version}"
+            )
     except Exception as e:
         print("Startup update check failed: {0}".format(e))
 
@@ -156,7 +161,7 @@ def run_update():
     try:
         _update_button_color("checking")
         tag, zip_url, body = _get_latest_release_info()
-        from fdma_shelf import __version__ as local_version  # Import here to fix undefined error
+        local_version = get_fdma2530_version()
         if _is_newer(tag):
             _update_button_color("updates_available")
             if cmds is not None and cmds.confirmDialog(
