@@ -221,17 +221,15 @@ def _build_button_command(item):
 def build_shelf(startup=False):
     """
     Public entry point. Reads config and schedules shelf creation.
-    This function now includes dynamic version substitution, automatically
-    replacing {version} tokens in the shelf configuration with the actual
-    version number from the fdma_shelf package.
-    Parameters
     ----------
     startup : bool
         If True, shelf is built at Maya startup (suppress messages).
     """
-    print("[FDMA SHELF DEBUG] build_shelf called with startup={}".format(startup))
-    print("[FDMA SHELF DEBUG] Config path: {}".format(_CONFIG_PATH))
-    print("[FDMA SHELF DEBUG] Config exists: {}".format(os.path.exists(_CONFIG_PATH)))
+    # Check for and remove uninstall marker first
+    marker = os.path.expanduser('~/.fdma2530_uninstalled')
+    if os.path.exists(marker):
+        os.remove(marker)
+        print("[FDMA SHELF DEBUG] Removed uninstall marker")
     
     cfg = _read_json(_CONFIG_PATH)
     if not cfg:

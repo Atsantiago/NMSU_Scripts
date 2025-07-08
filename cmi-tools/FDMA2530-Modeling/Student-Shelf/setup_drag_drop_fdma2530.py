@@ -272,55 +272,61 @@ Created with care for FDMA 2530 students at NMSU Creative Media Institute.
         return False
 
 def create_shelf_safely():
-    """Import and create the shelf after module installation with improved error handling"""
+    """Import and create shelf with marker check"""
     try:
+        # Check for and remove uninstall marker first
+        marker = os.path.expanduser('~/.fdma2530_uninstalled')
+        if os.path.exists(marker):
+            os.remove(marker)
+            print("Removed uninstall marker - shelf creation will proceed")
+            
         # Clear any existing fdma_shelf imports to ensure fresh load
         modules_to_clear = [name for name in sys.modules.keys() if name.startswith('fdma_shelf')]
         for module_name in modules_to_clear:
             del sys.modules[module_name]
         print("Cleared existing fdma_shelf modules: {0}".format(modules_to_clear))
-        # Import the package (should now be in Maya's Python path via module)
-        import fdma_shelf
-        print("Successfully imported fdma_shelf package")
         
-        # Debug: Check what attributes are available
-        print("fdma_shelf attributes: {0}".format(dir(fdma_shelf)))
-        
-        # Verify build_shelf exists
-        if not hasattr(fdma_shelf, 'build_shelf'):
-            print("Error: fdma_shelf.build_shelf not found")
-            print("Available attributes: {0}".format([attr for attr in dir(fdma_shelf) if not attr.startswith('_')]))
+        # Try importing builder directly first (most reliable)
+        try:
+            from fdma_shelf.shelf.builder import build_shelf
+            print("Successfully imported build_shelf directly from builder")
+            result = build_shelf(startup=False)
+            if result:
+                print("Shelf created successfully via direct import!")
+                return True
+            else:
+                print("Direct import build_shelf returned False")
+                return False
+        except ImportError as ie:
+            print("Direct import failed: {0}".format(ie))
             
-            # Try importing builder directly as fallback
-            try:
-                from fdma_shelf.shelf.builder import build_shelf
-                print("Successfully imported build_shelf directly from builder")
-                result = build_shelf(startup=False)
+        # Fallback: try package import
+        try:
+            import fdma_shelf
+            print("Successfully imported fdma_shelf package")
+            
+            # Debug: Check what attributes are available
+            print("fdma_shelf attributes: {0}".format(dir(fdma_shelf)))
+            
+            # Verify build_shelf exists
+            if hasattr(fdma_shelf, 'build_shelf'):
+                print("Creating FDMA 2530 shelf using fdma_shelf.build_shelf...")
+                result = fdma_shelf.build_shelf(startup=False)
+                
                 if result:
-                    print("Shelf created successfully via direct import!")
+                    print("Shelf created successfully!")
                     return True
                 else:
-                    print("Direct import build_shelf returned False")
+                    print("build_shelf returned False - shelf creation failed")
                     return False
-            except ImportError as ie:
-                print("Direct import also failed: {0}".format(ie))
+            else:
+                print("Error: fdma_shelf.build_shelf not found")
                 return False
-        
-        # Create the shelf using package function
-        print("Creating FDMA 2530 shelf using fdma_shelf.build_shelf...")
-        result = fdma_shelf.build_shelf(startup=False)
-        
-        if result:
-            print("Shelf created successfully!")
-            return True
-        else:
-            print("build_shelf returned False - shelf creation failed")
+                
+        except ImportError as e:
+            print("Package import also failed: {0}".format(e))
             return False
-    except ImportError as e:
-        print("Failed to import fdma_shelf: {0}".format(e))
-        import traceback
-        print(traceback.format_exc())
-        return False
+            
     except Exception as e:
         print("Failed to create shelf: {0}".format(e))
         import traceback
