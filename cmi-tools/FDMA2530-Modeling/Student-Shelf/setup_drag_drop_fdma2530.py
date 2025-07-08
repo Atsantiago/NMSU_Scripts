@@ -11,9 +11,6 @@ Created by: Alexander T. Santiago
 Contact: asanti89@nmsu.edu
 """
 
-from fdma_shelf.utils.version_utils import get_fdma2530_version
-PACKAGE_VERSION = get_fdma2530_version()
-
 import os
 import sys
 import shutil
@@ -382,10 +379,21 @@ def uninstall():
     print("CMI Tools uninstalled successfully!")
     return True
 
+def get_installed_package_version():
+    """Try to get the installed fdma_shelf version, or return 'Unknown' if not available.
+    Import is inside the function to avoid ModuleNotFoundError if fdma_shelf is not yet installed.
+    """
+    try:
+        import fdma_shelf.utils.version_utils as vutils
+        return vutils.get_fdma2530_version()
+    except Exception:
+        return "Unknown"
+
 def show_install_dialog():
     """Show installation dialog"""
+    version_str = get_installed_package_version()
     choice = cmds.confirmDialog(
-        title="CMI Tools Installer v{0}".format(PACKAGE_VERSION),
+        title="CMI Tools Installer v{0}".format(version_str),
         message="CMI Tools Installation\n\nChoose installation type:\n\nInstall Tools: Permanent installation using Maya modules\nLoad Once: Temporary installation (session only)\nUninstall: Remove CMI Tools",
         button=["Install", "Load Once", "Uninstall", "Cancel"],
         defaultButton="Install",
