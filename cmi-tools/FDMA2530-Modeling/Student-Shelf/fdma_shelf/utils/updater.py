@@ -75,13 +75,13 @@ _SHELF_NAME = "FDMA_2530"
 # GitHub Releases logic
 # ------------------------------------------------------------------
 
-def _is_newer(tag):
+def _is_newer(remote_version):
     """Compare semantic tag vX.Y.Z against local __version__."""
     try:
         from fdma_shelf import __version__ as local_version
         def to_tuple(v):
             return tuple(int(p) for p in v.lstrip("v").split("."))
-        return to_tuple(tag) > to_tuple(local_version)
+        return to_tuple(remote_version) > to_tuple(local_version)
     except Exception:
         return False
 
@@ -128,7 +128,7 @@ def _download_and_extract(zip_url):
     os.unlink(tmp.name)
     shutil.rmtree(extract_dir)
 
-def _perform_release_update(body):
+def _perform_release_update(new_version):
     """Reload package, rebuild shelf, and notify user."""
     # Clear cached modules
     for mod in [m for m in sys.modules if m.startswith("fdma_shelf")]:
@@ -138,7 +138,7 @@ def _perform_release_update(body):
     if mu is not None:
         mu.executeDeferred(lambda: fdma_shelf.build_shelf(startup=False))
     _update_button_color("up_to_date")
-    _show_viewport_message("CMI Tools updated!\n" + body[:200])
+    _show_viewport_message(f"CMI Tools updated to the latest version: {new_version}")
 
 # ------------------------------------------------------------------
 # Public API
@@ -169,20 +169,26 @@ def run_update():
             _update_button_color("updates_available")
             if cmds is not None and cmds.confirmDialog(
                 title="New Release Available",
-                message=f"Release {tag} available. Install now?",
+                message=(
+                    f"Installed version: {local_version}\n"
+                    f"Latest version: {tag}\n\n"
+                    "Install the latest version now?"
+                ),
                 button=["Yes", "No"],
                 defaultButton="Yes", cancelButton="No"
             ) == "Yes":
                 try:
                     _download_and_extract(zip_url)
-                    _perform_release_update(body)
+                    _perform_release_update(tag)
                 except Exception as ue:
                     print("Release update failed: {0}".format(ue))
                     _update_button_color("update_failed")
                     _show_viewport_message("Update failed. See console.", "#FF5555")
         else:
             _update_button_color("up_to_date")
-            _show_viewport_message(f"You are on the latest version of CMI Tools: {local_version}")
+            _show_viewport_message(
+                f"You are already the latest version of CMI Tools! {local_version}"
+            )
     except Exception as e:
         print("Update process failed: {0}".format(e))
         _update_button_color("update_failed")
