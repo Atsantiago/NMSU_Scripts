@@ -5,7 +5,6 @@ This module provides a clean, GT-Tools–inspired approach for
 loading the shelf configuration regardless of Maya version.
 Now includes dynamic version substitution from releases.json manifest.
 """
-
 from __future__ import absolute_import, print_function
 
 import json
@@ -155,7 +154,7 @@ def _create_shelf(config, startup=False):
 
     # Activate the new shelf tab
     if cmds.control(g_top, ex=True) and cmds.control(shelf, ex=True):
-        cmds.tabLayout(g_top, edit=True, tabLabelIndex=(shelf, shelf))
+        cmds.tabLayout(g_top, edit=True, tabLabel=(_SHELF_NAME, shelf))
 
     if not startup:
         cmds.inViewMessage(
