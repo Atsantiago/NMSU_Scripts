@@ -408,49 +408,29 @@ def get_manifest_data():
     return None
 
 
-@handle_version_errors()
 def get_fdma2530_version():
     """
     Get the current version of FDMA2530 Maya Shelf Tools from the manifest.
-    
-    This is the primary function for retrieving version information. It provides
-    a clean, simple interface while handling all complexity internally through
-    the manifest reading cascade and error handling.
-    
-    Returns:
-        str: Current version string (e.g., "2.0.1") or fallback version if manifest unavailable
-    
-    Examples:
-        >>> get_fdma2530_version()
-        '2.0.1'
-        
-        # In case of any errors:
-        >>> get_fdma2530_version()
-        '2.0.1'  # Returns fallback version
+    Returns the version string (e.g., "2.0.5") or fallback version if manifest unavailable or invalid.
     """
-    # Check cache first for performance
     cache_key = 'fdma2530_version'
     if cache_key in _VERSION_CACHE:
         cached_version = _VERSION_CACHE[cache_key]
         if is_valid_semantic_version(cached_version):
             return cached_version
-    
-    manifest_data = get_manifest_data()
-    if not manifest_data:
-        raise Exception("Unable to read manifest data from any source")
-    
-    current_version = manifest_data.get('current_version')
-    if not current_version:
-        raise ValueError("Manifest does not contain 'current_version' field")
-    
-    if not is_valid_semantic_version(current_version):
-        raise ValueError(f"Invalid version format in manifest: '{current_version}'")
-    
-    # Cache the successful result
-    _VERSION_CACHE[cache_key] = current_version
-    
-    logger.debug(f"Retrieved FDMA2530 version: {current_version}")
-    return current_version
+    try:
+        manifest_data = read_manifest_from_file()
+        if not manifest_data:
+            raise Exception("Unable to read manifest data from any source")
+        current_version = manifest_data.get('current_version')
+        if not current_version or not is_valid_semantic_version(current_version):
+            raise ValueError(f"Invalid version format in manifest: '{current_version}'")
+        _VERSION_CACHE[cache_key] = current_version
+        logger.debug(f"Retrieved FDMA2530 version: {current_version}")
+        return current_version
+    except Exception as e:
+        logger.warning(f"get_fdma2530_version failed: {e}")
+        return DEFAULT_FALLBACK_VERSION
 
 
 def get_tool_info():
