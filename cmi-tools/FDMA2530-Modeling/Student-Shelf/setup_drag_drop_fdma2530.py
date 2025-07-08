@@ -147,11 +147,19 @@ def download_and_extract_package(target_dir):
                 # Copy releases.json to fdma_shelf package directory for version detection
                 source_manifest = os.path.join(os.path.dirname(student_shelf_path), "releases.json")
                 target_manifest = os.path.join(target_package, "releases.json")
+                print("Looking for releases.json at: {0}".format(source_manifest))
                 if os.path.exists(source_manifest):
                     shutil.copy2(source_manifest, target_manifest)
                     print("Copied releases.json to fdma_shelf package directory")
                 else:
                     print("Warning: releases.json not found in repository")
+                    print("Checked path: {0}".format(source_manifest))
+                    print("Directory contents of {0}:".format(os.path.dirname(student_shelf_path)))
+                    try:
+                        for item in os.listdir(os.path.dirname(student_shelf_path)):
+                            print("  - {0}".format(item))
+                    except Exception as e:
+                        print("  Error listing directory: {0}".format(e))
                 # Clean up temp extraction
                 shutil.rmtree(temp_extract_dir)
             

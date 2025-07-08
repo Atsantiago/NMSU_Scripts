@@ -361,8 +361,6 @@ def read_manifest_from_url(manifest_url=None):
         logger.debug(f"Successfully read manifest from URL: {manifest_url}")
         return manifest_data
         
-    except urllib.error.URLError as e:
-        raise Exception(f"Failed to access manifest URL: {e}")
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON in remote manifest: {e}")
     except Exception as e:
