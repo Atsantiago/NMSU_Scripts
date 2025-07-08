@@ -16,6 +16,7 @@ import sys
 import shutil
 import tempfile
 import zipfile
+import json
 
 try:
     from urllib.request import urlopen
@@ -50,12 +51,34 @@ def safe_download(url, timeout=30):
         print("Download failed: {0}".format(e))
         return None
 
-def download_and_extract_package(target_dir):
-    """Download repo ZIP and extract to cmi-tools structure"""
-    print("Downloading CMI Tools shelf package...")
-    
+def get_latest_release_info():
+    """Return (version, download_url, description) from the releases.json manifest on GitHub."""
+    manifest_url = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/cmi-tools/FDMA2530-Modeling/releases.json"
     try:
-        zip_data = safe_download(REPO_ZIP_URL)
+        response = urlopen(manifest_url, timeout=30)
+        manifest = json.loads(response.read().decode("utf-8"))
+        current_version = manifest["current_version"]
+        for release in manifest["releases"]:
+            if release["version"] == current_version:
+                return release["version"], release["download_url"], release["description"]
+        # Fallback: use first release if current_version not found
+        if manifest["releases"]:
+            latest = manifest["releases"][0]
+            return latest["version"], latest["download_url"], latest["description"]
+    except Exception as e:
+        print("Failed to fetch latest release info: {0}".format(e))
+    return None, None, None
+
+
+def download_and_extract_package(target_dir):
+    """Download latest release ZIP and extract to cmi-tools structure (manifest-based)."""
+    print("Downloading CMI Tools shelf package...")
+    version, zip_url, _ = get_latest_release_info()
+    if not zip_url:
+        print("Could not determine latest release download URL.")
+        return False
+    try:
+        zip_data = safe_download(zip_url)
         if not zip_data:
             return False
         
