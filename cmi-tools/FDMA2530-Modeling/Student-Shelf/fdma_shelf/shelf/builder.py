@@ -136,7 +136,8 @@ def _create_shelf(config, startup=False):
 
     # Activate the new shelf tab
     if cmds.control(g_top, ex=True) and cmds.control(shelf, ex=True):
-        cmds.tabLayout(g_top, edit=True, tabLabel=(_SHELF_NAME, shelf))
+        # Only use the shelf name, not the full path, for the tab label
+        cmds.tabLayout(g_top, edit=True, selectTab=_SHELF_NAME)
 
     if not startup:
         cmds.inViewMessage(
