@@ -12,7 +12,6 @@ download_raw(url, timeout=15) -> str or None
 download_json(url, timeout=15) -> dict or None  
     Download and parse JSON content from a URL.
 """
-
 from __future__ import absolute_import, print_function
 
 try:

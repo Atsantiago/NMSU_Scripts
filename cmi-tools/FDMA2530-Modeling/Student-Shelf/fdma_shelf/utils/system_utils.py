@@ -9,12 +9,20 @@ Part of the fdma_shelf package ecosystem.
 """
 
 import sys
+import os
+import json
 
 # ============================================================================
 # VERSION INFORMATION
 # ============================================================================
 
-__version__ = "2.0.0"
+# Try to get version from manifest via version_utils, fall back to static version
+try:
+    from .utils.version_utils import get_fdma2530_version
+    __version__ = get_fdma2530_version()
+except (ImportError, Exception):
+    # Fallback version if version utils are unavailable or fail
+    __version__ = "2.0.1"
 
 # ============================================================================
 # CORE OS DETECTION FUNCTIONS
@@ -27,7 +35,7 @@ def is_windows():
     Returns:
         bool: True if Windows, False otherwise
     """
-    return sys.platform.startswith("win32")
+    return sys.platform.startswith("win")
 
 def is_macos():
     """

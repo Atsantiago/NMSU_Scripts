@@ -21,7 +21,6 @@ cache_exists() -> bool
 clear_cache() -> bool
     Delete the local cache file.
 """
-
 from __future__ import absolute_import, print_function
 
 import os
