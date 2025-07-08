@@ -20,15 +20,9 @@ import zipfile
 try:
     from urllib.request import urlopen
 except ImportError:
-    try:
-        from urllib2 import urlopen
-    except ImportError:
-        urlopen = None  # Fallback if neither is available
+    from urllib2 import urlopen
 
-try:
-    import maya.cmds as cmds
-except ImportError:
-    cmds = None  # Allow script to be imported outside Maya for linting/testing
+import maya.cmds as cmds
 
 __version__ = "2.0.1"
 
@@ -435,15 +429,14 @@ def show_install_dialog():
         
         if confirm == "Yes":
             if uninstall():
-def onMayaDroppedPythonFile():
+                cmds.confirmDialog(
+                    title="Uninstalled",
+                    message="CMI Tools removed successfully.",
+                    button=["OK"]
+                )
+
+def onMayaDroppedPythonFile(*args):
     """Maya drag-and-drop entry point"""
-    try:
-        show_install_dialog()
-    except Exception as e:
-        if cmds:
-            cmds.warning("Installer error: {0}".format(e))
-        import traceback
-        print(traceback.format_exc())
     try:
         show_install_dialog()
     except Exception as e:
