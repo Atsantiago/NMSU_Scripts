@@ -134,10 +134,25 @@ def _create_shelf(config, startup=False):
                 height=int(item.get("height", cell_h)),
             )
 
-    # Activate the new shelf tab
-    if cmds.control(g_top, ex=True) and cmds.control(shelf, ex=True):
-        # Only use the shelf name, not the full path, for the tab label
-        cmds.tabLayout(g_top, edit=True, selectTab=_SHELF_NAME)
+    # Force Maya to refresh and activate the new shelf tab
+    try:
+        # First ensure the shelf is properly registered
+        cmds.refresh()
+        
+        # Get the shelf tabs again after refresh
+        shelf_tabs = cmds.tabLayout(g_top, query=True, childArray=True)
+        if shelf_tabs and _SHELF_NAME in shelf_tabs:
+            # Use selectTabIndex which is more reliable than selectTab
+            idx = shelf_tabs.index(_SHELF_NAME)
+            cmds.tabLayout(g_top, edit=True, selectTabIndex=idx+1)
+            
+            # Additional step: make sure the shelf area is visible
+            cmds.evalDeferred('import maya.cmds as cmds; cmds.refresh()')
+        else:
+            # Fallback: try to select by name
+            cmds.tabLayout(g_top, edit=True, selectTab=shelf)
+    except Exception:
+        pass
 
     if not startup:
         cmds.inViewMessage(
@@ -145,19 +160,8 @@ def _create_shelf(config, startup=False):
             pos="botLeft",
             fade=True
         )
-
-    # After creating the shelf, force Maya to switch to it
-    try:
-        g_top = mel.eval("global string $gShelfTopLevel; $tmp=$gShelfTopLevel;")
-        shelf_tabs = cmds.tabLayout(g_top, query=True, childArray=True)
-        if shelf_tabs and _SHELF_NAME in shelf_tabs:
-            idx = shelf_tabs.index(_SHELF_NAME)
-            cmds.tabLayout(g_top, edit=True, selectTabIndex=idx+1)
-            print("[FDMA SHELF DEBUG] Switched to shelf tab {} (index {})".format(_SHELF_NAME, idx+1))
-        else:
-            print("[FDMA SHELF DEBUG] Could not find shelf tab {} to switch to".format(_SHELF_NAME))
-    except Exception as e:
-        print("[FDMA SHELF DEBUG] Error switching to shelf tab:", e)
+    
+    print("[FDMA SHELF DEBUG] _create_shelf() completed successfully")
 
 
 def _build_button_command(item):
@@ -205,15 +209,15 @@ def build_shelf(startup=False):
     startup : bool
         If True, shelf is built at Maya startup (suppress messages).
     """
-    print("[FDMA SHELF DEBUG] Config path:", _CONFIG_PATH)
-    if os.path.exists(_CONFIG_PATH):
-        with open(_CONFIG_PATH, "r") as f:
-            print("[FDMA SHELF DEBUG] Config contents:\n", f.read())
-    else:
-        print("[FDMA SHELF DEBUG] Config file does not exist!")
     cfg = _read_json(_CONFIG_PATH)
     if not cfg:
         cmds.warning("FDMA shelf config not found at {}".format(_CONFIG_PATH))
         return
+    
     cfg = _expand_version_tokens(cfg)
-    mu.executeDeferred(lambda: _create_shelf(cfg, startup=startup))
+    
+    # For immediate installation, create shelf directly instead of deferred
+    if not startup:
+        _create_shelf(cfg, startup=startup)
+    else:
+        mu.executeDeferred(lambda: _create_shelf(cfg, startup=startup))
