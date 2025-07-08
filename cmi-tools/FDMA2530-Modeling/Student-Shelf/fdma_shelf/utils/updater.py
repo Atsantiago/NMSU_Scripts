@@ -1,3 +1,4 @@
+from __future__ import absolute_import, print_function
 """
 FDMA 2530 Shelf Update System v2.0.1
 =====================================
@@ -20,7 +21,6 @@ startup_check() -> None
 get_update_status() -> str
     Get current update status for button coloring.
 """
-from __future__ import absolute_import, print_function
 import os
 import sys
 import json

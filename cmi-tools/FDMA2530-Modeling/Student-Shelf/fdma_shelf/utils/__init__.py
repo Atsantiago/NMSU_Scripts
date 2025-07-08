@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 """
 Utility modules for FDMA 2530 shelf system.
 
@@ -7,7 +8,6 @@ Provides helper functions for:
 - system utilities (system_utils.py)
 - updating (updater.py)
 """
-from __future__ import absolute_import
 
 # Re-export core cache functions
 try:
