@@ -22,6 +22,11 @@ except (ImportError, Exception):
 __author__ = "Alexander T. Santiago"
 __all__ = ["build_shelf"]
 
+import os
+
+# Marker file to prevent shelf recreation after uninstall
+_UNINSTALL_MARKER = os.path.expanduser('~/.fdma2530_uninstalled')
+
 def build_shelf(startup: bool = False) -> None:
     """
     Build or rebuild the FDMA 2530 shelf from the local JSON config.
@@ -54,13 +59,18 @@ def build_shelf(startup: bool = False) -> None:
     Startup shelf creation (suppresses messages):
     >>> fdma_shelf.build_shelf(startup=True)
     """
+    # Prevent shelf recreation if uninstall marker exists
+    if os.path.exists(_UNINSTALL_MARKER):
+        return
     from .shelf.builder import build_shelf as _real_builder
     _real_builder(startup=startup)
 
 # Automatically build the shelf at Maya startup
 try:
     import maya.utils as _mu
-    _mu.executeDeferred(lambda: build_shelf(startup=True))
+    # Only build shelf if uninstall marker does not exist
+    if not os.path.exists(_UNINSTALL_MARKER):
+        _mu.executeDeferred(lambda: build_shelf(startup=True))
 except ImportError:
     # Not running inside Maya; do nothing
     # This allows the package to be imported in other contexts

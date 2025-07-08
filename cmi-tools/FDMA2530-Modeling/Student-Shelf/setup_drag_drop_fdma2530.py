@@ -369,11 +369,10 @@ def install_temporary():
     return create_shelf_safely()
 
 def uninstall():
-    """Remove cmi-tools module system"""
+    """Remove cmi-tools module system and prevent shelf recreation on Maya restart."""
     cmi_root = get_cmi_tools_root()
     modules_dir = get_modules_dir()
     mod_file = os.path.join(modules_dir, "cmi-tools.mod")
-    
     # Remove shelf from Maya
     try:
         if cmds.shelfLayout("FDMA_2530", exists=True):
@@ -381,7 +380,6 @@ def uninstall():
             print("Removed FDMA_2530 shelf")
     except Exception:
         pass
-    
     # Remove cmi-tools directory
     if os.path.exists(cmi_root):
         try:
@@ -390,7 +388,6 @@ def uninstall():
         except Exception as e:
             print("Failed to remove cmi-tools: {0}".format(e))
             return False
-    
     # Remove module file
     if os.path.exists(mod_file):
         try:
@@ -398,7 +395,13 @@ def uninstall():
             print("Removed cmi-tools.mod")
         except Exception as e:
             print("Failed to remove module file: {0}".format(e))
-    
+    # Create uninstall marker to prevent shelf recreation
+    marker = os.path.expanduser('~/.fdma2530_uninstalled')
+    try:
+        with open(marker, 'w') as f:
+            f.write('uninstalled')
+    except Exception as e:
+        print("Failed to create uninstall marker: {0}".format(e))
     print("CMI Tools uninstalled successfully!")
     return True
 
