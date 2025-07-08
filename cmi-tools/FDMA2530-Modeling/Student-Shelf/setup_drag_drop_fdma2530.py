@@ -69,6 +69,16 @@ def get_latest_release_info():
         print("Failed to fetch latest release info: {0}".format(e))
     return None, None, None
 
+def get_latest_release_version():
+    """Return the latest release version from the releases.json manifest on GitHub."""
+    manifest_url = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/cmi-tools/FDMA2530-Modeling/releases.json"
+    try:
+        response = urlopen(manifest_url, timeout=30)
+        manifest = json.loads(response.read().decode("utf-8"))
+        return manifest.get("current_version", "Unknown")
+    except Exception as e:
+        print("Failed to fetch latest release version: {0}".format(e))
+    return "Unknown"
 
 def download_and_extract_package(target_dir):
     """Download latest release ZIP and extract to cmi-tools structure (manifest-based)."""
@@ -441,10 +451,12 @@ def get_installed_package_version():
         return "Unknown"
 
 def show_install_dialog():
-    """Show installation dialog"""
-    version_str = get_installed_package_version()
+    """Show installation dialog with both installed and latest version."""
+    installed_version = get_installed_package_version()
+    latest_version = get_latest_release_version()
+    title = f"CMI Tools Installer (Installed: v{installed_version} | Latest: v{latest_version})"
     choice = cmds.confirmDialog(
-        title="CMI Tools Installer v{0}".format(version_str),
+        title=title,
         message="CMI Tools Installation\n\nChoose installation type:\n\nInstall Tools: Permanent installation using Maya modules\nLoad Once: Temporary installation (session only)\nUninstall: Remove CMI Tools",
         button=["Install", "Load Once", "Uninstall", "Cancel"],
         defaultButton="Install",
