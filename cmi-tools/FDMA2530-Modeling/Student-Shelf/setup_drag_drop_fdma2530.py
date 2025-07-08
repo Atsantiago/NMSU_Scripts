@@ -128,14 +128,20 @@ def download_and_extract_package(target_dir):
                 else:
                     print("Warning: fdma_shelf package not found in repository")
                     return False
-                
                 # Copy config to scripts directory
                 if os.path.exists(source_config):
                     shutil.copy2(source_config, scripts_dir)
                     print("Copied shelf_config.json to scripts/")
                 else:
                     print("Warning: shelf_config.json not found in repository")
-                
+                # Copy releases.json to fdma_shelf package directory for version detection
+                source_manifest = os.path.join(os.path.dirname(student_shelf_path), "releases.json")
+                target_manifest = os.path.join(target_package, "releases.json")
+                if os.path.exists(source_manifest):
+                    shutil.copy2(source_manifest, target_manifest)
+                    print("Copied releases.json to fdma_shelf package directory")
+                else:
+                    print("Warning: releases.json not found in repository")
                 # Clean up temp extraction
                 shutil.rmtree(temp_extract_dir)
             
