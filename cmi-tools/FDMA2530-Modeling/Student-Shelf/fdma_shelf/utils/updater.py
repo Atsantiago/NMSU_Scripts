@@ -51,7 +51,7 @@ from fdma_shelf.utils.version_utils import get_fdma2530_version
 
 _REPO_OWNER     = "Atsantiago"
 _REPO_NAME      = "NMSU_Scripts"
-_RELEASES_MANIFEST_URL    = f"https://raw.githubusercontent.com/{_REPO_OWNER}/{_REPO_NAME}/master/cmi-tools/FDMA2530-Modeling/releases.json"
+_RELEASES_MANIFEST_URL = "https://raw.githubusercontent.com/{0}/{1}/master/cmi-tools/FDMA2530-Modeling/releases.json".format(_REPO_OWNER, _REPO_NAME)
 _HTTP_TIMEOUT = 10  # seconds
 
 # Visual status colors for update button

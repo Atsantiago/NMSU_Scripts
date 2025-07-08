@@ -409,25 +409,29 @@ def get_manifest_data():
 def get_fdma2530_version():
     """
     Get the current version of FDMA2530 Maya Shelf Tools from the manifest.
-    Returns the version string (e.g., "2.0.5") or fallback version if manifest unavailable or invalid.
+    Returns the version string (e.g., "2.0.6") or fallback version if manifest unavailable or invalid.
     """
     cache_key = 'fdma2530_version'
     if cache_key in _VERSION_CACHE:
         cached_version = _VERSION_CACHE[cache_key]
         if is_valid_semantic_version(cached_version):
             return cached_version
+    
     try:
-        manifest_data = read_manifest_from_file()
+        manifest_data = get_manifest_data()
         if not manifest_data:
             raise Exception("Unable to read manifest data from any source")
+        
         current_version = manifest_data.get('current_version')
         if not current_version or not is_valid_semantic_version(current_version):
-            raise ValueError(f"Invalid version format in manifest: '{current_version}'")
+            raise ValueError("Invalid version format in manifest: '{0}'".format(current_version))
+        
         _VERSION_CACHE[cache_key] = current_version
-        logger.debug(f"Retrieved FDMA2530 version: {current_version}")
+        logger.debug("Retrieved FDMA2530 version: {0}".format(current_version))
         return current_version
+        
     except Exception as e:
-        logger.warning(f"get_fdma2530_version failed: {e}")
+        logger.warning("get_fdma2530_version failed: {0}".format(e))
         return DEFAULT_FALLBACK_VERSION
 
 
