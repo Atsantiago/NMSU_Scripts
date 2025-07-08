@@ -281,7 +281,6 @@ def find_manifest_file():
     return None
 
 
-@handle_version_errors()
 def read_manifest_from_file():
     """
     Read and parse the releases.json manifest file from the local filesystem.
@@ -293,7 +292,7 @@ def read_manifest_from_file():
         dict or None: Parsed manifest data if successful, None if file not found or invalid
     
     Raises:
-        Exception: Re-raised by decorator as fallback version
+        Exception: For file not found or invalid JSON
     """
     manifest_path = find_manifest_file()
     if not manifest_path:
@@ -318,7 +317,6 @@ def read_manifest_from_file():
         raise Exception(f"Failed to read manifest file: {e}")
 
 
-@handle_version_errors()
 def read_manifest_from_url(manifest_url=None):
     """
     Read and parse the releases.json manifest file from a remote URL.
@@ -335,7 +333,7 @@ def read_manifest_from_url(manifest_url=None):
         dict or None: Parsed manifest data if successful, None if URL not accessible
     
     Raises:
-        Exception: Re-raised by decorator as fallback version
+        Exception: For URL errors or invalid JSON
     """
     if manifest_url is None:
         # Default GitHub raw content URL for FDMA2530 tools

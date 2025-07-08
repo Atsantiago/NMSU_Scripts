@@ -27,7 +27,10 @@ import os
 import json
 import hashlib
 
-import maya.cmds as cmds
+try:
+    import maya.cmds as cmds
+except ImportError:
+    cmds = None
 
 
 # ------------------------------------------------------------------
@@ -43,7 +46,11 @@ _CACHE_FILENAME = "shelf_config_cache.json"
 
 def _get_cache_path():
     """Return full path to the cache file in user scripts directory."""
-    scripts_dir = cmds.internalVar(userScriptDir=True)
+    if cmds is not None:
+        scripts_dir = cmds.internalVar(userScriptDir=True)
+    else:
+        # Fallback for non-Maya environments
+        scripts_dir = os.path.join(os.path.expanduser("~"), "maya", "scripts")
     return os.path.join(scripts_dir, _CACHE_FILENAME)
 
 
