@@ -12,12 +12,16 @@ Updates and changes by Alexander T. Santiago - github.com/atsantiago
 # Standard library imports
 import copy
 import sys
-# Version information
-__version__ = "2.0.1"
+from fdma_shelf.utils.version_utils import get_fdma2530_version
+
+# Tool version (independent of package)
+__tool_version__ = "2.0.1"
+# Package version
+PACKAGE_VERSION = get_fdma2530_version()
 
 # Script Information  
 SCRIPT_NAME = "CMI Modeling Checklist"
-SCRIPT_VERSION = __version__ 
+SCRIPT_VERSION = __tool_version__
 PYTHON_VERSION = sys.version_info.major
 
 # Maya imports  
@@ -2628,9 +2632,9 @@ def check_animated_visibility():
                 defaultButton='OK',
                 cancelButton='Ignore Issue',
                 dismissString='Ignore Issue', 
-                icon="warning"
+                icon="warning" if issues_found > 0 else "information"
             )
-                        
+            
             if user_input == 'Select Objects With Animated Visibility':
                 try:
                     cmds.select(objects_animated_visibility)
@@ -2784,6 +2788,15 @@ def check_non_deformer_history():
                 "output_" + item_id,
                 e=True,
                 l=f'[ {len(possible_objects_non_deformer_history)} ]'
+            )
+            patch_message = patch_message_warning
+            cancel_message = 'Ignore Warning'
+            buttons_to_add.append('Select Objects With Suspicious Deformers')
+        elif len(objects_non_deformer_history) == 0:
+            cmds.text(
+                "output_" + item_id,
+                e=True,
+                l=str(len(possible_objects_non_deformer_history))
             )
             patch_message = patch_message_warning
             cancel_message = 'Ignore Warning'
@@ -3178,6 +3191,8 @@ def check_textures_color_space():
             bgc=exception_color
         )
         return f"Error checking {item_name}: {e}"
+
+
 # Item 17 - AI Shadow Casting Lights
 def check_ai_shadow_casting_lights():
     """Validate AI shadow casting lights setup."""
@@ -3344,7 +3359,6 @@ def check_ai_shadow_casting_lights():
                         cmds.select(non_key_shadow_casters)
                     else:
                         cmds.select(clear=True)
-                        print("No specific lights to select")
                 except Exception:
                     print("Could not select lights")
             elif user_input == 'Ignore Issue':
@@ -3369,7 +3383,7 @@ def check_ai_shadow_casting_lights():
             string_status = (
                 f'0 issues found. Light setup is correct.\n'
                 f'Total lights: {len(all_lights)}, Skydome: {len(skydome_lights)}, '
-                f'Key lights: {len(key_lights)}, Shadow casters: {len(shadow_casting_lights)} {shadow_casting_lights}'
+                f'Key lights: {len(key_lights)}, Shadow casters: {len(shadow_casting_lights)}'
             )
         
         return f'\n*** {item_name} ***\n{string_status}'
@@ -3381,6 +3395,7 @@ def check_ai_shadow_casting_lights():
             bgc=exception_color
         )
         return f"Error checking {item_name}: {e}"
+
 
 # Item 18 - Camera Aspect Ratio
 def check_camera_aspect_ratio():

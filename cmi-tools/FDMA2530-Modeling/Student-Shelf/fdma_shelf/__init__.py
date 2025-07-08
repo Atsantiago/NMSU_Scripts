@@ -1,5 +1,5 @@
 """
-FDMA 2530 Shelf Package v2.0.1+
+FDMA 2530 Shelf Package
 ===============================
 
 Root package for the FDMA 2530 student shelf system.
@@ -12,13 +12,12 @@ License: MIT
 Repository: https://github.com/Atsantiago/NMSU_Scripts
 """
 
-# Try to get version from manifest via version_utils, fall back to static version
+# Always get version from manifest via version_utils
 try:
     from .utils.version_utils import get_fdma2530_version
     __version__ = get_fdma2530_version()
 except (ImportError, Exception):
-    # Fallback version if version utils are unavailable or fail
-    __version__ = "2.0.1"
+    __version__ = "unknown"
 
 __author__ = "Alexander T. Santiago"
 __all__ = ["build_shelf"]

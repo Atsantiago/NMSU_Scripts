@@ -1,6 +1,6 @@
 """
-CMI Tools Shelf Installer v2.0.1 - OPTIMIZED ZIP DOWNLOAD
-=========================================================
+CMI Tools Shelf Installer - OPTIMIZED ZIP DOWNLOAD
+========================================================
 Drag-and-drop installer for CMI Tools student shelf system.
 Fast ZIP-based installation following GT Tools architecture.
 
@@ -10,6 +10,9 @@ Maya versions: 2016-2025+ | Python 2/3 compatible
 Created by: Alexander T. Santiago
 Contact: asanti89@nmsu.edu
 """
+
+from fdma_shelf.utils.version_utils import get_fdma2530_version
+PACKAGE_VERSION = get_fdma2530_version()
 
 import os
 import sys
@@ -23,8 +26,6 @@ except ImportError:
     from urllib2 import urlopen
 
 import maya.cmds as cmds
-
-__version__ = "2.0.1"
 
 # Configuration - GitHub repository ZIP download
 REPO_ZIP_URL = "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/master.zip"
@@ -384,7 +385,7 @@ def uninstall():
 def show_install_dialog():
     """Show installation dialog"""
     choice = cmds.confirmDialog(
-        title="CMI Tools Installer v{0}".format(__version__),
+        title="CMI Tools Installer v{0}".format(PACKAGE_VERSION),
         message="CMI Tools Installation\n\nChoose installation type:\n\nInstall Tools: Permanent installation using Maya modules\nLoad Once: Temporary installation (session only)\nUninstall: Remove CMI Tools",
         button=["Install", "Load Once", "Uninstall", "Cancel"],
         defaultButton="Install",

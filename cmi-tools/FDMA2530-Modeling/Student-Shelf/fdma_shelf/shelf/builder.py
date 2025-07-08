@@ -14,7 +14,7 @@ import hashlib
 import maya.cmds as cmds
 import maya.mel as mel
 import maya.utils as mu
-from fdma_shelf import __version__
+from fdma_shelf.utils.version_utils import get_fdma2530_version
 
 # ----------------------------------------------------------------------
 # Constants
@@ -32,6 +32,7 @@ _SCRIPTS_DIR = os.path.abspath(
 )
 # Full path to JSON config
 _CONFIG_PATH = os.path.join(_SCRIPTS_DIR, _CONFIG_FILE)
+PACKAGE_VERSION = get_fdma2530_version()
 
 
 # ----------------------------------------------------------------------
@@ -67,34 +68,15 @@ def _hash_text(text):
 def _expand_version_tokens(obj):
     """
     Recursively expand all {version} tokens in the configuration data.
-    
-    This function traverses the entire configuration structure (dictionaries,
-    lists, and strings) and replaces any occurrence of {version} with the
-    actual version number from the fdma_shelf package.
-    
-    Args:
-        obj: The configuration object to process (dict, list, str, or other)
-    
-    Returns:
-        The same object with all {version} tokens replaced with actual version
-    
-    Examples:
-        >>> _expand_version_tokens("Tool v{version}")
-        'Tool v2.0.1'
-        >>> _expand_version_tokens({"annotation": "Update v{version}"})
-        {'annotation': 'Update v2.0.1'}
+    Replaces any occurrence of {version} with the actual version number from releases.json.
     """
     if isinstance(obj, str):
-        # Replace all occurrences of {version} with the actual version
-        return obj.replace(VERSION_TOKEN, __version__)
+        return obj.replace(VERSION_TOKEN, PACKAGE_VERSION)
     elif isinstance(obj, dict):
-        # Recursively process all dictionary values
         return {key: _expand_version_tokens(value) for key, value in obj.items()}
     elif isinstance(obj, list):
-        # Recursively process all list items
         return [_expand_version_tokens(item) for item in obj]
     else:
-        # Return unchanged for other types (int, bool, None, etc.)
         return obj
 
 

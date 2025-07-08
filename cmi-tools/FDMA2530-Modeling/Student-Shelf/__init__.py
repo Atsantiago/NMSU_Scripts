@@ -1,5 +1,5 @@
 """
-FDMA 2530 Shelf Package v2.0.0
+FDMA 2530 Shelf Package
 ==============================
 
 Root package for FDMA 2530 student shelf system.
@@ -9,7 +9,8 @@ Created by: Alexander T. Santiago
 Contact: asanti89@nmsu.edu
 """
 
-__version__ = "2.0.0"
+from fdma_shelf.utils.version_utils import get_fdma2530_version
+__version__ = get_fdma2530_version()
 __author__ = "Alexander T. Santiago"
 
 def build_shelf(startup=False):

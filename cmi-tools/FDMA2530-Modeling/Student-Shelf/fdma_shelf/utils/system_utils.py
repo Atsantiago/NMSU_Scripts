@@ -1,5 +1,5 @@
 """
-FDMA 2530 System Utilities v2.0.0
+FDMA 2530 System Utilities
 =================================
 
 Cross-platform OS detection utilities for Maya shelf systems.
@@ -16,13 +16,11 @@ import json
 # VERSION INFORMATION
 # ============================================================================
 
-# Try to get version from manifest via version_utils, fall back to static version
 try:
     from .utils.version_utils import get_fdma2530_version
     __version__ = get_fdma2530_version()
 except (ImportError, Exception):
-    # Fallback version if version utils are unavailable or fail
-    __version__ = "2.0.1"
+    __version__ = "unknown"
 
 # ============================================================================
 # CORE OS DETECTION FUNCTIONS
