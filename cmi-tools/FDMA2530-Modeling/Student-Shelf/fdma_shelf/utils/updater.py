@@ -68,14 +68,16 @@ _SHELF_NAME = "FDMA_2530"
 # Helper Functions for GitHub Release Handling
 # ------------------------------------------------------------------
 
-def _is_newer(remote_version):
-    """Compare semantic tag vX.Y.Z against local __version__."""
+def _is_newer(remote_version, local_version):
+    """Compare semantic versions vX.Y.Z."""
     try:
-        from fdma_shelf import __version__ as local_version
         def to_tuple(v):
-            return tuple(int(p) for p in v.lstrip("v").split("."))
+            # Remove 'v' prefix if present and split on '.'
+            clean_v = v.lstrip("v")
+            return tuple(int(p) for p in clean_v.split("."))
         return to_tuple(remote_version) > to_tuple(local_version)
-    except Exception:
+    except Exception as e:
+        print("Version comparison failed: {0}".format(e))
         return False
 
 def _get_cmi_tools_root():
@@ -106,8 +108,8 @@ def _download_and_extract(zip_url):
         for d in os.listdir(extract_dir)
         if d.startswith("NMSU_Scripts-")
     )
-    src = os.path.join(repo_root, "FDMA2530-Modeling", "Student-Shelf")
-    # Overwrite package
+    src = os.path.join(repo_root, "cmi-tools", "FDMA2530-Modeling", "Student-Shelf")
+    # Overwrite package and config
     for name in ("fdma_shelf", "shelf_config.json"):
         source = os.path.join(src, name)
         dest = os.path.join(scripts_dir, name)
@@ -117,6 +119,12 @@ def _download_and_extract(zip_url):
             shutil.copytree(source, dest)
         elif os.path.isfile(source):
             shutil.copy2(source, dest)
+    # Copy releases.json to fdma_shelf package for version detection
+    releases_source = os.path.join(repo_root, "cmi-tools", "FDMA2530-Modeling", "releases.json")
+    releases_dest = os.path.join(scripts_dir, "fdma_shelf", "releases.json")
+    if os.path.exists(releases_source):
+        shutil.copy2(releases_source, releases_dest)
+        print("Updated releases.json in fdma_shelf package")
     # Cleanup
     os.unlink(tmp.name)
     shutil.rmtree(extract_dir)
@@ -137,7 +145,7 @@ def _perform_release_update(new_version):
     if mu is not None:
         mu.executeDeferred(lambda: fdma_shelf.build_shelf(startup=False))
     _update_button_color("up_to_date")
-    _show_viewport_message(f"CMI Tools updated to the latest version: {new_version}")
+    _show_viewport_message("CMI Tools updated to the latest version: {0}".format(new_version))
 
 # ------------------------------------------------------------------
 # Public API
@@ -151,13 +159,13 @@ def startup_check():
             return
         tag, _, _ = _get_latest_release_info()
         local_version = get_fdma2530_version()
-        if _is_newer(tag):
+        if _is_newer(tag, local_version):
             _update_button_color("updates_available")
             _show_viewport_message("New CMI Tools release available!")
         else:
             _update_button_color("up_to_date")
             _show_viewport_message(
-                f"You are already the latest version of CMI Tools! {local_version}"
+                "You are already the latest version of CMI Tools! {0}".format(local_version)
             )
     except Exception as e:
         print("Startup update check failed: {0}".format(e))
@@ -168,15 +176,15 @@ def run_update():
         _update_button_color("checking")
         tag, zip_url, body = _get_latest_release_info()
         local_version = get_fdma2530_version()
-        if _is_newer(tag):
+        if _is_newer(tag, local_version):
             _update_button_color("updates_available")
             if cmds is not None and cmds.confirmDialog(
                 title="New Release Available",
                 message=(
-                    f"Installed version: {local_version}\n"
-                    f"Latest version: {tag}\n\n"
+                    "Installed version: {0}\n"
+                    "Latest version: {1}\n\n"
                     "Install the latest version now?"
-                ),
+                ).format(local_version, tag),
                 button=["Yes", "No"],
                 defaultButton="Yes", cancelButton="No"
             ) == "Yes":
@@ -190,7 +198,7 @@ def run_update():
         else:
             _update_button_color("up_to_date")
             _show_viewport_message(
-                f"You are already the latest version of CMI Tools! {local_version}"
+                "You are already the latest version of CMI Tools! {0}".format(local_version)
             )
     except Exception as e:
         print("Update process failed: {0}".format(e))
@@ -222,7 +230,8 @@ def get_update_status():
     """
     try:
         tag, _, _ = _get_latest_release_info()
-        if _is_newer(tag):
+        local_version = get_fdma2530_version()
+        if _is_newer(tag, local_version):
             return "updates_available"
         return "up_to_date"
     except Exception:

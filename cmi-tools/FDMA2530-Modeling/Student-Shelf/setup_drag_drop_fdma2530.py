@@ -181,11 +181,16 @@ def create_module_file():
         mod_file_path = os.path.join(modules_dir, "cmi-tools.mod")
         cmi_root = get_cmi_tools_root()
         
-        mod_content = """+ cmi-tools 2.0.1 {cmi_root}
+        # Use the latest version from releases.json
+        latest_version = get_latest_release_version()
+        if latest_version == "Unknown":
+            latest_version = "2.0.6"  # Fallback to current version
+        
+        mod_content = """+ cmi-tools {version} {cmi_root}
 scripts: scripts
 icons: icons
 shelves: shelves
-""".format(cmi_root=cmi_root)
+""".format(version=latest_version, cmi_root=cmi_root)
         
         with open(mod_file_path, 'w') as f:
             f.write(mod_content)
@@ -449,20 +454,51 @@ def uninstall():
     return True
 
 def get_installed_package_version():
-    """Try to get the installed fdma_shelf version, or return 'Unknown' if not available.
+    """Try to get the installed fdma_shelf version, or return 'Not Installed' if not available.
     Import is inside the function to avoid ModuleNotFoundError if fdma_shelf is not yet installed.
     """
     try:
-        import fdma_shelf.utils.version_utils as vutils
-        return vutils.get_fdma2530_version()
+        # Check if the cmi-tools directory exists first
+        cmi_root = get_cmi_tools_root()
+        if not os.path.exists(cmi_root):
+            return "Not Installed"
+        
+        # Check if the fdma_shelf package exists
+        scripts_dir = os.path.join(cmi_root, "scripts")
+        package_dir = os.path.join(scripts_dir, "fdma_shelf")
+        if not os.path.exists(package_dir):
+            return "Not Installed"
+        
+        # Try to add the scripts directory to path temporarily for import
+        if scripts_dir not in sys.path:
+            sys.path.insert(0, scripts_dir)
+            path_added = True
+        else:
+            path_added = False
+        
+        try:
+            import fdma_shelf.utils.version_utils as vutils
+            version = vutils.get_fdma2530_version()
+            return version
+        finally:
+            # Clean up the path modification if we added it
+            if path_added and scripts_dir in sys.path:
+                sys.path.remove(scripts_dir)
+                
     except Exception:
-        return "Unknown"
+        return "Not Installed"
 
 def show_install_dialog():
     """Show installation dialog with both installed and latest version."""
     installed_version = get_installed_package_version()
     latest_version = get_latest_release_version()
-    title = f"CMI Tools Installer (Installed: v{installed_version} | Latest: v{latest_version})"
+    
+    # Create title based on installation status
+    if installed_version == "Not Installed":
+        title = "CMI Tools Installer (Latest: v{0})".format(latest_version)
+    else:
+        title = "CMI Tools Installer (Installed: v{0} | Latest: v{1})".format(installed_version, latest_version)
+    
     choice = cmds.confirmDialog(
         title=title,
         message="CMI Tools Installation\n\nChoose installation type:\n\nInstall Tools: Permanent installation using Maya modules\nLoad Once: Temporary installation (session only)\nUninstall: Remove CMI Tools",
@@ -500,20 +536,28 @@ def show_install_dialog():
             )
     
     elif choice == "Uninstall":
-        confirm = cmds.confirmDialog(
-            title="Confirm Uninstall",
-            message="Remove CMI Tools completely?",
-            button=["Yes", "No"],
-            defaultButton="No"
-        )
-        
-        if confirm == "Yes":
-            if uninstall():
-                cmds.confirmDialog(
-                    title="Uninstalled",
-                    message="CMI Tools removed successfully.",
-                    button=["OK"]
-                )
+        # Check if anything is actually installed
+        if installed_version == "Not Installed":
+            cmds.confirmDialog(
+                title="Nothing to Uninstall",
+                message="CMI Tools is not currently installed.",
+                button=["OK"]
+            )
+        else:
+            confirm = cmds.confirmDialog(
+                title="Confirm Uninstall",
+                message="Remove CMI Tools completely?",
+                button=["Yes", "No"],
+                defaultButton="No"
+            )
+            
+            if confirm == "Yes":
+                if uninstall():
+                    cmds.confirmDialog(
+                        title="Uninstalled",
+                        message="CMI Tools removed successfully.",
+                        button=["OK"]
+                    )
 
 def onMayaDroppedPythonFile(*args):
     """Maya drag-and-drop entry point"""
