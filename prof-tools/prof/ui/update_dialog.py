@@ -92,7 +92,6 @@ def show_update_dialog():
     # Main layout
     main_layout = cmds.columnLayout(
         adjustableColumn=True,
-        spacing=10,
         parent=window
     )
     
@@ -123,7 +122,7 @@ def _create_header_section(parent):
         parent=parent
     )
     
-    cmds.columnLayout(adjustableColumn=True, spacing=5, parent=header_frame)
+    cmds.columnLayout(adjustableColumn=True, parent=header_frame)
     
     # Title
     cmds.text(
@@ -154,7 +153,7 @@ def _create_version_info_section(parent, current_version, latest_version, status
         parent=parent
     )
     
-    info_layout = cmds.columnLayout(adjustableColumn=True, spacing=8, parent=info_frame)
+    info_layout = cmds.columnLayout(adjustableColumn=True, parent=info_frame)
     
     # Current version row
     cmds.rowLayout(
@@ -206,7 +205,7 @@ def _create_details_section(parent, update_available, latest_version):
             parent=parent
         )
         
-        cmds.columnLayout(adjustableColumn=True, spacing=5, parent=details_frame)
+        cmds.columnLayout(adjustableColumn=True, parent=details_frame)
         cmds.text(
             label="Unable to connect to update server.",
             backgroundColor=COLOR_ERROR,
@@ -230,7 +229,7 @@ def _create_details_section(parent, update_available, latest_version):
             parent=parent
         )
         
-        cmds.columnLayout(adjustableColumn=True, spacing=5, parent=details_frame)
+        cmds.columnLayout(adjustableColumn=True, parent=details_frame)
         cmds.text(
             label="A new version of Prof-Tools is available!",
             backgroundColor=COLOR_WARNING,
@@ -254,7 +253,7 @@ def _create_details_section(parent, update_available, latest_version):
             parent=parent
         )
         
-        cmds.columnLayout(adjustableColumn=True, spacing=5, parent=details_frame)
+        cmds.columnLayout(adjustableColumn=True, parent=details_frame)
         cmds.text(
             label="Prof-Tools is up to date!",
             backgroundColor=COLOR_SUCCESS,

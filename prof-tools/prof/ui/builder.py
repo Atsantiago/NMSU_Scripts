@@ -146,21 +146,42 @@ def _show_about_dialog():
         "Version: {}\n\n"
         "A comprehensive suite of instructor tools for grading and managing "
         "Maya assignments across NMSU's FDMA animation courses.\n\n"
-        "This toolset also aims to automate, enhance, and simplify \n"
+        "This toolset also aims to automate, enhance, and simplify "
         "common Maya tasks and workflows for advanced users.\n\n"
         "Designed for Maya users and instructors at NMSU's "
         "Creative Media Institute (CMI).\n\n"
-        "Author: <a href='https://atsantiago.artstation.com/resume'>Alexander T. Santiago</a> |"
-        "<a href='https://github.com/Atsantiago'> GitHub: Atsantiago</a>\n"
-
+        "Author: Alexander T. Santiago"
     ).format(__version__)
     
-    cmds.confirmDialog(
+    result = cmds.confirmDialog(
         title="About Prof-Tools",
         message=about_message,
-        button=["OK"],
-        defaultButton="OK"
+        button=["Alexander T. Santiago", "GitHub", "Close"],
+        defaultButton="Close",
+        cancelButton="Close",
+        dismissString="Close"
     )
+    
+    # Handle button clicks to open links
+    if result == "Alexander T. Santiago":
+        _open_portfolio()
+    elif result == "GitHub":
+        _open_github()
+
+
+def _open_portfolio():
+    """Open Alexander's portfolio website."""
+    import webbrowser
+    try:
+        webbrowser.open("https://atsantiago.artstation.com/resume")
+        logger.info("Opened portfolio website")
+    except Exception as e:
+        logger.error("Failed to open portfolio: %s", e)
+        cmds.confirmDialog(
+            title="Error",
+            message="Failed to open resume/portfolio. Please visit:\nhttps://atsantiago.artstation.com/resume",
+            button=["OK"]
+        )
 
 
 def _open_github():
