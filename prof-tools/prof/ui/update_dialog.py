@@ -92,8 +92,6 @@ def show_update_dialog():
     # Main layout
     main_layout = cmds.columnLayout(
         adjustableColumn=True,
-        marginWidth=15,
-        marginHeight=15,
         spacing=10,
         parent=window
     )

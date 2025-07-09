@@ -135,13 +135,6 @@ def _build_help_section(parent_menu):
         command=lambda *args: _open_github()
     )
     
-    # Documentation
-    cmds.menuItem(
-        label="Documentation",
-        parent=help_menu,
-        command=lambda *args: _open_documentation()
-    )
-
     cmds.setParent('..', menu=True)  # close Help submenu
     cmds.setParent('..', menu=True)  # close main Prof-Tools menu
 
@@ -152,11 +145,14 @@ def _show_about_dialog():
         "Prof-Tools for Maya\n"
         "Version: {}\n\n"
         "A comprehensive suite of instructor tools for grading and managing "
-        "Maya assignments across NMSU's FDMA courses.\n\n"
-        "Designed for advanced Maya users and instructors at the "
+        "Maya assignments across NMSU's FDMA animation courses.\n\n"
+        "This toolset also aims to automate, enhance, and simplify \n"
+        "common Maya tasks and workflows for advanced users.\n\n"
+        "Designed for Maya users and instructors at NMSU's "
         "Creative Media Institute (CMI).\n\n"
-        "Author: Alexander T. Santiago\n"
-        "License: MIT"
+        "Author: <a href='https://atsantiago.artstation.com/resume'>Alexander T. Santiago</a> |"
+        "<a href='https://github.com/Atsantiago'> GitHub: Atsantiago</a>\n"
+
     ).format(__version__)
     
     cmds.confirmDialog(
@@ -178,21 +174,6 @@ def _open_github():
         cmds.confirmDialog(
             title="Error",
             message="Failed to open GitHub. Please visit:\nhttps://github.com/Atsantiago/NMSU_Scripts",
-            button=["OK"]
-        )
-
-
-def _open_documentation():
-    """Open the Prof-Tools documentation."""
-    import webbrowser
-    try:
-        webbrowser.open("https://github.com/Atsantiago/NMSU_Scripts/tree/master/prof-tools/docs")
-        logger.info("Opened documentation")
-    except Exception as e:
-        logger.error("Failed to open documentation: %s", e)
-        cmds.confirmDialog(
-            title="Error", 
-            message="Failed to open documentation. Please visit:\nhttps://github.com/Atsantiago/NMSU_Scripts/tree/master/prof-tools/docs",
             button=["OK"]
         )
 
