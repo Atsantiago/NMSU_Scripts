@@ -1,10 +1,7 @@
 """
 Prof-Tools Update Dialog
 
-A professional update dialog window for prof-tools designed for advanced Maya users and instructors.
-
 Author: Alexander T. Santiago
-License: MIT
 Repository: https://github.com/Atsantiago/NMSU_Scripts
 """
 
