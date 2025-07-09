@@ -35,15 +35,28 @@ if sys.version_info.major < 3:
     )
     raise ImportError(error)
 
-# Try to get version from manifest via version_utils, fall back to static version
+# Simple fallback version for reliable import
+__version_tuple__ = (0, 1, 0)   # MAJOR, MINOR, PATCH
+__version__ = '.'.join(map(str, __version_tuple__))
+
+# Try to get dynamic version from manifest, but don't fail import if it doesn't work
 try:
     from .core.version_utils import get_prof_tools_version, get_version_tuple
-    __version__ = get_prof_tools_version()
-    __version_tuple__ = get_version_tuple()
-except (ImportError, Exception):
-    # Fallback version if version utils are unavailable or fail
-    __version_tuple__ = (0, 1, 0)   # MAJOR, MINOR, PATCH
-    __version__ = '.'.join(map(str, __version_tuple__))
+    _dynamic_version = get_prof_tools_version()
+    _dynamic_version_tuple = get_version_tuple()
+    if _dynamic_version and _dynamic_version_tuple:
+        __version__ = _dynamic_version
+        __version_tuple__ = _dynamic_version_tuple
+        # Log successful dynamic version loading
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug("Using dynamic version from manifest: {0}".format(__version__))
+except (ImportError, Exception) as e:
+    # Use fallback version if dynamic version loading fails
+    # Log the fallback silently during import to avoid import issues
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.debug("Using fallback version due to: {0}".format(str(e)))
 
 __version_suffix__ = ''         # e.g. '-alpha', '-beta', '-rc1'
 

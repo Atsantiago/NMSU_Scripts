@@ -58,8 +58,17 @@ def onMayaDroppedPythonFile(*args):
         logger.debug("Prepended to sys.path: %s, %s", script_dir, prof_dir)
         
         # Import and launch installer logic
-        from prof.core.setup import launcher_entry_point
-        launcher_entry_point()
+        try:
+            from prof.core.setup import launcher_entry_point
+            if not callable(launcher_entry_point):
+                raise TypeError("launcher_entry_point is not callable. Type: {}".format(type(launcher_entry_point)))
+            launcher_entry_point()
+        except ImportError as import_err:
+            raise RuntimeError("Failed to import launcher: {}".format(import_err))
+        except TypeError as type_err:
+            raise RuntimeError("Launcher import issue: {}".format(type_err))
+        except Exception as launcher_err:
+            raise RuntimeError("Launcher execution failed: {}".format(launcher_err))
         
     except Exception as e:
         msg = "Prof-Tools installer failed: {}".format(e)

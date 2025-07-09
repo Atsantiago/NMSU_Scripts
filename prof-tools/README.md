@@ -43,6 +43,16 @@ Prof-Tools provides a menu-based interface in Maya for instructors to efficientl
 - Maya 2020+ (Python 3.x)
 - Windows, macOS, or Linux
 
+## Troubleshooting
+
+If you encounter installation issues:
+
+1. **"'str' object is not callable" error**: This has been fixed in the latest version. Make sure you're using the most recent files.
+
+2. **Version loading warnings**: The system will automatically fall back to a working version if the dynamic version loading fails.
+
+3. **Manual verification**: After dragging the installer, check Maya's script editor for any error messages.
+
 ## License
 
 MIT License - See LICENSE file for details

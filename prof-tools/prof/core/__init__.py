@@ -16,8 +16,13 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# Core module metadata
-__version__ = "0.1.0"
+# Core module metadata - version comes from main prof module
+try:
+    from prof import __version__
+except ImportError:
+    # Fallback if prof module not available
+    __version__ = "0.1.0"
+    
 __author__ = "Alexander T. Santiago - https://github.com/Atsantiago"
 
 # Module constants following GT-Tools patterns
@@ -89,32 +94,32 @@ def get_maya_version():
     except Exception:
         return ""
 
-def log_info(message):
+def log_info(msg):
     """
     Logs an info message to the core logger
     
     Args:
-        message (str): Message to log
+        msg (str): Message to log
     """
-    logger.info(message)
+    logger.info(msg)
 
-def log_warning(message):
+def log_warning(msg):
     """
     Logs a warning message to the core logger
     
     Args:
-        message (str): Message to log
+        msg (str): Message to log
     """
-    logger.warning(message)
+    logger.warning(msg)
 
-def log_error(message):
+def log_error(msg):
     """
     Logs an error message to the core logger
     
     Args:
-        message (str): Message to log
+        msg (str): Message to log
     """
-    logger.error(message)
+    logger.error(msg)
 
 # Python version compatibility check (following GT-Tools pattern)
 def check_python_compatibility():

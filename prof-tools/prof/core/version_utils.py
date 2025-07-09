@@ -2,8 +2,8 @@
 Version Utilities for Prof-Tools Maya Menu System
 
 This module provides version management utilities for dynamically reading version information
-from manifest files with robust fallback mechanisms. Designed for instructor tools used in
-NMSU's Creative Media Institute FDMA courses.
+from the releases.json manifest file. Follows the FDMA2530 pattern for consistency across
+NMSU Scripts while allowing individual tools to maintain their own versions.
 
 Author: Alexander T. Santiago
 Version: Dynamic (Read from releases.json)
@@ -12,7 +12,7 @@ Repository: https://github.com/Atsantiago/NMSU_Scripts
 
 Dependencies:
     - json (standard library)
-    - urllib.request (standard library)
+    - urllib.request/urllib2 (standard library)
     - ssl (standard library)
     - logging (standard library)
     - os (standard library)
@@ -21,12 +21,18 @@ Dependencies:
 Example Usage:
     >>> from prof.core.version_utils import get_prof_tools_version
     >>> version = get_prof_tools_version()
-    >>> print(f"Prof-Tools Version: {version}")
-    Prof-Tools Version: 0.1.0
+    >>> print("Prof-Tools Version: {0}".format(version))
+    Prof-Tools Version: 0.2.0
 """
 
 import json
-import urllib.request
+try:
+    from urllib.request import urlopen
+    from urllib.error import URLError
+except ImportError:
+    # Python 2 fallback
+    from urllib2 import urlopen
+    from urllib2 import URLError
 import ssl
 import logging
 import os
@@ -61,12 +67,6 @@ def handle_version_errors(fallback_version=DEFAULT_FALLBACK_VERSION):
     
     Returns:
         function: Decorated function with error handling
-    
-    Example:
-        @handle_version_errors("0.1.0")
-        def get_version():
-            # Function that might raise exceptions
-            return read_version_from_file()
     """
     def decorator(func):
         @wraps(func)
@@ -76,11 +76,11 @@ def handle_version_errors(fallback_version=DEFAULT_FALLBACK_VERSION):
                 if result and is_valid_semantic_version(result):
                     return result
                 else:
-                    logger.warning(f"Function {func.__name__} returned invalid version: {result}")
+                    logger.warning("Function {0} returned invalid version: {1}".format(func.__name__, result))
                     return fallback_version
             except Exception as e:
-                logger.debug(f"Error in {func.__name__}: {str(e)}")
-                logger.info(f"Using fallback version: {fallback_version}")
+                logger.debug("Error in {0}: {1}".format(func.__name__, str(e)))
+                logger.info("Using fallback version: {0}".format(fallback_version))
                 return fallback_version
         return wrapper
     return decorator
@@ -90,26 +90,11 @@ def is_valid_semantic_version(version_string):
     """
     Validate if a version string follows semantic versioning (SemVer) conventions.
     
-    Supports the standard MAJOR.MINOR.PATCH format with optional pre-release and build metadata.
-    Based on SemVer 2.0.0 specification and GT Tools validation patterns.
-    
     Args:
         version_string (str): Version string to validate
     
     Returns:
         bool: True if version string is valid semantic version, False otherwise
-    
-    Examples:
-        >>> is_valid_semantic_version("0.1.0")
-        True
-        >>> is_valid_semantic_version("0.1.0-alpha.1")
-        True
-        >>> is_valid_semantic_version("0.1.0+build.1")
-        True
-        >>> is_valid_semantic_version("0.1")
-        False
-        >>> is_valid_semantic_version("invalid")
-        False
     """
     if not isinstance(version_string, str):
         return False
@@ -117,7 +102,7 @@ def is_valid_semantic_version(version_string):
     try:
         return bool(re.match(SEMANTIC_VERSION_PATTERN, version_string.strip()))
     except Exception as e:
-        logger.debug(f"Error validating version string '{version_string}': {e}")
+        logger.debug("Error validating version string '{0}': {1}".format(version_string, e))
         return False
 
 
@@ -125,37 +110,21 @@ def parse_semantic_version(version_string):
     """
     Parse a semantic version string into its component parts.
     
-    Following GT Tools patterns for version parsing with comprehensive error handling
-    and validation. Returns a dictionary with major, minor, patch components and
-    optional pre-release and build metadata.
-    
     Args:
         version_string (str): Semantic version string to parse
     
     Returns:
-        dict: Dictionary containing version components:
-            - major (int): Major version number
-            - minor (int): Minor version number  
-            - patch (int): Patch version number
-            - prerelease (str or None): Pre-release identifier
-            - build (str or None): Build metadata
+        dict: Dictionary containing version components
     
     Raises:
         ValueError: If version string is not a valid semantic version
-    
-    Examples:
-        >>> parse_semantic_version("0.1.0")
-        {'major': 0, 'minor': 1, 'patch': 0, 'prerelease': None, 'build': None}
-        >>> parse_semantic_version("0.1.0-alpha.1+build.2")
-        {'major': 0, 'minor': 1, 'patch': 0, 'prerelease': 'alpha.1', 'build': 'build.2'}
     """
     if not is_valid_semantic_version(version_string):
-        raise ValueError(f"Invalid semantic version: '{version_string}'. "
-                        f"Expected format: MAJOR.MINOR.PATCH[-prerelease][+build]")
+        raise ValueError("Invalid semantic version: '{0}'".format(version_string))
     
     match = re.match(SEMANTIC_VERSION_PATTERN, version_string.strip())
     if not match:
-        raise ValueError(f"Failed to parse version string: '{version_string}'")
+        raise ValueError("Failed to parse version string: '{0}'".format(version_string))
     
     major, minor, patch, prerelease, build = match.groups()
     
@@ -168,80 +137,12 @@ def parse_semantic_version(version_string):
     }
 
 
-def compare_versions(version_a, version_b):
-    """
-    Compare two semantic version strings following SemVer precedence rules.
-    
-    Implements semantic version comparison logic as defined in SemVer 2.0.0 specification.
-    Pre-release versions have lower precedence than normal versions. Build metadata
-    is ignored during comparison.
-    
-    Args:
-        version_a (str): First version string
-        version_b (str): Second version string
-    
-    Returns:
-        int: -1 if version_a < version_b
-             0 if version_a == version_b  
-             1 if version_a > version_b
-    
-    Examples:
-        >>> compare_versions("0.1.0", "0.2.0")
-        -1
-        >>> compare_versions("0.2.0", "0.1.0")
-        1
-        >>> compare_versions("0.1.0", "0.1.0")
-        0
-        >>> compare_versions("0.1.0-alpha", "0.1.0")
-        -1
-    """
-    try:
-        parsed_a = parse_semantic_version(version_a)
-        parsed_b = parse_semantic_version(version_b)
-    except ValueError as e:
-        logger.error(f"Version comparison failed: {e}")
-        return 0
-    
-    # Compare major, minor, patch
-    for component in ['major', 'minor', 'patch']:
-        if parsed_a[component] < parsed_b[component]:
-            return -1
-        elif parsed_a[component] > parsed_b[component]:
-            return 1
-    
-    # Handle pre-release comparison
-    pre_a = parsed_a['prerelease']
-    pre_b = parsed_b['prerelease']
-    
-    if pre_a is None and pre_b is None:
-        return 0
-    elif pre_a is None:
-        return 1  # Normal version > pre-release
-    elif pre_b is None:
-        return -1  # Pre-release < normal version
-    else:
-        # Both have pre-release, compare lexically
-        if pre_a < pre_b:
-            return -1
-        elif pre_a > pre_b:
-            return 1
-        else:
-            return 0
-
-
 def get_current_file_directory():
     """
-    Get the directory where this version_utils.py file is located.
-    
-    Provides a reliable way to determine the base path for relative file operations,
-    following GT Tools patterns for path resolution.
+    Get the directory containing this version_utils.py file.
     
     Returns:
         str: Absolute path to the directory containing this file
-    
-    Example:
-        >>> get_current_file_directory()
-        '/path/to/prof-tools/prof/core'
     """
     return os.path.dirname(os.path.abspath(__file__))
 
@@ -250,16 +151,8 @@ def find_manifest_file():
     """
     Locate the releases.json manifest file by searching up the directory tree.
     
-    Searches from the current file location up through parent directories until
-    it finds the releases.json file. This provides flexibility for different
-    deployment scenarios while maintaining reliability.
-    
     Returns:
         str or None: Absolute path to releases.json file if found, None otherwise
-    
-    Example:
-        >>> find_manifest_file()
-        '/path/to/prof-tools/releases.json'
     """
     current_dir = get_current_file_directory()
     
@@ -269,7 +162,7 @@ def find_manifest_file():
         manifest_path = os.path.join(current_dir, MANIFEST_FILENAME)
         
         if os.path.isfile(manifest_path):
-            logger.debug(f"Found manifest file at: {manifest_path}")
+            logger.debug("Found manifest file at: {0}".format(manifest_path))
             return manifest_path
         
         parent_dir = os.path.dirname(current_dir)
@@ -277,27 +170,23 @@ def find_manifest_file():
             break
         current_dir = parent_dir
     
-    logger.warning(f"Manifest file '{MANIFEST_FILENAME}' not found in directory tree")
+    logger.warning("Manifest file '{0}' not found in directory tree".format(MANIFEST_FILENAME))
     return None
 
 
-@handle_version_errors()
 def read_manifest_from_file():
     """
     Read and parse the releases.json manifest file from the local filesystem.
-    
-    Provides the primary method for reading version information from the local
-    manifest file. Includes comprehensive error handling and validation.
     
     Returns:
         dict or None: Parsed manifest data if successful, None if file not found or invalid
     
     Raises:
-        Exception: Re-raised by decorator as fallback version
+        Exception: For file not found or invalid JSON
     """
     manifest_path = find_manifest_file()
     if not manifest_path:
-        raise FileNotFoundError(f"Manifest file '{MANIFEST_FILENAME}' not found")
+        raise FileNotFoundError("Manifest file '{0}' not found".format(MANIFEST_FILENAME))
     
     try:
         with open(manifest_path, 'r', encoding='utf-8') as file:
@@ -307,35 +196,29 @@ def read_manifest_from_file():
         required_fields = ['current_version', 'tool_name']
         for field in required_fields:
             if field not in manifest_data:
-                raise ValueError(f"Invalid manifest: missing required field '{field}'")
+                raise ValueError("Invalid manifest: missing required field '{0}'".format(field))
         
-        logger.debug(f"Successfully read manifest from: {manifest_path}")
+        logger.debug("Successfully read manifest from: {0}".format(manifest_path))
         return manifest_data
         
     except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON in manifest file: {e}")
+        raise ValueError("Invalid JSON in manifest file: {0}".format(e))
     except Exception as e:
-        raise Exception(f"Failed to read manifest file: {e}")
+        raise Exception("Failed to read manifest file: {0}".format(e))
 
 
-@handle_version_errors()
 def read_manifest_from_url(manifest_url=None):
     """
     Read and parse the releases.json manifest file from a remote URL.
     
-    Provides a fallback method for reading version information when local file
-    is not available. Useful for development scenarios or when tools are run
-    from different locations.
-    
     Args:
-        manifest_url (str, optional): URL to the manifest file. If None, constructs
-                                    default GitHub raw content URL.
+        manifest_url (str, optional): URL to the manifest file
     
     Returns:
         dict or None: Parsed manifest data if successful, None if URL not accessible
     
     Raises:
-        Exception: Re-raised by decorator as fallback version
+        Exception: For HTTP errors or invalid JSON
     """
     if manifest_url is None:
         # Default GitHub raw content URL for prof-tools
@@ -346,9 +229,9 @@ def read_manifest_from_url(manifest_url=None):
         # Create SSL context for HTTPS requests
         ctx = ssl.create_default_context()
         
-        with urllib.request.urlopen(manifest_url, timeout=HTTP_TIMEOUT_SECONDS, context=ctx) as response:
+        with urlopen(manifest_url, timeout=HTTP_TIMEOUT_SECONDS, context=ctx) as response:
             if response.status != 200:
-                raise Exception(f"HTTP {response.status}: {response.reason}")
+                raise Exception("HTTP {0}: {1}".format(response.status, response.reason))
             
             manifest_data = json.loads(response.read().decode('utf-8'))
         
@@ -356,27 +239,22 @@ def read_manifest_from_url(manifest_url=None):
         required_fields = ['current_version', 'tool_name']
         for field in required_fields:
             if field not in manifest_data:
-                raise ValueError(f"Invalid manifest: missing required field '{field}'")
+                raise ValueError("Invalid manifest: missing required field '{0}'".format(field))
         
-        logger.debug(f"Successfully read manifest from URL: {manifest_url}")
+        logger.debug("Successfully read manifest from URL: {0}".format(manifest_url))
         return manifest_data
         
-    except urllib.error.URLError as e:
-        raise Exception(f"Failed to access manifest URL: {e}")
+    except URLError as e:
+        raise Exception("Failed to access manifest URL: {0}".format(e))
     except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON in remote manifest: {e}")
+        raise ValueError("Invalid JSON in remote manifest: {0}".format(e))
     except Exception as e:
-        raise Exception(f"Failed to read remote manifest: {e}")
+        raise Exception("Failed to read remote manifest: {0}".format(e))
 
 
 def get_manifest_data():
     """
     Get manifest data using a cascade of fallback methods.
-    
-    Attempts to read manifest data in order of preference:
-    1. Local file (fastest, most reliable)
-    2. Remote URL (fallback for development/distributed scenarios)
-    3. Cache (if available from previous successful reads)
     
     Returns:
         dict or None: Manifest data from the first successful method, None if all fail
@@ -388,7 +266,7 @@ def get_manifest_data():
             _VERSION_CACHE['manifest'] = manifest_data  # Cache successful read
             return manifest_data
     except Exception as e:
-        logger.debug(f"Local manifest read failed: {e}")
+        logger.debug("Local manifest read failed: {0}".format(e))
     
     # Try remote URL as fallback
     try:
@@ -397,7 +275,7 @@ def get_manifest_data():
             _VERSION_CACHE['manifest'] = manifest_data  # Cache successful read
             return manifest_data
     except Exception as e:
-        logger.debug(f"Remote manifest read failed: {e}")
+        logger.debug("Remote manifest read failed: {0}".format(e))
     
     # Use cached data if available
     if 'manifest' in _VERSION_CACHE:
@@ -413,20 +291,8 @@ def get_prof_tools_version():
     """
     Get the current version of Prof-Tools Maya Menu System from the manifest.
     
-    This is the primary function for retrieving version information. It provides
-    a clean, simple interface while handling all complexity internally through
-    the manifest reading cascade and error handling.
-    
     Returns:
-        str: Current version string (e.g., "0.1.0") or fallback version if manifest unavailable
-    
-    Examples:
-        >>> get_prof_tools_version()
-        '0.1.0'
-        
-        # In case of any errors:
-        >>> get_prof_tools_version()
-        '0.1.0'  # Returns fallback version
+        str: Current version string (e.g., "0.2.0") or fallback version if manifest unavailable
     """
     # Check cache first for performance
     cache_key = 'prof_tools_version'
@@ -444,12 +310,12 @@ def get_prof_tools_version():
         raise ValueError("Manifest does not contain 'current_version' field")
     
     if not is_valid_semantic_version(current_version):
-        raise ValueError(f"Invalid version format in manifest: '{current_version}'")
+        raise ValueError("Invalid version format in manifest: '{0}'".format(current_version))
     
     # Cache the successful result
     _VERSION_CACHE[cache_key] = current_version
     
-    logger.debug(f"Retrieved Prof-Tools version: {current_version}")
+    logger.debug("Retrieved Prof-Tools version: {0}".format(current_version))
     return current_version
 
 
@@ -457,26 +323,15 @@ def get_version_tuple():
     """
     Get the current version as a tuple of integers for easy comparison.
     
-    Useful for programmatic version comparisons and compatibility checks.
-    Following the pattern used in GT Tools for version tuple management.
-    
     Returns:
         tuple: Version as (major, minor, patch) integers
-    
-    Examples:
-        >>> get_version_tuple()
-        (0, 1, 0)
-        >>> version_tuple = get_version_tuple()
-        >>> if version_tuple >= (0, 1, 0):
-        ...     print("Compatible version")
-        Compatible version
     """
     try:
         version_string = get_prof_tools_version()
         parsed = parse_semantic_version(version_string)
         return (parsed['major'], parsed['minor'], parsed['patch'])
     except Exception as e:
-        logger.debug(f"Error creating version tuple: {e}")
+        logger.debug("Error creating version tuple: {0}".format(e))
         # Parse fallback version
         parsed = parse_semantic_version(DEFAULT_FALLBACK_VERSION)
         return (parsed['major'], parsed['minor'], parsed['patch'])
@@ -486,114 +341,83 @@ def get_tool_info():
     """
     Get comprehensive tool information from the manifest.
     
-    Provides additional metadata about the prof-tools beyond just version
-    information. Useful for about dialogs, debugging, and system information.
-    
     Returns:
-        dict: Dictionary containing tool information with keys:
-            - version (str): Current version
-            - version_tuple (tuple): Version as tuple
-            - tool_name (str): Name of the tool
-            - description (str): Tool description
-            - author (str): Tool author
-            - Other fields as available in manifest
-    
-    Example:
-        >>> info = get_tool_info()
-        >>> print(f"{info['tool_name']} v{info['version']}")
-        prof-tools v0.1.0
+        dict: Dictionary containing tool information
     """
-    default_info = {
-        'version': DEFAULT_FALLBACK_VERSION,
-        'version_tuple': parse_semantic_version(DEFAULT_FALLBACK_VERSION),
-        'tool_name': 'prof-tools',
-        'description': 'Maya instructor tools for grading and managing student assignments across NMSU\'s FDMA courses',
-        'author': 'Alexander T. Santiago'
-    }
-    
     try:
         manifest_data = get_manifest_data()
         if not manifest_data:
-            return default_info
+            # Return fallback info
+            return {
+                'version': DEFAULT_FALLBACK_VERSION,
+                'version_tuple': get_version_tuple(),
+                'tool_name': 'prof-tools',
+                'description': 'Maya instructor tools for grading and assignment management',
+                'author': 'Alexander T. Santiago'
+            }
         
-        current_version = manifest_data.get('current_version', default_info['version'])
+        # Extract version information
+        version = get_prof_tools_version()
+        version_tuple = get_version_tuple()
         
-        # Extract available information from manifest
-        tool_info = default_info.copy()
-        tool_info.update({
-            'version': current_version,
-            'version_tuple': get_version_tuple(),
-            'tool_name': manifest_data.get('tool_name', default_info['tool_name']),
-            'description': manifest_data.get('description', default_info['description']),
-            'author': manifest_data.get('author', default_info['author']),
-            'repository': manifest_data.get('repository', ''),
-            'license': manifest_data.get('license', 'MIT'),
-            'target_courses': manifest_data.get('target_courses', [])
-        })
+        # Combine manifest data with version info
+        tool_info = manifest_data.copy()
+        tool_info['version'] = version
+        tool_info['version_tuple'] = version_tuple
         
         return tool_info
         
     except Exception as e:
-        logger.debug(f"Error retrieving tool info: {e}")
-        return default_info
+        logger.warning("Error getting tool info: {0}".format(e))
+        # Return fallback info
+        return {
+            'version': DEFAULT_FALLBACK_VERSION,
+            'version_tuple': (0, 1, 0),
+            'tool_name': 'prof-tools',
+            'description': 'Maya instructor tools for grading and assignment management',
+            'author': 'Alexander T. Santiago'
+        }
+
+
+def get_individual_tool_version(tool_name, tool_module=None):
+    """
+    Get version for an individual tool within prof-tools.
+    
+    Some tools may want to maintain their own version numbers independent of the
+    main prof-tools version. This function checks for individual tool versions
+    following GT Tools patterns.
+    
+    Args:
+        tool_name (str): Name of the tool
+        tool_module (module, optional): Tool module to check for __version__
+    
+    Returns:
+        str: Tool version if found, otherwise returns main prof-tools version
+    """
+    try:
+        # If module is provided, check for __version__ attribute
+        if tool_module and hasattr(tool_module, '__version__'):
+            tool_version = getattr(tool_module, '__version__')
+            if is_valid_semantic_version(tool_version):
+                logger.debug("Found individual version for {0}: {1}".format(tool_name, tool_version))
+                return tool_version
+        
+        # Fall back to main prof-tools version
+        main_version = get_prof_tools_version()
+        logger.debug("Using main prof-tools version for {0}: {1}".format(tool_name, main_version))
+        return main_version
+        
+    except Exception as e:
+        logger.warning("Error getting tool version for {0}: {1}".format(tool_name, e))
+        return DEFAULT_FALLBACK_VERSION
 
 
 def clear_version_cache():
     """
     Clear the internal version cache.
     
-    Useful for testing, debugging, or when you need to force a fresh read
-    of version information from manifest sources.
-    
-    Example:
-        >>> clear_version_cache()
-        >>> version = get_prof_tools_version()  # Will read fresh from manifest
+    Useful for testing or when you want to force fresh reads from the manifest.
     """
     global _VERSION_CACHE
     _VERSION_CACHE.clear()
     logger.debug("Version cache cleared")
-
-
-# Module initialization and validation
-if __name__ == "__main__":
-    # Self-test when module is run directly
-    logger.setLevel(logging.DEBUG)
-    
-    print("Prof-Tools Version Utils Self-Test")
-    print("=" * 40)
-    
-    # Test version retrieval
-    version = get_prof_tools_version()
-    print(f"Current Version: {version}")
-    
-    # Test version tuple
-    version_tuple = get_version_tuple()
-    print(f"Version Tuple: {version_tuple}")
-    
-    # Test tool info
-    info = get_tool_info()
-    print(f"Tool Name: {info['tool_name']}")
-    print(f"Description: {info['description']}")
-    print(f"Author: {info['author']}")
-    
-    # Test version validation
-    test_versions = ["0.1.0", "0.1.0-alpha", "0.1.0+build", "invalid"]
-    print("\nVersion Validation Tests:")
-    for test_ver in test_versions:
-        is_valid = is_valid_semantic_version(test_ver)
-        print(f"  {test_ver}: {'✓' if is_valid else '✗'}")
-    
-    # Test version comparison
-    print("\nVersion Comparison Tests:")
-    comparisons = [
-        ("0.1.0", "0.2.0", -1),
-        ("0.2.0", "0.1.0", 1),
-        ("0.1.0", "0.1.0", 0),
-        ("0.1.0-alpha", "0.1.0", -1)
-    ]
-    for v1, v2, expected in comparisons:
-        result = compare_versions(v1, v2)
-        status = "✓" if result == expected else "✗"
-        print(f"  {v1} vs {v2}: {result} (expected {expected}) {status}")
-    
-    print("\nSelf-test completed!")

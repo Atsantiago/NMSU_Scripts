@@ -19,8 +19,12 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# UI module metadata
-__version__ = "0.1.0"
+# UI module metadata - version comes from main prof module
+try:
+    from prof import __version__
+except ImportError:
+    # Fallback if prof module not available
+    __version__ = "0.1.0"
 __author__ = "Alexander T. Santiago - https://github.com/Atsantiago"
 
 # UI module constants

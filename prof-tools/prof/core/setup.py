@@ -32,7 +32,7 @@ try:
     )
     # Import version from single source of truth
     from prof import __version__
-except ImportError:
+except ImportError as e:
     # Fallback constants if imports fail
     PACKAGE_NAME = "prof-tools"
     PACKAGE_MAIN_MODULE = "prof"
@@ -44,8 +44,8 @@ except ImportError:
     PREFS_FOLDER_NAME = "prefs"
     SCRIPTS_FOLDER_NAME = "scripts"
     USERSETUP_FILE_NAME = "userSetup.mel"
-    # Remove hard-coded version - will cause error if prof package unavailable
-    # This ensures we always use the centralized version from prof/__init__.py
+    # Fallback version
+    __version__ = "0.1.0"
     
     logging.basicConfig()
     logger = logging.getLogger(__name__)
@@ -54,8 +54,7 @@ except ImportError:
     def log_warning(msg): logger.warning(msg)
     def log_error(msg): logger.error(msg)
     
-    # If prof package is unavailable, we cannot determine version
-    raise ImportError("Prof-tools package must be available to determine version")
+    log_warning("Using fallback constants due to import error: {}".format(str(e)))
 
 class ProfToolsSetup(object):
     """
@@ -67,7 +66,7 @@ class ProfToolsSetup(object):
         self.main_module = PACKAGE_MAIN_MODULE
         self.entry_line = PACKAGE_ENTRY_LINE
         self.install_dir = INSTALL_DIRECTORY_NAME
-        self.install_package = INSTALL_PACKAGE_NAME
+        self.install_package_name = INSTALL_PACKAGE_NAME  # Renamed to avoid conflict with install_package method
         # Use centralized version from prof/__init__.py
         self.version = __version__
         
@@ -100,7 +99,10 @@ class ProfToolsSetup(object):
             log_info("Source path: {}".format(source_path))
             log_info("Install path: {}".format(install_path))
             
-            os.makedirs(install_path, exist_ok=True)
+            # Create installation directory (compatible with older Python versions)
+            if not os.path.exists(install_path):
+                os.makedirs(install_path)
+            
             self._copy_package_files(source_path, install_path)
             self._update_usersetup_mel()
             
@@ -196,8 +198,8 @@ class ProfToolsSetup(object):
         return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     
     def _copy_package_files(self, source_path, install_path):
-        prof_source = os.path.join(source_path, self.install_package)
-        prof_dest = os.path.join(install_path, self.install_package)
+        prof_source = os.path.join(source_path, self.install_package_name)
+        prof_dest = os.path.join(install_path, self.install_package_name)
         if os.path.exists(prof_dest):
             shutil.rmtree(prof_dest)
         shutil.copytree(prof_source, prof_dest)
@@ -206,7 +208,10 @@ class ProfToolsSetup(object):
     def _update_usersetup_mel(self):
         usersetup_path = self.get_usersetup_path()
         scripts_dir = os.path.dirname(usersetup_path)
-        os.makedirs(scripts_dir, exist_ok=True)
+        
+        # Create scripts directory if it doesn't exist (compatible with older Python)
+        if not os.path.exists(scripts_dir):
+            os.makedirs(scripts_dir)
         
         existing = ""
         if os.path.exists(usersetup_path):
@@ -248,8 +253,24 @@ def launcher_entry_point():
     Entry point for the drag-and-drop installer launcher.
     """
     try:
+        # Add debug logging to identify where the error occurs
+        log_info("Creating ProfToolsSetup instance...")
         setup_instance = ProfToolsSetup()
+        log_info("ProfToolsSetup instance created successfully")
+        
+        # Verify that required methods exist and are callable
+        required_methods = ['install_package', 'uninstall_package', 'run_only']
+        for method_name in required_methods:
+            if not hasattr(setup_instance, method_name):
+                raise AttributeError("Required method '{}' not found on ProfToolsSetup instance".format(method_name))
+            method = getattr(setup_instance, method_name)
+            if not callable(method):
+                raise AttributeError("Method '{}' exists but is not callable. Type: {}".format(method_name, type(method)))
+        
+        log_info("All required methods verified as callable")
+        
         if MAYA_AVAILABLE:
+            log_info("Maya available, showing dialog...")
             result = cmds.confirmDialog(
                 title="Prof-Tools Setup",
                 message="Choose installation option:",
@@ -258,19 +279,29 @@ def launcher_entry_point():
                 cancelButton="Cancel",
                 dismissString="Cancel"
             )
+            log_info("Dialog result: {}".format(result))
+            
             if result == "Install":
+                log_info("Calling install_package method...")
                 setup_instance.install_package()
             elif result == "Uninstall":
+                log_info("Calling uninstall_package method...")
                 setup_instance.uninstall_package()
             elif result == "Run Only":
+                log_info("Calling run_only method...")
                 setup_instance.run_only()
         else:
             print("Maya not available. Setup operations require Maya environment.")
     except Exception as e:
         error_msg = "Setup launcher failed: {}".format(e)
         log_error(error_msg)
+        import traceback
+        log_error("Full traceback: {}".format(traceback.format_exc()))
         if MAYA_AVAILABLE:
-            cmds.confirmDialog(title="Setup Error", message=error_msg, button=["OK"])
+            try:
+                cmds.confirmDialog(title="Setup Error", message=error_msg, button=["OK"])
+            except Exception:
+                print("Error: {}".format(error_msg))
 
 if __name__ == "__main__":
     setup = ProfToolsSetup()
