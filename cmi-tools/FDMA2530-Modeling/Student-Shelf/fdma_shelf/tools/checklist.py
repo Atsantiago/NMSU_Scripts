@@ -37,8 +37,8 @@ SCRIPT_VERSION = __tool_version__
 PACKAGE_VERSION = __package_version__
 PYTHON_VERSION = sys.version_info.major
 
-# Create comprehensive title for UI
-WINDOW_TITLE = f"{SCRIPT_NAME} v{SCRIPT_VERSION} | CMI Tools {PACKAGE_VERSION}"
+# Create comprehensive title for UI with better visual separation
+WINDOW_TITLE = f"{SCRIPT_NAME}:v{SCRIPT_VERSION}  ——  CMI Tools:v{PACKAGE_VERSION}"
 
 # Qt imports with fallback
 try:
