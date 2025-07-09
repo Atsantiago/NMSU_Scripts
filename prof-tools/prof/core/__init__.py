@@ -25,7 +25,7 @@ except ImportError:
     
 __author__ = "Alexander T. Santiago - https://github.com/Atsantiago"
 
-# Module constants following GT-Tools patterns
+# Module constants following industry best practices
 PACKAGE_NAME = "prof-tools"
 PACKAGE_MAIN_MODULE = "prof"
 PACKAGE_ENTRY_LINE = 'python("import prof.ui.builder as _p; _p.build_menu()");'
@@ -121,7 +121,7 @@ def log_error(msg):
     """
     logger.error(msg)
 
-# Python version compatibility check (following GT-Tools pattern)
+# Python version compatibility check (following best practices)
 def check_python_compatibility():
     """
     Checks if the current Python version is compatible with prof-tools

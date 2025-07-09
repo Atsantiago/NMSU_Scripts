@@ -1,6 +1,6 @@
 """
 Prof-Tools Drag-and-Drop Installer
-Emulates GT Tools installer pattern: no downloads, runs local code shipped alongside this file.
+Follows a proven installer pattern: no downloads, runs local code shipped alongside this file.
 
 Place this file alongside your `prof/` package folder. Drag-and-drop onto Maya to Install, Uninstall, or Run Only.
 """

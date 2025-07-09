@@ -12,7 +12,7 @@ Prof-Tools provides a menu-based interface in Maya for instructors to efficientl
 - **Universal Grading Engine**: Consistent grading logic across all courses and assignments  
 - **Configurable Rubrics**: Class and assignment-specific grading criteria without code changes
 - **Automated Analysis**: File validation, geometry analysis, scene organization checks
-- **Drag-and-Drop Installation**: Simple installer following GT-Tools pattern
+- **Drag-and-Drop Installation**: Simple installer for easy setup
 
 ## Target Courses
 

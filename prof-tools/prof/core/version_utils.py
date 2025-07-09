@@ -2,8 +2,7 @@
 Version Utilities for Prof-Tools Maya Menu System
 
 This module provides version management utilities for dynamically reading version information
-from the releases.json manifest file. Follows the FDMA2530 pattern for consistency across
-NMSU Scripts while allowing individual tools to maintain their own versions.
+from the releases.json manifest file for the Prof-Tools system.
 
 Author: Alexander T. Santiago
 Version: Dynamic (Read from releases.json)
@@ -44,7 +43,7 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# Constants - Following GT Tools naming conventions
+# Constants - Following semantic versioning conventions
 MANIFEST_FILENAME = "releases.json"
 DEFAULT_FALLBACK_VERSION = "0.1.0"
 HTTP_TIMEOUT_SECONDS = 5
@@ -139,7 +138,7 @@ def parse_semantic_version(version_string):
 
 def get_current_file_directory():
     """
-    Get the directory containing this version_utils.py file.
+    Get the directory where this version_utils.py file is located.
     
     Returns:
         str: Absolute path to the directory containing this file
@@ -385,7 +384,7 @@ def get_individual_tool_version(tool_name, tool_module=None):
     
     Some tools may want to maintain their own version numbers independent of the
     main prof-tools version. This function checks for individual tool versions
-    following GT Tools patterns.
+    following standard versioning patterns.
     
     Args:
         tool_name (str): Name of the tool

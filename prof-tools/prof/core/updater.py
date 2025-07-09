@@ -4,9 +4,9 @@ Prof-Tools Updater Module
 Handles checking for updates via releases.json manifest, version comparison,
 and provides user feedback for the Prof-Tools Maya menu system.
 
-This module follows the manifest-based update pattern established in FDMA2530
-tools, ensuring all update checks use the local releases.json file as the 
-source of truth rather than GitHub releases.
+This module handles checking for updates via releases.json manifest, version comparison,
+and provides user feedback for the Prof-Tools Maya menu system using a 
+manifest-based approach.
 
 Author: Alexander T. Santiago
 Version: Dynamic (Read from releases.json)
@@ -44,7 +44,7 @@ except ImportError:
     from urllib2 import urlopen, Request, URLError
 
 # Import version utilities for robust version handling
-from .version_utils import get_prof_tools_version, parse_semantic_version, is_valid_semantic_version
+from .version_utils import get_prof_tools_version, parse_semantic_version, is_valid_semantic_version, get_manifest_data
 
 # Configure logging for debug output
 logger = logging.getLogger(__name__)
@@ -55,43 +55,18 @@ MANIFEST_URL = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master
 _HTTP_TIMEOUT = 10  # seconds
 
 
-def _get_releases_manifest():
-    """
-    Fetch the releases manifest from GitHub.
-    Returns the manifest data or None on error.
-    
-    This function uses robust error handling and follows the pattern
-    established in FDMA2530 tools for consistent manifest fetching.
-    """
-    try:
-        req = Request(MANIFEST_URL, headers={'User-Agent': 'Prof-Tools-Updater'})
-        resp = urlopen(req, timeout=_HTTP_TIMEOUT)
-        data = json.loads(resp.read().decode('utf-8'))
-        logger.debug("Successfully fetched releases manifest")
-        return data
-    except URLError as e:
-        logger.error("Network error fetching releases manifest: %s", e)
-        return None
-    except json.JSONDecodeError as e:
-        logger.error("JSON decode error in releases manifest: %s", e)
-        return None
-    except Exception as e:
-        logger.error("Unexpected error fetching releases manifest: %s", e)
-        return None
-
-
 def get_latest_version():
     """
     Fetch the latest release version from the manifest.
     Returns the version string (e.g. "0.2.0") or None on error.
     
-    This uses the manifest-based approach rather than GitHub releases API,
-    ensuring consistency with the local releases.json file.
+    This uses the version_utils manifest system for consistency with
+    the rest of the prof-tools versioning infrastructure.
     """
     try:
-        manifest = _get_releases_manifest()
+        manifest = get_manifest_data()
         if not manifest:
-            logger.warning("Could not fetch manifest for version check")
+            logger.warning("Could not get manifest data for version check")
             return None
         
         latest_version = manifest.get('current_version')
@@ -163,11 +138,21 @@ def launch_update_process():
 
 def check_for_updates():
     """
-    Main function to check for updates and prompt the user.
+    Main function to check for updates and show the professional update dialog.
     
-    This function provides Maya-integrated dialogs when available,
-    with console fallback for non-Maya environments.
+    This function uses the new update dialog for a better user experience
+    designed for advanced Maya users and instructors.
     """
+    try:
+        # Try to use the new update dialog
+        from ..ui.update_dialog import check_for_updates_with_dialog
+        check_for_updates_with_dialog()
+        return
+        
+    except ImportError as e:
+        logger.warning("Could not load update dialog, falling back to simple dialog: %s", e)
+        
+    # Fallback to simple dialog if update_dialog is not available
     try:
         import maya.cmds as cmds  # Maya commands for dialog boxes
     except ImportError:

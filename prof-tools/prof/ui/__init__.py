@@ -205,6 +205,20 @@ def _initialize_ui_module():
 # Automatic initialization when module is imported
 _initialize_ui_module()
 
+# Import centralized version from package root
+try:
+    from prof import __version__
+except ImportError:
+    # Fallback if prof module not available
+    __version__ = "0.1.0"
+
+# Try to import update dialog module for UI functionality
+try:
+    from . import update_dialog
+except ImportError:
+    update_dialog = None
+    logger.warning("Update dialog module not available")
+
 # Make key functions available at package level
 __all__ = [
     'is_maya_ui_available',
@@ -214,5 +228,6 @@ __all__ = [
     'get_platform_info',
     'log_ui_info',
     'log_ui_warning',
-    'log_ui_error'
+    'log_ui_error',
+    'update_dialog'  # Add update dialog module
 ]

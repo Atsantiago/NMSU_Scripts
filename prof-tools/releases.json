@@ -11,21 +11,29 @@
   "releases": [
     {
       "version": "0.2.0",
-      "date": "2025-07-03",
-      "commit_hash": "6e22770",
-      "description": "Initial release of Prof-Tools framework with core functionality",
+      "date": "2025-07-08",
+      "commit_hash": "master",
+      "description": "Initial release of Prof-Tools framework with core functionality and manifest-based versioning",
       "features": [
         "Project structure and architecture established",
         "Basic menu system framework implemented",
         "Core grading engine implementation",
         "Rubric configuration system foundation",
-        "Drag-and-drop installer following GT-Tools pattern",
+        "Drag-and-drop installer with simple installation process",
         "Universal grading engine for consistent logic across courses",
         "Configurable rubrics for class and assignment-specific criteria",
         "Automated analysis capabilities for file validation and scene checks",
-        "Menu-based interface integrated into Maya's main interface"
+        "Menu-based interface integrated into Maya's main interface",
+        "Manifest-based versioning and update system",
+        "Robust version utilities with caching and fallback mechanisms",
+        "SSL-secured manifest fetching with proper error handling",
+        "Local-first manifest reading with remote fallback",
+        "Fixed commit hash to use master branch for automatic updates",
+        "Professional update dialog with comprehensive version comparison",
+        "Enhanced Help menu with about dialog and quick links",
+        "User-friendly update interface designed for advanced Maya users"
       ],
-      "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/6e22770.zip",
+      "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/master.zip",
       "directory_path": "prof-tools",
       "breaking_changes": false,
       "requirements": {

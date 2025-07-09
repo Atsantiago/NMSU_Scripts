@@ -87,7 +87,8 @@ def _build_grading_section(parent_menu):
 
 def _build_help_section(parent_menu):
     """
-    Add the 'Help' submenu showing version and update option.
+    Add the 'Help' submenu with version info, update checking, and helpful links.
+    Enhanced to provide more useful information for instructors.
     """
     # Open Help submenu
     help_menu = cmds.menuItem(
@@ -97,6 +98,13 @@ def _build_help_section(parent_menu):
         parent=parent_menu
     )
 
+    # About Prof-Tools
+    cmds.menuItem(
+        label="About Prof-Tools",
+        parent=help_menu,
+        command=lambda *args: _show_about_dialog()
+    )
+    
     # Divider before version
     cmds.menuItem(divider=True, parent=help_menu)
 
@@ -107,18 +115,86 @@ def _build_help_section(parent_menu):
         parent=help_menu
     )
 
-    # Divider before update option
+    # Divider before update section
     cmds.menuItem(divider=True, parent=help_menu)
 
-    # Command to check for updates
+    # Command to check for updates (uses new dialog)
     cmds.menuItem(
         label="Check for Updates…",
         parent=help_menu,
         command=lambda *args: check_for_updates()
     )
+    
+    # Divider before links
+    cmds.menuItem(divider=True, parent=help_menu)
+    
+    # GitHub repository
+    cmds.menuItem(
+        label="View Source Code",
+        parent=help_menu,
+        command=lambda *args: _open_github()
+    )
+    
+    # Documentation
+    cmds.menuItem(
+        label="Documentation",
+        parent=help_menu,
+        command=lambda *args: _open_documentation()
+    )
 
     cmds.setParent('..', menu=True)  # close Help submenu
     cmds.setParent('..', menu=True)  # close main Prof-Tools menu
+
+
+def _show_about_dialog():
+    """Show an about dialog with Prof-Tools information."""
+    about_message = (
+        "Prof-Tools for Maya\n"
+        "Version: {}\n\n"
+        "A comprehensive suite of instructor tools for grading and managing "
+        "Maya assignments across NMSU's FDMA courses.\n\n"
+        "Designed for advanced Maya users and instructors at the "
+        "Creative Media Institute (CMI).\n\n"
+        "Author: Alexander T. Santiago\n"
+        "License: MIT"
+    ).format(__version__)
+    
+    cmds.confirmDialog(
+        title="About Prof-Tools",
+        message=about_message,
+        button=["OK"],
+        defaultButton="OK"
+    )
+
+
+def _open_github():
+    """Open the Prof-Tools GitHub repository."""
+    import webbrowser
+    try:
+        webbrowser.open("https://github.com/Atsantiago/NMSU_Scripts")
+        logger.info("Opened GitHub repository")
+    except Exception as e:
+        logger.error("Failed to open GitHub: %s", e)
+        cmds.confirmDialog(
+            title="Error",
+            message="Failed to open GitHub. Please visit:\nhttps://github.com/Atsantiago/NMSU_Scripts",
+            button=["OK"]
+        )
+
+
+def _open_documentation():
+    """Open the Prof-Tools documentation."""
+    import webbrowser
+    try:
+        webbrowser.open("https://github.com/Atsantiago/NMSU_Scripts/tree/master/prof-tools/docs")
+        logger.info("Opened documentation")
+    except Exception as e:
+        logger.error("Failed to open documentation: %s", e)
+        cmds.confirmDialog(
+            title="Error", 
+            message="Failed to open documentation. Please visit:\nhttps://github.com/Atsantiago/NMSU_Scripts/tree/master/prof-tools/docs",
+            button=["OK"]
+        )
 
 if __name__ == "__main__":
     # When run directly in Maya script editor, build the menu
