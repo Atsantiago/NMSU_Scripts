@@ -27,7 +27,7 @@ run_update() -> None
 
 startup_check() -> None
     Perform startup update check with visual feedback.
-    Called automatically when Maya starts.
+    Called automatically when Maya starts, even on first startup.
 
 get_update_status() -> str
     Get current update status for button coloring.
@@ -165,9 +165,8 @@ def _perform_release_update(new_version):
 def startup_check():
     """Perform startup update check with visual feedback."""
     try:
-        # Check only if previously installed
-        if not cache_exists():
-            return
+        # Always check for updates on startup (removed cache_exists() check)
+        # This ensures update button highlighting works on first Maya startup
         tag, _, _ = _get_latest_release_info()
         local_version = get_fdma2530_version()
         if _is_newer(tag, local_version):

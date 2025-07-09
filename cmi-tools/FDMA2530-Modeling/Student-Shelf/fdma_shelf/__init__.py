@@ -73,12 +73,15 @@ try:
         def _startup_initialization():
             """Build shelf and check for updates at startup."""
             build_shelf(startup=True)
-            # Delay update check to ensure shelf buttons exist
-            try:
-                from .utils.updater import startup_check
-                startup_check()
-            except Exception:
-                pass  # Silently ignore update check failures at startup
+            # Add a small delay to ensure shelf is fully created before update check
+            def _delayed_update_check():
+                try:
+                    from .utils.updater import startup_check
+                    startup_check()
+                except Exception:
+                    pass  # Silently ignore update check failures at startup
+            # Use executeDeferred again to ensure shelf is ready
+            _mu.executeDeferred(_delayed_update_check)
         _mu.executeDeferred(_startup_initialization)
 except ImportError:
     # Not running inside Maya; do nothing
