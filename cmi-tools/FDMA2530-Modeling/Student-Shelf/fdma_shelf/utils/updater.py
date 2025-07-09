@@ -7,6 +7,16 @@ Handles checking for updates via GitHub Releases, version comparison,
 and update installation for the FDMA 2530 shelf system.
 Provides both startup checking and on-demand update functionality.
 
+Update Button Highlighting
+-------------------------
+The Update button on the shelf is automatically colored based on update status:
+- Green: Updates are available
+- Gray: Up-to-date (default)
+- Yellow: Checking for updates
+- Red: Update check or installation failed
+
+This happens automatically on Maya startup and when the Update button is clicked.
+
 Functions
 ---------
 check_for_updates() -> bool
@@ -17,6 +27,7 @@ run_update() -> None
 
 startup_check() -> None
     Perform startup update check with visual feedback.
+    Called automatically when Maya starts.
 
 get_update_status() -> str
     Get current update status for button coloring.
@@ -160,13 +171,15 @@ def startup_check():
         tag, _, _ = _get_latest_release_info()
         local_version = get_fdma2530_version()
         if _is_newer(tag, local_version):
-            _update_button_color("updates_available")
-            _show_viewport_message("New CMI Tools release available!")
+            # Try to update button color, but don't fail if shelf isn't ready
+            if _update_button_color("updates_available"):
+                _show_viewport_message("New CMI Tools release available!")
         else:
-            _update_button_color("up_to_date")
-            _show_viewport_message(
-                "You are already the latest version of CMI Tools! {0}".format(local_version)
-            )
+            # Try to update button color, but don't fail if shelf isn't ready
+            if _update_button_color("up_to_date"):
+                _show_viewport_message(
+                    "You are already the latest version of CMI Tools! {0}".format(local_version)
+                )
     except Exception as e:
         print("Startup update check failed: {0}".format(e))
 

@@ -70,7 +70,16 @@ try:
     import maya.utils as _mu
     # Only build shelf if uninstall marker does not exist
     if not os.path.exists(_UNINSTALL_MARKER):
-        _mu.executeDeferred(lambda: build_shelf(startup=True))
+        def _startup_initialization():
+            """Build shelf and check for updates at startup."""
+            build_shelf(startup=True)
+            # Delay update check to ensure shelf buttons exist
+            try:
+                from .utils.updater import startup_check
+                startup_check()
+            except Exception:
+                pass  # Silently ignore update check failures at startup
+        _mu.executeDeferred(_startup_initialization)
 except ImportError:
     # Not running inside Maya; do nothing
     # This allows the package to be imported in other contexts
