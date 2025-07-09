@@ -7,7 +7,6 @@ following PEP 8 coding standards.
 
 Author: Alexander T. Santiago
 Version: Dynamic (Read from releases.json)
-License: MIT
 Repository: https://github.com/Atsantiago/NMSU_Scripts
 
 Dependencies:

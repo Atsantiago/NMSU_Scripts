@@ -139,6 +139,7 @@ def _create_shelf(config, startup=False):
                 width=int(item.get("width", cell_w)),
                 height=int(item.get("height", cell_h)),
             )
+<<<<<<< HEAD
     
     # Activate the new shelf
     try:
@@ -155,6 +156,13 @@ def _create_shelf(config, startup=False):
         pass
     
     # Show success message for manual installations
+=======
+
+    # Activate the new shelf tab
+    if cmds.control(g_top, ex=True) and cmds.control(shelf, ex=True):
+        cmds.tabLayout(g_top, edit=True, tabLabel=(shelf, _SHELF_NAME))
+
+>>>>>>> bd60b003fa2b3ac6c11a49f980642cfa6d6f37af
     if not startup:
         cmds.inViewMessage(
             amg="FDMA 2530 shelf rebuilt",
