@@ -115,7 +115,6 @@ def _create_header_section(parent):
     # Header background
     header_frame = cmds.frameLayout(
         label="",
-        borderStyle="etchedIn",
         backgroundColor=COLOR_HEADER,
         marginWidth=5,
         marginHeight=8,
@@ -146,7 +145,6 @@ def _create_version_info_section(parent, current_version, latest_version, status
     """Create the version information section."""
     info_frame = cmds.frameLayout(
         label="Version Information",
-        borderStyle="etchedIn",
         collapsable=False,
         marginWidth=5,
         marginHeight=5,
@@ -198,7 +196,6 @@ def _create_details_section(parent, update_available, latest_version):
         # Error state
         details_frame = cmds.frameLayout(
             label="Connection Status",
-            borderStyle="etchedIn",
             collapsable=False,
             marginWidth=5,
             marginHeight=5,
@@ -222,7 +219,6 @@ def _create_details_section(parent, update_available, latest_version):
         # Update available
         details_frame = cmds.frameLayout(
             label=f"Update Details - v{latest_version}",
-            borderStyle="etchedIn",
             collapsable=False,
             marginWidth=5,
             marginHeight=5,
@@ -246,7 +242,6 @@ def _create_details_section(parent, update_available, latest_version):
         # Up to date
         details_frame = cmds.frameLayout(
             label="System Status",
-            borderStyle="etchedIn",
             collapsable=False,
             marginWidth=5,
             marginHeight=5,
