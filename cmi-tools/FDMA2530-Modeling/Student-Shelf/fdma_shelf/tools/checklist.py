@@ -12,22 +12,33 @@ Updates and changes by Alexander T. Santiago - github.com/atsantiago
 # Standard library imports
 import copy
 import sys
-from fdma_shelf.utils.version_utils import get_fdma2530_version
-
-# Tool version (independent of package)
-__tool_version__ = "2.0.2"
-# Package version
-PACKAGE_VERSION = get_fdma2530_version()
-
-# Script Information  
-SCRIPT_NAME = "CMI Modeling Checklist"
-SCRIPT_VERSION = __tool_version__
-PYTHON_VERSION = sys.version_info.major
 
 # Maya imports  
 import maya.cmds as cmds
 import maya.mel as mel
 from maya import OpenMayaUI as omui
+
+# Version imports
+from fdma_shelf.utils.version_utils import get_fdma2530_version
+
+# ==============================================================================
+# VERSION INFORMATION
+# ==============================================================================
+
+# Tool version (independent of package)
+__tool_version__ = "2.0.2"
+
+# Package version
+__package_version__ = get_fdma2530_version()
+
+# Script information
+SCRIPT_NAME = "CMI Modeling Checklist"
+SCRIPT_VERSION = __tool_version__
+PACKAGE_VERSION = __package_version__
+PYTHON_VERSION = sys.version_info.major
+
+# Create comprehensive title for UI
+WINDOW_TITLE = f"{SCRIPT_NAME} v{SCRIPT_VERSION} | CMI Tools {PACKAGE_VERSION}"
 
 # Qt imports with fallback
 try:
@@ -41,20 +52,9 @@ except ImportError:
     except ImportError:
         print("Warning: Qt libraries not available for window icons")
 
-# Additional Maya imports
-try:
-    import maya.app.general.fileTexturePathResolver
-except ImportError:
-    print("Warning: Could not import fileTexturePathResolver")
-
 # ==============================================================================
 # CONSTANTS
 # ==============================================================================
-
-# Script Information
-SCRIPT_NAME = "CMI Modeling Checklist"
-SCRIPT_VERSION = "2.0.1"
-PYTHON_VERSION = sys.version_info.major
 
 # UI Colors
 DEFAULT_COLOR = (0.3, 0.3, 0.3)
@@ -136,7 +136,7 @@ def build_gui_ats_cmi_modeling_checklist():
     # Create window with resizing enabled and scroll support
     cmds.window(
         window_name,
-        title=f"{script_name}  v{script_version}",
+        title=WINDOW_TITLE,
         mnb=False,
         mxb=False,
         s=True,
@@ -433,7 +433,7 @@ def build_gui_help_ats_cmi_modeling_checklist():
     # Create help window
     cmds.window(
         window_name,
-        title=f"{script_name} Help",
+        title=f"{SCRIPT_NAME} Help",
         mnb=False,
         mxb=False,
         s=True
@@ -457,7 +457,7 @@ def build_gui_help_ats_cmi_modeling_checklist():
         p="main_column"
     )
     cmds.text(
-        f"{script_name} Help",
+        f"{SCRIPT_NAME} Help",
         bgc=[0, .5, 0],
         fn="boldLabelFont",
         align="center"
@@ -3128,7 +3128,7 @@ def check_textures_color_space():
                 defaultButton='OK',
                 cancelButton='Ignore Issue',
                 dismissString='Ignore Issue', 
-                icon="warning"
+                icon="warning" if issues_found > 0 else "information"
             )
                         
             if user_input == 'Select File Nodes':
@@ -3349,7 +3349,7 @@ def check_ai_shadow_casting_lights():
                 button=buttons,
                 defaultButton='OK',
                 cancelButton='Ignore Issue',
-                dismissString='Ignore Issue',
+                dismissString='Ignore Issue', 
                 icon="warning" if issues_found > 0 else "information"
             )
             
@@ -3614,21 +3614,26 @@ def _set_window_icon(window_name):
         print(f"Could not set window icon: {e}")
 
 
-# Additional Maya imports
-try:
-    import maya.app.general.fileTexturePathResolver
-except ImportError:
-    print("Warning: Could not import fileTexturePathResolver")
+# ==============================================================================
+# VERSION UTILITY FUNCTIONS
+# ==============================================================================
+
+def get_checklist_version_info():
+    """
+    Return version information for the checklist tool.
+    
+    Returns:
+        dict: Dictionary containing version information
+    """
+    return {
+        'tool_name': SCRIPT_NAME,
+        'tool_version': SCRIPT_VERSION,
+        'package_version': PACKAGE_VERSION,
+        'python_version': f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+        'window_title': WINDOW_TITLE
+    }
 
 
 # ==============================================================================
-# MAIN EXECUTION
+# CHECKLIST CONSTANTS
 # ==============================================================================
-
-# Main execution
-def main():
-    build_gui_ats_cmi_modeling_checklist()
-
-# If run as a script, launch the GUI
-if __name__ == "__main__":
-    main()
