@@ -243,7 +243,7 @@ def _create_details_section(parent, update_available, latest_version):
             align="center"
         )
         cmds.text(
-            label="New features and improvements are ready to install.",
+            label="Click 'Update Now' to automatically install the latest version.",
             height=20,
             align="center"
         )
@@ -296,11 +296,11 @@ def _create_button_section(parent, update_available, latest_version):
     # Update/View button (context-dependent)
     if update_available:
         cmds.button(
-            label="Get Update",
+            label="Update Now",
             height=35,
             backgroundColor=COLOR_WARNING,
             command=lambda *args: _launch_update_process(),
-            annotation=f"Download and install v{latest_version}"
+            annotation=f"Automatically download and install v{latest_version}"
         )
     else:
         cmds.button(
@@ -327,29 +327,66 @@ def _refresh_update_dialog():
 
 
 def _launch_update_process():
-    """Launch the update process by opening the releases page."""
+    """Launch the automatic update process."""
     try:
-        repo_url = "https://github.com/Atsantiago/NMSU_Scripts"
-        releases_url = repo_url + "/releases"
-        webbrowser.open(releases_url)
-        logger.info("Opened releases page for manual update")
-        
-        # Show confirmation
-        cmds.confirmDialog(
-            title="Update Process",
-            message=(
-                "The releases page has been opened in your browser.\n\n"
-                "Download the latest release and run the installer to update Prof-Tools."
-            ),
-            button=["OK"],
-            defaultButton="OK"
+        # Ask user for confirmation
+        result = cmds.confirmDialog(
+            title="Update Prof-Tools",
+            message="Would you like to update now?\n\nThis will download and install the latest version automatically.",
+            button=["Update Now", "Cancel"],
+            defaultButton="Update Now",
+            cancelButton="Cancel",
+            dismissString="Cancel"
         )
         
+        if result == "Update Now":
+            logger.info("Starting automatic update process...")
+            
+            # Import the update function
+            from ..core.updater import perform_automatic_update
+            
+            # Show progress message
+            progress_dialog = cmds.confirmDialog(
+                title="Updating Prof-Tools",
+                message="Downloading and installing update...\nThis may take a few moments.",
+                button=["Please Wait..."],
+                defaultButton="Please Wait..."
+            )
+            
+            # Perform the update
+            success = perform_automatic_update()
+            
+            # Close the update dialog first
+            _close_update_dialog()
+            
+            if success:
+                # Show success message
+                cmds.confirmDialog(
+                    title="Update Complete",
+                    message="Prof-Tools has been updated successfully!\n\nThe menu has been refreshed with the latest version.",
+                    button=["OK"],
+                    defaultButton="OK"
+                )
+            else:
+                # Show error and offer manual option
+                result = cmds.confirmDialog(
+                    title="Update Failed",
+                    message="Automatic update failed. Would you like to download manually?",
+                    button=["Open Downloads", "Cancel"],
+                    defaultButton="Open Downloads",
+                    cancelButton="Cancel"
+                )
+                
+                if result == "Open Downloads":
+                    repo_url = "https://github.com/Atsantiago/NMSU_Scripts"
+                    releases_url = repo_url + "/releases"
+                    webbrowser.open(releases_url)
+        
     except Exception as e:
-        logger.error("Failed to open releases page: %s", e)
+        logger.error("Update process failed: %s", e)
         cmds.confirmDialog(
-            title="Error",
-            message="Failed to open the releases page. Please visit:\nhttps://github.com/Atsantiago/NMSU_Scripts/releases",
+            title="Update Error",
+            message="Update process failed: {}".format(str(e)),
             button=["OK"],
             defaultButton="OK"
         )

@@ -31,7 +31,9 @@
         "Fixed commit hash to use master branch for automatic updates",
         "Professional update dialog with comprehensive version comparison",
         "Enhanced Help menu with about dialog and quick links",
-        "User-friendly update interface designed for advanced Maya users"
+        "User-friendly update interface designed for advanced Maya users",
+        "Automatic update system with one-click download and installation",
+        "Immediate menu loading after installation - no Maya restart required"
       ],
       "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/master.zip",
       "directory_path": "prof-tools",
@@ -53,11 +55,13 @@
     }
   ],
   "update_system": {
-    "type": "manifest_based",
+    "type": "automatic",
     "manifest_url": "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/prof-tools/releases.json",
     "check_frequency": "on_demand",
-    "auto_update": false,
-    "user_confirmation_required": true
+    "auto_download": true,
+    "auto_install": true,
+    "user_confirmation_required": true,
+    "fallback_to_manual": true
   },
   "development_status": {
     "phase": "Initial Development",

@@ -106,13 +106,36 @@ class ProfToolsSetup(object):
             self._copy_package_files(source_path, install_path)
             self._update_usersetup_mel()
             
+            # Load the menu immediately after installation
+            try:
+                if install_path not in sys.path:
+                    sys.path.insert(0, install_path)
+                from prof.ui import builder
+                menu_result = builder.build_menu()
+                if menu_result:
+                    log_info("Prof-tools menu loaded immediately after installation")
+                    menu_success = True
+                else:
+                    log_warning("Failed to load menu immediately, but installation completed")
+                    menu_success = False
+            except Exception as e:
+                log_warning("Failed to load menu immediately: {}".format(e))
+                menu_success = False
+            
             log_info("Prof-tools installation completed successfully")
             if MAYA_AVAILABLE:
-                cmds.confirmDialog(
-                    title="Installation Complete",
-                    message="Prof-tools has been installed successfully!\n\nPlease restart Maya to see the tools in the menu.",
-                    button=["OK"]
-                )
+                if menu_success:
+                    cmds.confirmDialog(
+                        title="Installation Complete",
+                        message="Prof-tools has been installed successfully!\n\nThe tools are now available in the menu bar.",
+                        button=["OK"]
+                    )
+                else:
+                    cmds.confirmDialog(
+                        title="Installation Complete",
+                        message="Prof-tools has been installed successfully!\n\nPlease restart Maya to see the tools in the menu.",
+                        button=["OK"]
+                    )
             return True
             
         except Exception as e:

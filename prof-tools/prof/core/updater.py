@@ -30,10 +30,14 @@ Functions:
 # Ensure print/division behave the same in Python 2 and 3
 from __future__ import absolute_import, division, print_function
 import sys
+import os
 import webbrowser
 import logging
 import ssl
 import json
+import tempfile
+import zipfile
+import shutil
 
 try:
     # Python 3 built-in
@@ -220,3 +224,152 @@ def _show_dialog(title, message, cmds):
     else:
         # console fallback
         print("{0}: {1}".format(title, message))
+
+
+def perform_automatic_update():
+    """
+    Perform an automatic update by downloading and installing the latest version.
+    Returns True on success, False on failure.
+    """
+    try:
+        import maya.cmds as cmds
+        logger.info("Starting automatic update process...")
+        
+        # Get the latest version info from manifest
+        manifest = get_manifest_data()
+        if not manifest:
+            logger.error("Could not get manifest data for update")
+            return False
+        
+        releases = manifest.get('releases', [])
+        if not releases:
+            logger.error("No releases found in manifest")
+            return False
+        
+        latest_release = releases[0]  # First release is latest
+        download_url = latest_release.get('download_url')
+        directory_path = latest_release.get('directory_path', 'prof-tools')
+        
+        if not download_url:
+            logger.error("No download URL found in latest release")
+            return False
+        
+        logger.info("Downloading update from: %s", download_url)
+        
+        # Create a temporary directory for the download
+        temp_dir = tempfile.mkdtemp()
+        try:
+            # Download the ZIP file
+            zip_path = os.path.join(temp_dir, "update.zip")
+            _download_file(download_url, zip_path)
+            
+            # Extract the ZIP file
+            extract_dir = os.path.join(temp_dir, "extracted")
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(extract_dir)
+            
+            # Find the prof-tools directory in the extracted files
+            prof_tools_source = None
+            for root, dirs, files in os.walk(extract_dir):
+                if directory_path in dirs:
+                    prof_tools_source = os.path.join(root, directory_path)
+                    break
+            
+            if not prof_tools_source:
+                logger.error("Could not find prof-tools directory in download")
+                return False
+            
+            # Use the setup module to perform the installation
+            from prof.core.setup import ProfToolsSetup
+            setup = ProfToolsSetup()
+            
+            # Get the installation path
+            install_path = setup.get_installation_path()
+            
+            # Remove existing installation
+            if os.path.exists(install_path):
+                shutil.rmtree(install_path)
+            
+            # Copy new files
+            prof_source = os.path.join(prof_tools_source, "prof")
+            if os.path.exists(prof_source):
+                shutil.copytree(prof_source, install_path)
+                logger.info("Successfully copied updated files to: %s", install_path)
+            else:
+                logger.error("Could not find prof directory in download")
+                return False
+            
+            # Rebuild the menu with updated code
+            try:
+                # Remove any cached modules to force reload
+                import sys
+                to_remove = [name for name in sys.modules if name.startswith("prof")]
+                for name in to_remove:
+                    sys.modules.pop(name, None)
+                
+                # Add install path to sys.path if not already there
+                if install_path not in sys.path:
+                    sys.path.insert(0, install_path)
+                
+                # Import and rebuild menu
+                from prof.ui import builder
+                builder.build_menu()
+                logger.info("Successfully rebuilt menu with updated code")
+                
+                return True
+                
+            except Exception as e:
+                logger.error("Failed to rebuild menu after update: %s", e)
+                return False
+                
+        finally:
+            # Clean up temporary files
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception as e:
+                logger.warning("Failed to clean up temp directory: %s", e)
+    
+    except Exception as e:
+        logger.error("Automatic update failed: %s", e)
+        return False
+
+
+def _download_file(url, destination):
+    """
+    Download a file from URL to destination with SSL context.
+    """
+    import sys
+    
+    # Create SSL context for secure downloads
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    
+    if sys.version_info[0] >= 3:
+        # Python 3
+        from urllib.request import urlopen, Request
+        from urllib.error import URLError, HTTPError
+    else:
+        # Python 2
+        from urllib2 import urlopen, Request, URLError, HTTPError
+    
+    try:
+        request = Request(url)
+        request.add_header('User-Agent', 'Prof-Tools-Updater/1.0')
+        
+        if sys.version_info[0] >= 3:
+            response = urlopen(request, timeout=30, context=ssl_context)
+        else:
+            response = urlopen(request, timeout=30)
+        
+        with open(destination, 'wb') as f:
+            shutil.copyfileobj(response, f)
+        
+        logger.info("Successfully downloaded file to: %s", destination)
+        
+    except (URLError, HTTPError) as e:
+        logger.error("Failed to download file: %s", e)
+        raise
+    except Exception as e:
+        logger.error("Unexpected error during download: %s", e)
+        raise
