@@ -15,7 +15,7 @@ import sys
 from fdma_shelf.utils.version_utils import get_fdma2530_version
 
 # Tool version (independent of package)
-__tool_version__ = "2.0.1"
+__tool_version__ = "2.0.2"
 # Package version
 PACKAGE_VERSION = get_fdma2530_version()
 
