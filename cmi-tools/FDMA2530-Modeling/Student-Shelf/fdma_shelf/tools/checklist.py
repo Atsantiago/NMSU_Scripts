@@ -2414,8 +2414,6 @@ def check_frozen_transforms():
                 cmds.button("status_" + item_id, e=True, l='')
         
         # Return string for report
-        issue_string = "issues" if issues_found != 1 else "issue"
-        
         if issues_found > 0:
             string_status = f'{issues_found} {issue_string} found.\n'
             for obj in objects_no_frozen_transforms:
@@ -3130,7 +3128,7 @@ def check_textures_color_space():
                 dismissString='Ignore Issue', 
                 icon="warning" if issues_found > 0 else "information"
             )
-                        
+            
             if user_input == 'Select File Nodes':
                 try:
                     cmds.select(clear=True)
@@ -3141,8 +3139,6 @@ def check_textures_color_space():
                 except Exception:
                     print("Could not select file nodes")
             elif user_input == 'Ignore Issue':
-                cmds.button("status_" + item_id, e=True, l='')
-            else:
                 cmds.button("status_" + item_id, e=True, l='')
         
         # Return string for report
@@ -3637,3 +3633,29 @@ def get_checklist_version_info():
 # ==============================================================================
 # CHECKLIST CONSTANTS
 # ==============================================================================
+
+# ==============================================================================
+# MAIN ENTRY POINT
+# ==============================================================================
+
+def main():
+    """
+    Main entry point for the CMI Modeling Checklist tool.
+    
+    This function serves as the standard entry point when the module is called
+    from Maya's script editor or shelf buttons. It launches the main GUI.
+    """
+    build_gui_ats_cmi_modeling_checklist()
+
+
+def run():
+    """
+    Alternative entry point (alias for main).
+    Provides compatibility for different calling conventions.
+    """
+    main()
+
+
+# Run the tool when called directly
+if __name__ == "__main__":
+    main()
