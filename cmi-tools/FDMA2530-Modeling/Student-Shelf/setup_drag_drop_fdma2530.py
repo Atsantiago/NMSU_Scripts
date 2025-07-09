@@ -135,19 +135,11 @@ def download_and_extract_package(target_dir):
             # Copy releases.json to fdma_shelf package directory for version detection
             source_manifest = os.path.join(os.path.dirname(student_shelf_path), "releases.json")
             target_manifest = os.path.join(target_package, "releases.json")
-            print("Looking for releases.json at: {0}".format(source_manifest))
             if os.path.exists(source_manifest):
                 shutil.copy2(source_manifest, target_manifest)
                 print("Copied releases.json to fdma_shelf package directory")
             else:
                 print("Warning: releases.json not found in repository")
-                print("Checked path: {0}".format(source_manifest))
-                print("Directory contents of {0}:".format(os.path.dirname(student_shelf_path)))
-                try:
-                    for item in os.listdir(os.path.dirname(student_shelf_path)):
-                        print(" - {0}".format(item))
-                except Exception as e:
-                    print(" Error listing directory: {0}".format(e))
             # Clean up temp extraction
             shutil.rmtree(temp_extract_dir)
             return True
@@ -278,59 +270,46 @@ def create_shelf_safely():
         marker = os.path.expanduser('~/.fdma2530_uninstalled')
         if os.path.exists(marker):
             os.remove(marker)
-            print("Removed uninstall marker - shelf creation will proceed")
             
         # Clear any existing fdma_shelf imports to ensure fresh load
         modules_to_clear = [name for name in sys.modules.keys() if name.startswith('fdma_shelf')]
         for module_name in modules_to_clear:
             del sys.modules[module_name]
-        print("Cleared existing fdma_shelf modules: {0}".format(modules_to_clear))
         
         # Try importing builder directly first (most reliable)
         try:
             from fdma_shelf.shelf.builder import build_shelf
-            print("Successfully imported build_shelf directly from builder")
             result = build_shelf(startup=False)
             if result:
-                print("Shelf created successfully via direct import!")
+                print("Shelf created successfully!")
                 return True
             else:
-                print("Direct import build_shelf returned False")
                 return False
         except ImportError as ie:
-            print("Direct import failed: {0}".format(ie))
+            pass
             
         # Fallback: try package import
         try:
             import fdma_shelf
-            print("Successfully imported fdma_shelf package")
             
-            # Debug: Check what attributes are available
-            print("fdma_shelf attributes: {0}".format(dir(fdma_shelf)))
-            
-            # Verify build_shelf exists
+            # Verify build_shelf exists and create shelf
             if hasattr(fdma_shelf, 'build_shelf'):
-                print("Creating FDMA 2530 shelf using fdma_shelf.build_shelf...")
+                print("Creating FDMA 2530 shelf...")
                 result = fdma_shelf.build_shelf(startup=False)
                 
                 if result:
                     print("Shelf created successfully!")
                     return True
                 else:
-                    print("build_shelf returned False - shelf creation failed")
                     return False
             else:
-                print("Error: fdma_shelf.build_shelf not found")
                 return False
                 
         except ImportError as e:
-            print("Package import also failed: {0}".format(e))
             return False
             
     except Exception as e:
         print("Failed to create shelf: {0}".format(e))
-        import traceback
-        print(traceback.format_exc())
         return False
 
 def install_permanent():
