@@ -63,6 +63,15 @@ def _build_grading_section(parent_menu):
         parent=parent_menu
     )
 
+    # Assignment Grading Rubric
+    cmds.menuItem(
+        label="Assignment Grading Rubric",
+        parent=grading,
+        command=lambda *args: _open_grading_rubric()
+    )
+    
+    cmds.menuItem(divider=True, parent=grading)
+
     # FDMA 1510 placeholder
     fdma1510 = cmds.menuItem(
         label="FDMA 1510",
@@ -195,6 +204,21 @@ def _open_github():
         cmds.confirmDialog(
             title="Error",
             message="Failed to open GitHub. Please visit:\nhttps://github.com/Atsantiago/NMSU_Scripts",
+            button=["OK"]
+        )
+
+
+def _open_grading_rubric():
+    """Open the assignment grading rubric system."""
+    try:
+        from prof.tools.assignments.example_assignment_rubrics import grade_current_assignment
+        grade_current_assignment()
+        logger.info("Opened grading rubric system")
+    except Exception as e:
+        logger.error("Failed to open grading rubric: %s", e)
+        cmds.confirmDialog(
+            title="Error",
+            message="Failed to open grading rubric. Please check the console for details.",
             button=["OK"]
         )
 
