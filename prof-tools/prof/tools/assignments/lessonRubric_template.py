@@ -292,8 +292,6 @@ class LessonRubric(object):
         # adjustableColumn=True makes the layout resize with the window
         main_layout = cmds.columnLayout(
             adjustableColumn=True,  # Automatically adjust width to fit window
-            columnOffset=('both', 10),  # 10-pixel margin on left and right sides
-            rowSpacing=10,  # 10-pixel vertical spacing between child elements
             parent=self.ui_elements['window']  # Attach to the main window
         )
         
@@ -351,7 +349,6 @@ class LessonRubric(object):
             numberOfColumns=3,  # Three buttons in a horizontal row
             columnAlign=[(1, 'center'), (2, 'center'), (3, 'center')],  # Center-align all buttons
             columnWidth=[(1, 200), (2, 200), (3, 200)],  # Fixed width for each button column
-            columnSpacing=[(1, 20), (2, 20)],  # 20-pixel spacing between buttons
             parent=main_layout
         )
         
@@ -474,7 +471,6 @@ class LessonRubric(object):
         cmds.setParent(parent)
         comment_layout = cmds.columnLayout(
             adjustableColumn=True,
-            columnOffset=('left', 20),
             parent=parent
         )
         
