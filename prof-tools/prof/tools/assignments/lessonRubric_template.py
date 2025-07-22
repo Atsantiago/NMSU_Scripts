@@ -522,8 +522,8 @@ class LessonRubric(object):
         
         # Create a single scrollField that spans the first 3 columns by using a nested rowLayout
         comments_row = cmds.rowLayout(
-            numberOfColumns=1,
-            columnWidth=[(1, 590)],  # 150+120+320 = 590px to span columns 1-3
+            numberOfColumns=3,
+            columnWidth=[(1, 150), (2, 120), (3, 320)],  # Match column widths exactly
             parent=comments_and_button_layout
         )
         
