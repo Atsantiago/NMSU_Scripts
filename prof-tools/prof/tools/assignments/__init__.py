@@ -7,12 +7,11 @@ for Maya courses at NMSU's Creative Media Institute.
 
 from __future__ import absolute_import
 
-# Try to get dynamic version from prof-tools version system
+# Core module metadata - version comes from main prof module
 try:
-    from prof.core.version_utils import get_prof_tools_version
-    __version__ = get_prof_tools_version()
+    from prof import __version__
 except ImportError:
-    # Fallback version if version utils not available
+    # Fallback if prof module not available
     __version__ = "0.2.4"
 
 # Import the lesson rubric template when Maya is available
