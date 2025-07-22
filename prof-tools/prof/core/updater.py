@@ -58,11 +58,17 @@ def _merge_release_with_defaults(release, manifest):
         manifest (dict): Full manifest with release_defaults
         
     Returns:
-        dict: Release with defaults applied
+        dict: Release with defaults applied, with dynamic URL substitution
     """
     defaults = manifest.get('release_defaults', {})
     merged = defaults.copy()
     merged.update(release)
+    
+    # Handle dynamic download URL substitution
+    if 'download_url' in merged and '{commit_hash}' in merged['download_url']:
+        commit_hash = merged.get('commit_hash', 'master')
+        merged['download_url'] = merged['download_url'].format(commit_hash=commit_hash)
+    
     return merged
 
 # Import version utilities for robust version handling

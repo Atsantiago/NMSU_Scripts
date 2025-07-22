@@ -10,7 +10,7 @@
     "FDMA 2530 - Introduction to Modeling"
   ],
   "release_defaults": {
-    "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/master.zip",
+    "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/{commit_hash}.zip",
     "directory_path": "prof-tools",
     "breaking_changes": false,
     "requirements": {
