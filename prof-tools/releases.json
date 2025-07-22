@@ -32,7 +32,7 @@
     {
       "version": "0.2.16.2",
       "date": "2025-07-22",
-      "commit_hash": "master",
+      "commit_hash": "dev-grader",
       "description": "TEST: Enhanced rubric UI with compact window sizing (720px width), improved button spacing with proper padding, and larger header fonts using fixedWidthFont for better readability",
       "test_version": true,
       "testing_notes": "WARNING: This is a test version for development purposes. Includes rubric window layout optimization and typography improvements."
