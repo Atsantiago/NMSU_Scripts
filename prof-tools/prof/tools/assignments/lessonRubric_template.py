@@ -283,7 +283,7 @@ class LessonRubric(object):
         self.ui_elements['window'] = cmds.window(
             self.window_name,
             title=f"Grading Rubric - {self.assignment_name}",
-            widthHeight=(720, 800),  # Compact width matching table layout + padding
+            widthHeight=(720, 600),  # Reduced height to fit content better
             resizeToFitChildren=True,  # Auto-adjust if content is larger
             sizeable=True  # Allow user to resize window
         )
@@ -292,13 +292,14 @@ class LessonRubric(object):
         # adjustableColumn=True makes the layout resize with the window
         main_layout = cmds.columnLayout(
             adjustableColumn=True,  # Automatically adjust width to fit window
+            columnAttach=('both', 20),  # Add 20px margins on left and right
             parent=self.ui_elements['window']  # Attach to the main window
         )
         
         # Header section with assignment information
         cmds.text(
             label=f"Assignment: {self.assignment_name}",
-            font="fixedWidthFont",  # Use Maya's larger fixed-width font for emphasis
+            font="boldLabelFont",  # Use Maya's bold font for emphasis
             align="left",
             wordWrap=True,
             parent=main_layout
@@ -338,7 +339,7 @@ class LessonRubric(object):
         
         self.ui_elements['total_score'] = cmds.text(
             label=f"Total Grade: {self.calculate_total_score():.1f}/{self.total_points}",
-            font="fixedWidthFont",
+            font="boldLabelFont",
             parent=total_layout
         )
         
@@ -407,11 +408,11 @@ class LessonRubric(object):
             parent=parent
         )
         
-        # Column headers using larger bold font to distinguish from data
-        cmds.text(label="Criteria", font="fixedWidthFont", parent=header_layout)
-        cmds.text(label="Score %", font="fixedWidthFont", parent=header_layout)
-        cmds.text(label="Performance Level", font="fixedWidthFont", parent=header_layout)
-        cmds.text(label="Points", font="fixedWidthFont", parent=header_layout)
+        # Column headers using bold font to distinguish from data
+        cmds.text(label="Criteria", font="boldLabelFont", parent=header_layout)
+        cmds.text(label="Score %", font="boldLabelFont", parent=header_layout)
+        cmds.text(label="Performance Level", font="boldLabelFont", parent=header_layout)
+        cmds.text(label="Points", font="boldLabelFont", parent=header_layout)
         
         cmds.setParent(parent)  # Return to parent for adding data rows
         
@@ -433,15 +434,43 @@ class LessonRubric(object):
         # Criterion name
         cmds.text(label=criterion_name, parent=row_layout)
         
-        # Score percentage dropdown/field
-        percentage_field = cmds.intFieldGrp(
-            numberOfFields=1,
-            label="",
-            value1=criterion_data['percentage'],
-            changeCommand=lambda: self._on_percentage_change(criterion_name),
+        # Score percentage with dropdown and manual input
+        percentage_layout = cmds.rowLayout(
+            numberOfColumns=2,
+            columnWidth=[(1, 60), (2, 55)],
             parent=row_layout
         )
-        self.ui_elements[f"{criterion_name}_percentage"] = percentage_field
+        
+        # Dropdown for common percentages
+        percentage_dropdown = cmds.optionMenu(
+            parent=percentage_layout,
+            changeCommand=lambda selection: self._on_dropdown_change(criterion_name, selection)
+        )
+        
+        # Add common percentage options
+        for percentage in self.PERCENTAGE_OPTIONS:
+            cmds.menuItem(label=f"{percentage}%", parent=percentage_dropdown)
+        
+        # Set initial dropdown selection to match current percentage
+        current_percentage = criterion_data['percentage']
+        if current_percentage in self.PERCENTAGE_OPTIONS:
+            dropdown_index = self.PERCENTAGE_OPTIONS.index(current_percentage) + 1  # Maya uses 1-based indexing
+            cmds.optionMenu(percentage_dropdown, edit=True, select=dropdown_index)
+        
+        # Manual input field for custom percentages
+        percentage_field = cmds.intField(
+            value=current_percentage,
+            minValue=0,
+            maxValue=100,
+            changeCommand=lambda: self._on_percentage_field_change(criterion_name),
+            parent=percentage_layout
+        )
+        
+        # Store both UI elements for updates
+        self.ui_elements[f"{criterion_name}_percentage_dropdown"] = percentage_dropdown
+        self.ui_elements[f"{criterion_name}_percentage_field"] = percentage_field
+        
+        cmds.setParent(row_layout)
         
         # Performance level indicators
         level_layout = cmds.rowLayout(
@@ -515,18 +544,40 @@ class LessonRubric(object):
         
         cmds.separator(height=8, parent=parent)
     
-    def _on_percentage_change(self, criterion_name):
-        """Handle percentage change for a criterion."""
-        if criterion_name not in self.ui_elements:
-            return
-            
-        field = self.ui_elements[f"{criterion_name}_percentage"]
-        new_percentage = cmds.intFieldGrp(field, query=True, value1=True)
+    def _on_dropdown_change(self, criterion_name, selection):
+        """Handle dropdown selection change for percentage."""
+        # Extract percentage value from selection (e.g., "85%" -> 85)
+        percentage_str = selection.replace('%', '')
+        try:
+            new_percentage = int(percentage_str)
+            # Update the manual input field to match dropdown selection
+            percentage_field = self.ui_elements[f"{criterion_name}_percentage_field"]
+            cmds.intField(percentage_field, edit=True, value=new_percentage)
+            # Update the criterion data and displays
+            self._update_percentage_value(criterion_name, new_percentage)
+        except ValueError:
+            logger.warning(f"Invalid percentage selection: {selection}")
+    
+    def _on_percentage_field_change(self, criterion_name):
+        """Handle manual percentage field change."""
+        percentage_field = self.ui_elements[f"{criterion_name}_percentage_field"]
+        new_percentage = cmds.intField(percentage_field, query=True, value=True)
         
         # Clamp percentage between 0 and 100
         new_percentage = max(0, min(100, new_percentage))
-        cmds.intFieldGrp(field, edit=True, value1=new_percentage)
+        cmds.intField(percentage_field, edit=True, value=new_percentage)
         
+        # Update dropdown if the value matches a common option
+        dropdown = self.ui_elements[f"{criterion_name}_percentage_dropdown"]
+        if new_percentage in self.PERCENTAGE_OPTIONS:
+            dropdown_index = self.PERCENTAGE_OPTIONS.index(new_percentage) + 1
+            cmds.optionMenu(dropdown, edit=True, select=dropdown_index)
+        
+        # Update the criterion data and displays
+        self._update_percentage_value(criterion_name, new_percentage)
+    
+    def _update_percentage_value(self, criterion_name, new_percentage):
+        """Update criterion percentage and refresh displays."""
         # Update criterion data
         self.criteria[criterion_name]['percentage'] = new_percentage
         self.criteria[criterion_name]['comments'] = self._generate_comments(criterion_name)
@@ -534,6 +585,11 @@ class LessonRubric(object):
         # Update displays
         self._update_criterion_display(criterion_name)
         self._update_total_score_display()
+    
+    def _on_percentage_change(self, criterion_name):
+        """Legacy method - kept for backward compatibility if needed."""
+        # This method is now replaced by the dropdown/field specific handlers
+        pass
     
     def _update_criterion_display(self, criterion_name):
         """Update the display for a specific criterion."""
