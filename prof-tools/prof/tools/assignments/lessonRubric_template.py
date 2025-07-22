@@ -451,11 +451,18 @@ class LessonRubric(object):
         for percentage in self.PERCENTAGE_OPTIONS:
             cmds.menuItem(label=f"{percentage}%", parent=percentage_dropdown)
         
+        # Add "Custom" option at the end
+        cmds.menuItem(label="Custom", parent=percentage_dropdown)
+        
         # Set initial dropdown selection to match current percentage
         current_percentage = criterion_data['percentage']
         if current_percentage in self.PERCENTAGE_OPTIONS:
             dropdown_index = self.PERCENTAGE_OPTIONS.index(current_percentage) + 1  # Maya uses 1-based indexing
             cmds.optionMenu(percentage_dropdown, edit=True, select=dropdown_index)
+        else:
+            # If current percentage is not in standard options, select "Custom"
+            custom_index = len(self.PERCENTAGE_OPTIONS) + 1  # "Custom" is the last option
+            cmds.optionMenu(percentage_dropdown, edit=True, select=custom_index)
         
         # Manual input field for custom percentages
         percentage_field = cmds.intField(
@@ -513,34 +520,26 @@ class LessonRubric(object):
             parent=parent
         )
         
-        # Comments section (spans first 3 columns)
-        comment_layout = cmds.columnLayout(
-            adjustableColumn=True,
-            parent=comments_and_button_layout
-        )
-        
+        # Comments label
         cmds.text(
             label="Comments:",
             font="boldLabelFont",
             align="left",
-            parent=comment_layout
+            parent=comments_and_button_layout
         )
         
-        # Copyable comments field
+        # Copyable comments field spanning columns 1-3
         comments = self._generate_comments(criterion_name)
         comment_field = cmds.scrollField(
             text=comments,
             editable=True,
             wordWrap=True,
             height=40,
-            font="smallPlainLabelFont",
-            parent=comment_layout
+            font="plainLabelFont",
+            columnSpan=3,  # Span across columns 1, 2, and 3
+            parent=comments_and_button_layout
         )
         self.ui_elements[f"{criterion_name}_comment_field"] = comment_field
-        
-        # Empty spacers for columns 2 and 3 to maintain table alignment
-        cmds.text(label="", parent=comments_and_button_layout)  # Column 2 spacer
-        cmds.text(label="", parent=comments_and_button_layout)  # Column 3 spacer
         
         # Copy button in column 4 (Points column)
         cmds.button(
@@ -555,6 +554,10 @@ class LessonRubric(object):
     
     def _on_dropdown_change(self, criterion_name, selection):
         """Handle dropdown selection change for percentage."""
+        # If "Custom" is selected, don't change the percentage field value
+        if selection == "Custom":
+            return  # Let user manually set their custom value
+            
         # Extract percentage value from selection (e.g., "85%" -> 85)
         percentage_str = selection.replace('%', '')
         try:
@@ -576,11 +579,16 @@ class LessonRubric(object):
         new_percentage = max(0, min(100, new_percentage))
         cmds.intField(percentage_field, edit=True, value=new_percentage)
         
-        # Update dropdown if the value matches a common option
+        # Update dropdown based on the value
         dropdown = self.ui_elements[f"{criterion_name}_percentage_dropdown"]
         if new_percentage in self.PERCENTAGE_OPTIONS:
+            # If it matches a standard option, select that
             dropdown_index = self.PERCENTAGE_OPTIONS.index(new_percentage) + 1
             cmds.optionMenu(dropdown, edit=True, select=dropdown_index)
+        else:
+            # If it's a custom value, select "Custom"
+            custom_index = len(self.PERCENTAGE_OPTIONS) + 1  # "Custom" is the last option
+            cmds.optionMenu(dropdown, edit=True, select=custom_index)
         
         # Update the criterion data and displays
         self._update_percentage_value(criterion_name, new_percentage)
