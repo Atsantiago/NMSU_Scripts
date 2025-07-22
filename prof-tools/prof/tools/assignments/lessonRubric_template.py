@@ -283,7 +283,7 @@ class LessonRubric(object):
         self.ui_elements['window'] = cmds.window(
             self.window_name,
             title=f"Grading Rubric - {self.assignment_name}",
-            widthHeight=(900, 700),  # Larger size to accommodate improved layout
+            widthHeight=(900, 800),  # Increased height for larger text content
             resizeToFitChildren=True,  # Auto-adjust if content is larger
             sizeable=True  # Allow user to resize window
         )
@@ -299,13 +299,13 @@ class LessonRubric(object):
         cmds.text(
             label=f"Assignment: {self.assignment_name}",
             font="boldLabelFont",  # Use Maya's bold font for emphasis
-            height=30,  # Fixed height for consistent spacing
+            height=40,  # Increased height for larger text
             parent=main_layout
         )
         
         cmds.text(
             label=f"Total Points: {self.total_points}",
-            font="smallPlainLabelFont",  # Smaller font for secondary info
+            font="plainLabelFont",  # Larger font for better readability
             parent=main_layout
         )
         
@@ -428,8 +428,8 @@ class LessonRubric(object):
             parent=parent
         )
         
-        # Criterion name
-        cmds.text(label=criterion_name, parent=row_layout)
+        # Criterion name with larger font for better readability
+        cmds.text(label=criterion_name, font="plainLabelFont", parent=row_layout)
         
         # Score percentage dropdown/field
         percentage_field = cmds.intFieldGrp(
@@ -484,7 +484,7 @@ class LessonRubric(object):
         
         cmds.text(
             label="Comments:",
-            font="smallBoldLabelFont",
+            font="boldLabelFont",  # Larger bold font for better visibility
             align="left",
             parent=header_layout
         )
@@ -492,7 +492,7 @@ class LessonRubric(object):
         cmds.button(
             label="Copy",
             command=lambda *args, cn=criterion_name: self._copy_criterion_comment(cn),
-            height=20,
+            height=25,  # Slightly larger button
             width=80,
             parent=header_layout
         )
@@ -505,8 +505,8 @@ class LessonRubric(object):
             text=comments,
             editable=True,
             wordWrap=True,
-            height=40,
-            font="smallPlainLabelFont",
+            height=60,  # Increased height for larger text
+            font="plainLabelFont",  # Larger font for better readability
             parent=comment_layout
         )
         self.ui_elements[f"{criterion_name}_comment_field"] = comment_field
@@ -618,6 +618,7 @@ class LessonRubric(object):
             editable=True,
             wordWrap=True,
             height=420,
+            font="plainLabelFont",  # Larger font for better readability
             parent=layout
         )
         

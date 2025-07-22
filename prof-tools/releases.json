@@ -1,7 +1,7 @@
 {
   "tool_name": "prof-tools",
   "current_version": "0.2.16",
-  "latest_test_version": "0.2.16",
+  "latest_test_version": "0.2.16.1",
   "description": "Maya instructor tools for grading and managing student assignments across NMSU's FDMA courses for the Creative Media Institute (CMI)",
   "author": "Alexander T. Santiago",
   "repository": "https://github.com/Atsantiago/NMSU_Scripts",
@@ -10,6 +10,37 @@
     "FDMA 2530 - Introduction to Modeling"
   ],
   "releases": [
+    {
+      "version": "0.2.16.1",
+      "date": "2025-07-22",
+      "commit_hash": "master",
+      "description": "TEST VERSION: Cosmetic improvements to rubric text readability",
+      "features": [
+        "Increased text size in rubrics for better readability - text is now twice as large",
+        "Enhanced font sizes for headers, criteria text, and comments",
+        "Improved visual hierarchy in rubric interface",
+        "Added vertical scrolling support for larger text content"
+      ],
+      "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/master.zip",
+      "directory_path": "prof-tools",
+      "breaking_changes": false,
+      "test_version": true,
+      "requirements": {
+        "maya_version": "2020+",
+        "python_version": "3.x",
+        "platforms": [
+          "Windows",
+          "macOS",
+          "Linux"
+        ]
+      },
+      "installation": {
+        "method": "drag_and_drop",
+        "installer_file": "setup_drag_drop_maya_prof-tools.py",
+        "target_location": "Maya menu bar"
+      },
+      "testing_notes": "WARNING: This is a test version for development purposes. Use at your own risk."
+    },
     {
       "version": "0.2.16",
       "date": "2025-07-22",
