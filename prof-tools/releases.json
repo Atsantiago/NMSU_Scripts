@@ -1,6 +1,6 @@
 {
   "tool_name": "prof-tools",
-  "current_version": "0.2.8",
+  "current_version": "0.2.9",
   "description": "Maya instructor tools for grading and managing student assignments across NMSU's FDMA courses for the Creative Media Institute (CMI)",
   "author": "Alexander T. Santiago",
   "repository": "https://github.com/Atsantiago/NMSU_Scripts",
@@ -10,7 +10,7 @@
   ],
   "releases": [
     {
-      "version": "0.2.8.1",
+      "version": "0.2.9.1",
       "date": "2025-07-21",
       "commit_hash": "test-branch",
       "description": "TEST VERSION: Enhanced versioning system with MAJOR.MINOR.PATCH.TEST support",
