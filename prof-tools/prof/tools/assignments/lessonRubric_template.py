@@ -339,7 +339,8 @@ class LessonRubric(object):
         
         self.ui_elements['total_score'] = cmds.text(
             label=f"Total Grade: {self.calculate_total_score():.1f}/{self.total_points}",
-            font="boldLabelFont",
+            font="fixedWidthFont",  # Larger, more prominent font
+            height=30,  # Taller text for better visibility
             parent=total_layout
         )
         
@@ -347,11 +348,13 @@ class LessonRubric(object):
         
         # Action buttons section with improved sizing and spacing
         cmds.setParent(main_layout)  # Return to main layout after creating other elements
+        cmds.separator(height=5, parent=main_layout)  # Reduced separator for cleaner look
+        
         button_layout = cmds.rowLayout(
             numberOfColumns=3,  # Three buttons in a horizontal row
             columnAlign=[(1, 'center'), (2, 'center'), (3, 'center')],  # Center-align all buttons
             columnWidth=[(1, 200), (2, 200), (3, 200)],  # Fixed width for each button column
-            columnAttach=[(1, 'left', 20), (2, 'both', 10), (3, 'right', 20)],  # Add padding
+            columnAttach=[(1, 'left', 20), (2, 'both', 10), (3, 'right', 20)],  # Match main layout margins
             parent=main_layout
         )
         
@@ -403,7 +406,7 @@ class LessonRubric(object):
         header_layout = cmds.rowLayout(
             numberOfColumns=4,  # Four main columns for the table
             columnAlign=[(1, 'left'), (2, 'center'), (3, 'center'), (4, 'right')],  # Text alignment per column
-            columnWidth=[(1, 150), (2, 120), (3, 320), (4, 80)],  # Fixed widths for consistent layout (narrower Points column)
+            columnWidth=[(1, 150), (2, 120), (3, 320), (4, 60)],  # Fixed widths for consistent layout (much narrower Points column)
             backgroundColor=(0.3, 0.3, 0.3),  # Dark gray header background for contrast
             parent=parent
         )
@@ -427,7 +430,7 @@ class LessonRubric(object):
         row_layout = cmds.rowLayout(
             numberOfColumns=4,
             columnAlign=[(1, 'left'), (2, 'center'), (3, 'center'), (4, 'right')],
-            columnWidth=[(1, 150), (2, 120), (3, 320), (4, 80)],  # Match header column widths
+            columnWidth=[(1, 150), (2, 120), (3, 320), (4, 60)],  # Match header column widths
             parent=parent
         )
         
@@ -490,7 +493,7 @@ class LessonRubric(object):
         current_level = self._get_score_level_for_percentage(criterion_data['percentage'])
         for level_name in self.SCORE_LEVELS.keys():
             color = (0.4, 0.7, 0.4) if level_name == current_level else (0.6, 0.6, 0.6)
-            cmds.text(
+            level_indicator = cmds.text(
                 label=level_name.split()[0],  # Show just first word
                 backgroundColor=color,
                 font="boldLabelFont",  # Larger, bold font for better visibility
@@ -498,28 +501,45 @@ class LessonRubric(object):
                 height=25,  # Taller for better readability
                 parent=level_layout
             )
+            # Store level indicators for dynamic updates
+            self.ui_elements[f"{criterion_name}_level_{level_name.split()[0]}"] = level_indicator
         
         cmds.setParent(row_layout)
         
         # Points display
         calculated_score = self._calculate_criterion_score(criterion_name)
-        points_text = cmds.text(
-            label=f"{calculated_score:.1f}/{criterion_data['point_value']:.1f}",
+        points_layout = cmds.rowLayout(
+            numberOfColumns=2,
+            columnWidth=[(1, 25), (2, 30)],
             parent=row_layout
         )
+        
+        # Current score (normal text)
+        cmds.text(
+            label=f"{calculated_score:.1f}/",
+            parent=points_layout
+        )
+        
+        # Total points (bold text)
+        points_text = cmds.text(
+            label=f"{criterion_data['point_value']:.1f}",
+            font="boldLabelFont",
+            parent=points_layout
+        )
         self.ui_elements[f"{criterion_name}_points"] = points_text
+        self.ui_elements[f"{criterion_name}_points_layout"] = points_layout
         
         # Comments row - spans only to the end of Performance Level column
         cmds.setParent(parent)
         
         # Create layout for comments and copy button
-        col_widths = [150, 120, 320, 80]
+        col_widths = [150, 120, 320, 60]
         comment_span_width = sum(col_widths[:3])  # 590px to span columns 1-3
         
         comments_and_button_layout = cmds.rowLayout(
             numberOfColumns=4,
             columnAlign=[(1, 'left'), (2, 'left'), (3, 'left'), (4, 'center')],
-            columnWidth=[(1, 150), (2, 120), (3, 320), (4, 80)],  # Match table structure exactly
+            columnWidth=[(1, 150), (2, 120), (3, 320), (4, 60)],  # Match table structure exactly
             parent=parent
         )
         
@@ -537,15 +557,15 @@ class LessonRubric(object):
         self.ui_elements[f"{criterion_name}_comment_field"] = comment_field
         
         # 2nd & 3rd columns: invisible spacers to preserve layout grid
-        cmds.text(label="", width=1, parent=comments_and_button_layout)  # col 2 spacer
-        cmds.text(label="", width=1, parent=comments_and_button_layout)  # col 3 spacer
+        cmds.text(label="", width=0, parent=comments_and_button_layout)  # col 2 spacer
+        cmds.text(label="", width=0, parent=comments_and_button_layout)  # col 3 spacer
         
         # 4th column: Copy button
         cmds.button(
             label="Copy",
             command=lambda *args, cn=criterion_name: self._copy_criterion_comment(cn),
             height=40,
-            width=70,  # Narrower button to fit in smaller column
+            width=50,  # Much narrower button to fit in smaller column
             parent=comments_and_button_layout
         )
         
@@ -609,15 +629,44 @@ class LessonRubric(object):
     
     def _update_criterion_display(self, criterion_name):
         """Update the display for a specific criterion."""
-        if f"{criterion_name}_points" in self.ui_elements:
+        if f"{criterion_name}_points_layout" in self.ui_elements:
             calculated_score = self._calculate_criterion_score(criterion_name)
             point_value = self.criteria[criterion_name]['point_value']
             
+            # Update the points layout
+            points_layout = self.ui_elements[f"{criterion_name}_points_layout"]
+            
+            # Delete existing children and recreate
+            children = cmds.layout(points_layout, query=True, childArray=True)
+            if children:
+                for child in children:
+                    cmds.deleteUI(child)
+            
+            # Recreate points display
             cmds.text(
-                self.ui_elements[f"{criterion_name}_points"],
-                edit=True,
-                label=f"{calculated_score:.1f}/{point_value:.1f}"
+                label=f"{calculated_score:.1f}/",
+                parent=points_layout
             )
+            
+            cmds.text(
+                label=f"{point_value:.1f}",
+                font="boldLabelFont",
+                parent=points_layout
+            )
+        
+        # Update performance level indicators
+        current_percentage = self.criteria[criterion_name]['percentage']
+        current_level = self._get_score_level_for_percentage(current_percentage)
+        
+        for level_name in self.SCORE_LEVELS.keys():
+            level_key = f"{criterion_name}_level_{level_name.split()[0]}"
+            if level_key in self.ui_elements:
+                color = (0.4, 0.7, 0.4) if level_name == current_level else (0.6, 0.6, 0.6)
+                cmds.text(
+                    self.ui_elements[level_key],
+                    edit=True,
+                    backgroundColor=color
+                )
         
         # Update comment field if it exists
         if f"{criterion_name}_comment_field" in self.ui_elements:
