@@ -76,7 +76,14 @@ def get_latest_version(include_test=False):
         if not manifest:
             logger.warning("Could not get manifest data for version check")
             return None
+
+        if include_test:
+            # Check for latest test version first
+            latest_test_version = manifest.get('latest_test_version')
+            if latest_test_version and is_valid_semantic_version(latest_test_version):
+                return latest_test_version
         
+        # Fall back to current_version (stable version)
         latest_version = manifest.get('current_version')
         if not latest_version:
             logger.error("No current_version field found in manifest")
@@ -85,29 +92,8 @@ def get_latest_version(include_test=False):
         if not is_valid_semantic_version(latest_version):
             logger.error("Invalid semantic version in manifest: %s", latest_version)
             return None
-        
-        # If not including test versions, return the stable version only
-        if not include_test:
-            from prof.core.version_utils import get_stable_version_string
-            return get_stable_version_string(latest_version)
-        
-        # For test versions, check if there are any test releases available
-        releases = manifest.get('releases', [])
-        if not releases:
-            return latest_version
-        
-        # Find the highest version (including test versions)
-        from prof.core.version_utils import compare_versions_extended
-        
-        highest_version = latest_version
-        
-        for release in releases:
-            release_version = release.get('version')
-            if release_version:
-                if compare_versions_extended(highest_version, release_version, True):
-                    highest_version = release_version
-        
-        return highest_version
+
+        return latest_version
         
     except Exception as e:
         logger.error("Failed to parse latest version from manifest: %s", e)
@@ -384,14 +370,23 @@ def perform_automatic_update(include_test_versions=False):
         # Find the appropriate release based on test version preference
         target_release = None
         if include_test_versions:
-            # Get the latest version (including test versions)
-            latest_version = get_latest_version(include_test=True)
-            for release in releases:
-                if release.get('version') == latest_version:
-                    target_release = release
-                    break
+            # Get the latest test version from manifest
+            latest_test_version = manifest.get('latest_test_version')
+            if latest_test_version:
+                for release in releases:
+                    if release.get('version') == latest_test_version:
+                        target_release = release
+                        break
+            
+            # Fallback to highest version if latest_test_version not found
+            if not target_release:
+                latest_version = get_latest_version(include_test=True)
+                for release in releases:
+                    if release.get('version') == latest_version:
+                        target_release = release
+                        break
         else:
-            # Get the latest stable version only
+            # Get the latest stable version only (back to original logic)
             latest_stable_version = get_latest_version(include_test=False)
             for release in releases:
                 if release.get('version') == latest_stable_version and not release.get('test_version', False):

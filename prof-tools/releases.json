@@ -1,6 +1,7 @@
 {
   "tool_name": "prof-tools",
-  "current_version": "0.2.15",
+  "current_version": "0.2.16",
+  "latest_test_version": "0.2.16",
   "description": "Maya instructor tools for grading and managing student assignments across NMSU's FDMA courses for the Creative Media Institute (CMI)",
   "author": "Alexander T. Santiago",
   "repository": "https://github.com/Atsantiago/NMSU_Scripts",
@@ -9,6 +10,41 @@
     "FDMA 2530 - Introduction to Modeling"
   ],
   "releases": [
+    {
+      "version": "0.2.16",
+      "date": "2025-07-22",
+      "commit_hash": "master",
+      "description": "Enhanced version system with clean stable/test separation and developer mode integration",
+      "features": [
+        "Implemented clean separation between stable and test version systems",
+        "Added developer mode conditional access to test features",
+        "Enhanced version detection with installed_version.txt support for permanent test installations",
+        "Restructured releases.json with separate current_version and latest_test_version fields",
+        "Updated get_latest_version() function with developer mode awareness",
+        "Enhanced update dialog to respect developer mode settings for test version access",
+        "Improved version comparison logic for MAJOR.MINOR.PATCH.TEST format",
+        "Added permanent test version installation capabilities",
+        "Protected normal update flow from test version interference",
+        "Enhanced Help menu to show full version format in developer mode"
+      ],
+      "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/master.zip",
+      "directory_path": "prof-tools",
+      "breaking_changes": false,
+      "requirements": {
+        "maya_version": "2020+",
+        "python_version": "3.x",
+        "platforms": [
+          "Windows",
+          "macOS",
+          "Linux"
+        ]
+      },
+      "installation": {
+        "method": "drag_and_drop",
+        "installer_file": "setup_drag_drop_maya_prof-tools.py",
+        "target_location": "Maya menu bar"
+      }
+    },
     {
       "version": "0.2.15",
       "date": "2025-07-22",

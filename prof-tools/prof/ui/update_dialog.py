@@ -690,8 +690,13 @@ def check_for_updates_with_dialog(include_test_versions=False):
     
     Args:
         include_test_versions (bool): If True, temporarily enable test versions
-                                    for this update check
+                                    for this update check (requires developer mode)
     """
+    # Only allow test versions if developer mode is enabled
+    if include_test_versions and not is_dev_mode_enabled():
+        logger.warning("Test versions requested but developer mode is disabled")
+        include_test_versions = False
+    
     if include_test_versions:
         # Temporarily enable test versions for this check
         original_setting = is_testing_temp_versions()
