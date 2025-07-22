@@ -43,11 +43,14 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# Constants - Following semantic versioning conventions
+# Constants - Following semantic versioning conventions with test extension
 MANIFEST_FILENAME = "releases.json"
 DEFAULT_FALLBACK_VERSION = "0.1.0"
 HTTP_TIMEOUT_SECONDS = 5
-SEMANTIC_VERSION_PATTERN = r"^(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z0-9\-\.]+))?(?:\+([a-zA-Z0-9\-\.]+))?$"
+# Enhanced pattern to support MAJOR.MINOR.PATCH.TEST format for testing
+# Standard semver: MAJOR.MINOR.PATCH with optional prerelease/build metadata
+# Extended format: MAJOR.MINOR.PATCH.TEST where TEST is an integer for testing versions
+SEMANTIC_VERSION_PATTERN = r"^(\d+)\.(\d+)\.(\d+)(?:\.(\d+))?(?:-([a-zA-Z0-9\-\.]+))?(?:\+([a-zA-Z0-9\-\.]+))?$"
 
 # Cache for version information to avoid repeated file reads
 _VERSION_CACHE = {}
@@ -108,6 +111,7 @@ def is_valid_semantic_version(version_string):
 def parse_semantic_version(version_string):
     """
     Parse a semantic version string into its component parts.
+    Supports both standard MAJOR.MINOR.PATCH and extended MAJOR.MINOR.PATCH.TEST format.
     
     Args:
         version_string (str): Semantic version string to parse
@@ -125,15 +129,121 @@ def parse_semantic_version(version_string):
     if not match:
         raise ValueError("Failed to parse version string: '{0}'".format(version_string))
     
-    major, minor, patch, prerelease, build = match.groups()
+    major, minor, patch, test, prerelease, build = match.groups()
     
     return {
         'major': int(major),
         'minor': int(minor), 
         'patch': int(patch),
+        'test': int(test) if test is not None else None,  # Test number for MAJOR.MINOR.PATCH.TEST format
         'prerelease': prerelease,
-        'build': build
+        'build': build,
+        'is_test_version': test is not None  # Flag to indicate if this is a test version
     }
+
+
+def is_test_version(version_string):
+    """
+    Check if a version string is a test version (MAJOR.MINOR.PATCH.TEST format).
+    
+    Args:
+        version_string (str): Version string to check
+        
+    Returns:
+        bool: True if version is a test version, False otherwise
+    """
+    try:
+        parsed = parse_semantic_version(version_string)
+        return parsed['is_test_version']
+    except (ValueError, TypeError):
+        return False
+
+
+def compare_versions_extended(local, remote, include_test_versions=True):
+    """
+    Enhanced version comparison that handles both standard and test versions.
+    
+    Version precedence (highest to lowest):
+    1. MAJOR.MINOR.PATCH (stable releases)
+    2. MAJOR.MINOR.PATCH.TEST (test versions, ordered by test number)
+    
+    Test versions are considered newer than the base version but older than the next stable version.
+    For example: 1.0.0 < 1.0.0.1 < 1.0.0.2 < 1.0.1
+    
+    Args:
+        local (str): Local version string
+        remote (str): Remote version string  
+        include_test_versions (bool): Whether to consider test versions as valid updates
+        
+    Returns:
+        bool: True if remote > local, False otherwise
+    """
+    try:
+        # Validate both versions first
+        if not is_valid_semantic_version(local):
+            logger.error("Invalid local version format: %s", local)
+            return False
+            
+        if not is_valid_semantic_version(remote):
+            logger.error("Invalid remote version format: %s", remote)
+            return False
+        
+        # Parse both versions
+        local_parsed = parse_semantic_version(local)
+        remote_parsed = parse_semantic_version(remote)
+        
+        # If test versions are disabled, skip any remote test versions
+        if not include_test_versions and remote_parsed['is_test_version']:
+            logger.debug("Skipping test version %s (test versions disabled)", remote)
+            return False
+        
+        # Create comparison tuples
+        # For stable versions: (major, minor, patch, 999999) - high test number ensures stability precedence
+        # For test versions: (major, minor, patch, test_number)
+        local_tuple = (
+            local_parsed['major'], 
+            local_parsed['minor'], 
+            local_parsed['patch'],
+            local_parsed['test'] if local_parsed['test'] is not None else 999999
+        )
+        
+        remote_tuple = (
+            remote_parsed['major'], 
+            remote_parsed['minor'], 
+            remote_parsed['patch'],
+            remote_parsed['test'] if remote_parsed['test'] is not None else 999999
+        )
+        
+        is_newer = remote_tuple > local_tuple
+        
+        logger.debug("Extended version comparison: %s (%s) vs %s (%s) -> newer: %s", 
+                    local, local_tuple, remote, remote_tuple, is_newer)
+        return is_newer
+        
+    except Exception as e:
+        logger.error("Extended version comparison error between %s and %s: %s", local, remote, e)
+        return False
+
+
+def get_stable_version_string(version_string):
+    """
+    Convert a test version to its stable equivalent by removing the test component.
+    
+    Examples:
+        1.2.3.4 -> 1.2.3
+        1.2.3 -> 1.2.3 (no change)
+        
+    Args:
+        version_string (str): Version string to convert
+        
+    Returns:
+        str: Stable version string without test component
+    """
+    try:
+        parsed = parse_semantic_version(version_string)
+        return "{}.{}.{}".format(parsed['major'], parsed['minor'], parsed['patch'])
+    except (ValueError, TypeError):
+        return version_string
 
 
 def get_current_file_directory():

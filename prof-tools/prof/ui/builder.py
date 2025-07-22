@@ -134,6 +134,13 @@ def _build_help_section(parent_menu):
         command=lambda *args: check_for_updates()
     )
     
+    # Command to check for test updates (MAJOR.MINOR.PATCH.TEST format)
+    cmds.menuItem(
+        label="Check for Test Updates…",
+        parent=help_menu,
+        command=lambda *args: _check_for_test_updates()
+    )
+    
     # Divider before links
     cmds.menuItem(divider=True, parent=help_menu)
     
@@ -219,6 +226,21 @@ def _open_grading_rubric():
         cmds.confirmDialog(
             title="Error",
             message="Failed to open grading rubric. Please check the console for details.",
+            button=["OK"]
+        )
+
+
+def _check_for_test_updates():
+    """Check for test updates (MAJOR.MINOR.PATCH.TEST format) for development testing."""
+    try:
+        from prof.core.updater import check_for_test_updates
+        check_for_test_updates()
+        logger.info("Checked for test updates")
+    except Exception as e:
+        logger.error("Failed to check for test updates: %s", e)
+        cmds.confirmDialog(
+            title="Error",
+            message="Failed to check for test updates. Please check the console for details.",
             button=["OK"]
         )
 

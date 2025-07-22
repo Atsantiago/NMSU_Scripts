@@ -10,6 +10,39 @@
   ],
   "releases": [
     {
+      "version": "0.2.8.1",
+      "date": "2025-07-21",
+      "commit_hash": "test-branch",
+      "description": "TEST VERSION: Enhanced versioning system with MAJOR.MINOR.PATCH.TEST support",
+      "features": [
+        "Added support for MAJOR.MINOR.PATCH.TEST versioning format",
+        "Enhanced version comparison for test versions",
+        "Added 'Check for Test Updates' menu option",
+        "Test versions support for development and pre-release testing",
+        "Improved semantic version parsing with test component",
+        "Fixed Maya UI compatibility issues in rubric templates"
+      ],
+      "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/test-branch.zip",
+      "directory_path": "prof-tools",
+      "breaking_changes": false,
+      "test_version": true,
+      "requirements": {
+        "maya_version": "2020+",
+        "python_version": "3.x",
+        "platforms": [
+          "Windows",
+          "macOS",
+          "Linux"
+        ]
+      },
+      "installation": {
+        "method": "drag_and_drop",
+        "installer_file": "setup_drag_drop_maya_prof-tools.py",
+        "target_location": "Maya menu bar"
+      },
+      "testing_notes": "⚠️ This is a test version for development purposes. Use at your own risk."
+    },
+    {
       "version": "0.2.7",
       "date": "2025-07-21",
       "commit_hash": "master",

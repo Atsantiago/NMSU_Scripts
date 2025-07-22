@@ -59,13 +59,16 @@ MANIFEST_URL = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master
 _HTTP_TIMEOUT = 10  # seconds
 
 
-def get_latest_version():
+def get_latest_version(include_test=False):
     """
     Fetch the latest release version from the manifest.
     Returns the version string (e.g. "0.2.0") or None on error.
     
     This uses the version_utils manifest system for consistency with
     the rest of the prof-tools versioning infrastructure.
+    
+    Args:
+        include_test (bool): Whether to include test versions in the search
     """
     try:
         manifest = get_manifest_data()
@@ -81,22 +84,69 @@ def get_latest_version():
         if not is_valid_semantic_version(latest_version):
             logger.error("Invalid semantic version in manifest: %s", latest_version)
             return None
-            
-        logger.debug("Latest version from manifest: %s", latest_version)
-        return latest_version
+        
+        # If not including test versions, return the stable version only
+        if not include_test:
+            from prof.core.version_utils import get_stable_version_string
+            return get_stable_version_string(latest_version)
+        
+        # For test versions, check if there are any test releases available
+        releases = manifest.get('releases', [])
+        if not releases:
+            return latest_version
+        
+        # Find the highest version (including test versions)
+        from prof.core.version_utils import compare_versions_extended
+        
+        highest_version = latest_version
+        for release in releases:
+            release_version = release.get('version')
+            if release_version and compare_versions_extended(highest_version, release_version, True):
+                highest_version = release_version
+        
+        logger.debug("Latest version from manifest (include_test=%s): %s", include_test, highest_version)
+        return highest_version
         
     except Exception as e:
         logger.error("Failed to parse latest version from manifest: %s", e)
         return None
 
 
-def compare_versions(local, remote):
+def compare_versions(local, remote, include_test_versions=False):
     """
-    Compare semantic version strings "MAJOR.MINOR.PATCH".
+    Compare semantic version strings with support for test versions.
     Returns True if remote > local.
     
-    Uses robust semantic version parsing to handle edge cases
-    and provide reliable version comparison.
+    This function now supports both:
+    - Standard MAJOR.MINOR.PATCH format
+    - Extended MAJOR.MINOR.PATCH.TEST format for testing
+    
+    Args:
+        local (str): Local version string
+        remote (str): Remote version string
+        include_test_versions (bool): Whether to include test versions in comparison
+        
+    Returns:
+        bool: True if remote version is newer than local
+    """
+    try:
+        # Import here to avoid circular imports
+        from prof.core.version_utils import compare_versions_extended
+        
+        return compare_versions_extended(local, remote, include_test_versions)
+        
+    except ImportError:
+        # Fallback to basic comparison if enhanced version isn't available
+        logger.warning("Enhanced version comparison not available, using basic comparison")
+        return _basic_version_compare(local, remote)
+    except Exception as e:
+        logger.error("Version comparison error between %s and %s: %s", local, remote, e)
+        return False
+
+
+def _basic_version_compare(local, remote):
+    """
+    Basic version comparison fallback for MAJOR.MINOR.PATCH format only.
     """
     try:
         # Validate both versions first
@@ -112,16 +162,16 @@ def compare_versions(local, remote):
         local_parsed = parse_semantic_version(local)
         remote_parsed = parse_semantic_version(remote)
         
-        # Compare major.minor.patch
+        # Compare major.minor.patch only (ignore test versions in basic mode)
         local_tuple = (local_parsed['major'], local_parsed['minor'], local_parsed['patch'])
         remote_tuple = (remote_parsed['major'], remote_parsed['minor'], remote_parsed['patch'])
         
         is_newer = remote_tuple > local_tuple
-        logger.debug("Version comparison: %s vs %s -> newer: %s", local, remote, is_newer)
+        logger.debug("Basic version comparison: %s vs %s -> newer: %s", local, remote, is_newer)
         return is_newer
         
     except Exception as e:
-        logger.error("Version comparison error between %s and %s: %s", local, remote, e)
+        logger.error("Basic version comparison error between %s and %s: %s", local, remote, e)
         return False
 
 
@@ -224,6 +274,82 @@ def _show_dialog(title, message, cmds):
     else:
         # console fallback
         print("{0}: {1}".format(title, message))
+
+
+def check_for_test_updates():
+    """
+    Check for test versions (MAJOR.MINOR.PATCH.TEST format) available for testing.
+    This is separate from the main update check to allow testing new features.
+    """
+    try:
+        # Try to use the enhanced update dialog
+        from ..ui.update_dialog import check_for_updates_with_dialog
+        check_for_updates_with_dialog(include_test_versions=True)
+        return
+        
+    except ImportError as e:
+        logger.warning("Could not load update dialog, falling back to simple dialog: %s", e)
+        
+    # Fallback to simple test update check
+    _simple_test_update_check()
+
+
+def _simple_test_update_check():
+    """
+    Simple test update check fallback when UI dialog is not available.
+    """
+    try:
+        import maya.cmds as cmds
+    except ImportError:
+        cmds = None
+
+    # Get current version
+    current_version = get_prof_tools_version()
+    if not current_version:
+        _show_dialog("Version Error",
+                     "Could not determine current Prof-Tools version.",
+                     cmds)
+        return
+
+    # Get latest version including test versions
+    latest = get_latest_version(include_test=True)
+    if not latest:
+        _show_dialog("Update Check Failed",
+                     "Could not determine latest version. Please check your internet connection.",
+                     cmds)
+        return
+
+    # Compare versions including test versions
+    if compare_versions(current_version, latest, include_test_versions=True):
+        from prof.core.version_utils import is_test_version
+        
+        version_type = "test version" if is_test_version(latest) else "stable version"
+        
+        msg = (
+            "A new {version_type} of Prof-Tools is available for testing.\n\n"
+            "Current: {local}\nLatest: {remote}\n\n"
+            "⚠️ Test versions are for development and testing only.\n"
+            "Open the releases page to download?"
+        ).format(local=current_version, remote=latest, version_type=version_type)
+
+        if cmds:
+            res = cmds.confirmDialog(
+                title="Test Update Available",
+                message=msg,
+                button=["Yes", "No"],
+                defaultButton="Yes",
+                cancelButton="No",
+                dismissString="No"
+            )
+            if res == "Yes":
+                launch_update_process()
+        else:
+            print(msg)
+            launch_update_process()
+    else:
+        _show_dialog("Up to Date",
+                     "You are running the latest version ({ver}) including test versions.".format(ver=current_version),
+                     cmds)
 
 
 def perform_automatic_update():
