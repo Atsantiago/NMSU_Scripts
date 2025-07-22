@@ -1,9 +1,8 @@
 """
 Silent Update Checker for Prof-Tools
 
-Inspired by GT Tools' silent update system. Checks for updates in the background
-without interrupting the user's workflow, and only shows notifications when
-updates are actually available.
+Checks for updates in the background without interrupting the user's workflow, 
+and only shows notifications when updates are actually available.
 
 Author: Alexander T. Santiago
 """
@@ -189,7 +188,7 @@ def _open_update_manager(include_test_versions=False):
 def configure_auto_updates():
     """
     Show a dialog to configure auto-update settings.
-    Inspired by GT Tools' preference configuration.
+    Provides professional preference configuration interface.
     """
     if not MAYA_AVAILABLE:
         logger.warning("Auto-update configuration requires Maya")
@@ -203,7 +202,7 @@ def configure_auto_updates():
     interval_days = prefs.get_check_interval_days()
     include_test = prefs.includes_test_versions()
     
-    # Interval options (similar to GT Tools)
+    # Interval options for different update frequencies
     interval_options = {
         1: "Daily",
         3: "Every 3 days", 

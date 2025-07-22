@@ -44,7 +44,7 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# Constants - Following GT Tools naming conventions
+# Constants - Following semantic versioning conventions
 MANIFEST_FILENAME = "releases.json"
 DEFAULT_FALLBACK_VERSION = "0.1.0"
 HTTP_TIMEOUT_SECONDS = 5
@@ -385,7 +385,7 @@ def get_individual_tool_version(tool_name, tool_module=None):
     
     Some tools may want to maintain their own version numbers independent of the
     main prof-tools version. This function checks for individual tool versions
-    following GT Tools patterns.
+    following standard patterns.
     
     Args:
         tool_name (str): Name of the tool

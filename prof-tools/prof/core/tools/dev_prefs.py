@@ -1,7 +1,6 @@
 """
 Prof-Tools Developer Mode and Silent Update System
 
-Inspired by GT Tools' approach to developer mode and silent updates.
 Provides a clean separation between stable and development features.
 
 Features:
