@@ -95,21 +95,23 @@ def set_temp_version(version):
         logger.info("Temporary version cleared")
 
 
-def _on_dev_mode_toggle(value):
-    """Handle developer mode checkbox toggle."""
-    set_dev_mode(bool(value))
+def _on_test_version_toggle(value):
+    """Handle test version checkbox toggle."""
+    set_testing_temp_versions(value)
     
-    # Note: In a full implementation, this would refresh the UI
-    # to show/hide test version options
+    # Provide immediate visual feedback
     if MAYA_AVAILABLE:
         try:
             from maya import cmds
             cmds.inViewMessage(
-                amg=f'Developer Mode: <span style="color:#FF0000;">{("Enabled" if value else "Disabled")}</span>',
+                amg=f'Test Versions: <span style="color:#00FF00;">{("Enabled" if value else "Disabled")}</span> - Refreshing...',
                 pos='botLeft', fade=True, alpha=0.9
             )
         except:
             pass
+    
+    # Use the existing refresh function for immediate update
+    _refresh_update_dialog()
 
 
 def clear_temp_version():
@@ -142,10 +144,11 @@ def show_update_dialog():
     
     # Get version information
     current_version = get_prof_tools_version()
-    latest_version = get_latest_version()
+    include_test = is_testing_temp_versions()  # Check if test versions should be included
+    latest_version = get_latest_version(include_test=include_test)
     
     # Determine update status
-    if latest_version and compare_versions(current_version, latest_version):
+    if latest_version and compare_versions(current_version, latest_version, include_test):
         update_available = True
         status_message = "Update Available"
         status_color = COLOR_WARNING
@@ -282,28 +285,11 @@ def _create_version_info_section(parent, current_version, latest_version, status
     cmds.text(label=f"v{latest_version}")
     cmds.setParent("..")
     
-    # Dev mode section
-    cmds.separator(height=10, parent=info_layout)
-    
-    # Dev mode toggle
-    cmds.rowLayout(
-        numberOfColumns=2,
-        columnWidth2=(150, 250),
-        columnAlign2=("left", "left"),
-        columnAttach2=("left", "left"),
-        parent=info_layout
-    )
-    cmds.text(label="Developer Mode:", font="boldLabelFont")
-    
-    dev_toggle = cmds.checkBox(
-        label="Enable Developer Mode", 
-        value=dev_mode_enabled,
-        changeCommand=lambda value: _on_dev_mode_toggle(value)
-    )
-    cmds.setParent("..")
-    
-    # Test version checkbox (only show if dev mode enabled)
+    # Dev mode section (only show if developer mode is already enabled)
     if dev_mode_enabled:
+        cmds.separator(height=10, parent=info_layout)
+        
+        # Test version toggle (shown when dev mode is active)
         cmds.rowLayout(
             numberOfColumns=2,
             columnWidth2=(150, 250),
@@ -314,9 +300,9 @@ def _create_version_info_section(parent, current_version, latest_version, status
         cmds.text(label="Test Versions:", font="boldLabelFont")
         
         test_toggle = cmds.checkBox(
-            label="Include Pre-release Versions",
+            label="Include Test Versions in Updates",
             value=is_testing_temp_versions(),
-            changeCommand=lambda value: set_testing_temp_versions(bool(value))
+            changeCommand=lambda value: _on_test_version_toggle(bool(value))
         )
         cmds.setParent("..")
     
@@ -455,6 +441,16 @@ def _create_button_section(parent, update_available, latest_version):
 def _refresh_update_dialog():
     """Refresh the update dialog with latest information."""
     logger.info("Refreshing update dialog...")
+    
+    # Clear any cached data to ensure fresh information
+    try:
+        from ..core.version_utils import clear_version_cache
+        clear_version_cache()
+    except (ImportError, AttributeError):
+        # Cache clearing not available, that's okay
+        pass
+    
+    # Recreate the dialog with fresh data
     show_update_dialog()
 
 
