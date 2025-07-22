@@ -97,21 +97,43 @@ def set_temp_version(version):
 
 def _on_test_version_toggle(value):
     """Handle test version checkbox toggle."""
-    set_testing_temp_versions(value)
-    
-    # Provide immediate visual feedback
-    if MAYA_AVAILABLE:
-        try:
-            from maya import cmds
-            cmds.inViewMessage(
-                amg=f'Test Versions: <span style="color:#00FF00;">{("Enabled" if value else "Disabled")}</span> - Refreshing...',
-                pos='botLeft', fade=True, alpha=0.9
-            )
-        except:
-            pass
-    
-    # Use the existing refresh function for immediate update
-    _refresh_update_dialog()
+    try:
+        logger.info("Test version checkbox toggled: %s", value)
+        
+        # Save the preference first
+        set_testing_temp_versions(value)
+        
+        # Provide immediate visual feedback
+        if MAYA_AVAILABLE:
+            try:
+                from maya import cmds
+                cmds.inViewMessage(
+                    amg=f'Test Versions: <span style="color:#00FF00;">{("Enabled" if value else "Disabled")}</span> - Refreshing...',
+                    pos='botLeft', fade=True, alpha=0.9
+                )
+            except Exception as e:
+                logger.debug("Could not show in-view message: %s", e)
+        
+        # Small delay to ensure preference is saved
+        import time
+        time.sleep(0.1)
+        
+        # Refresh the dialog to show updated information
+        _refresh_update_dialog()
+        
+    except Exception as e:
+        logger.error("Error in test version toggle: %s", e)
+        # Try to show a simple message to the user
+        if MAYA_AVAILABLE:
+            try:
+                from maya import cmds
+                cmds.confirmDialog(
+                    title="Error",
+                    message=f"Error updating test version setting: {e}",
+                    button=["OK"]
+                )
+            except:
+                pass
 
 
 def clear_temp_version():
@@ -440,18 +462,61 @@ def _create_button_section(parent, update_available, latest_version):
 
 def _refresh_update_dialog():
     """Refresh the update dialog with latest information."""
-    logger.info("Refreshing update dialog...")
-    
-    # Clear any cached data to ensure fresh information
     try:
-        from ..core.version_utils import clear_version_cache
-        clear_version_cache()
-    except (ImportError, AttributeError):
-        # Cache clearing not available, that's okay
-        pass
-    
-    # Recreate the dialog with fresh data
-    show_update_dialog()
+        logger.info("Refreshing update dialog...")
+        
+        # Clear any cached data to ensure fresh information
+        try:
+            from ..core.version_utils import clear_version_cache
+            clear_version_cache()
+        except (ImportError, AttributeError):
+            # Cache clearing not available, that's okay
+            logger.debug("Version cache clearing not available")
+        
+        # Add a small delay to ensure smooth transition
+        if MAYA_AVAILABLE:
+            try:
+                from maya import cmds
+                # Check if the current window still exists before refresh
+                if cmds.window(WINDOW_NAME, exists=True):
+                    # Store current window position
+                    pos = cmds.window(WINDOW_NAME, query=True, topLeftCorner=True)
+                    
+                    # Recreate the dialog with fresh data
+                    show_update_dialog()
+                    
+                    # Try to restore position
+                    try:
+                        if cmds.window(WINDOW_NAME, exists=True):
+                            cmds.window(WINDOW_NAME, edit=True, topLeftCorner=pos)
+                    except:
+                        pass  # Position restore failed, not critical
+                else:
+                    # Window doesn't exist, just create new one
+                    show_update_dialog()
+            except Exception as e:
+                logger.debug("Error in Maya-specific refresh: %s", e)
+                # Fallback to simple refresh
+                show_update_dialog()
+        else:
+            # Non-Maya environment
+            show_update_dialog()
+            
+        logger.info("Update dialog refreshed successfully")
+        
+    except Exception as e:
+        logger.error("Error refreshing update dialog: %s", e)
+        # Try to show a simple message to the user
+        if MAYA_AVAILABLE:
+            try:
+                from maya import cmds
+                cmds.confirmDialog(
+                    title="Error",
+                    message=f"Error refreshing dialog: {e}",
+                    button=["OK"]
+                )
+            except:
+                pass
 
 
 def _launch_update_process():
