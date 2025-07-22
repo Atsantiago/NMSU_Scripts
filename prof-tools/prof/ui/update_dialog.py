@@ -23,6 +23,7 @@ except ImportError:
 # Import version utilities
 from ..core.version_utils import get_prof_tools_version
 from ..core.updater import get_latest_version, compare_versions
+from ..core.tools.dev_prefs import get_prefs
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -50,51 +51,65 @@ COLOR_TEXT = (0.9, 0.9, 0.9)
 # Dev Mode Utility Functions
 def is_dev_mode_enabled():
     """Check if development mode is enabled."""
-    if not MAYA_AVAILABLE:
-        return False
-    try:
-        return cmds.optionVar(query=DEV_MODE_PREF_KEY) if cmds.optionVar(exists=DEV_MODE_PREF_KEY) else False
-    except:
-        return False
+    prefs = get_prefs()
+    return prefs.is_dev_mode_enabled()
 
 
 def set_dev_mode(enabled):
     """Enable or disable development mode."""
-    if not MAYA_AVAILABLE:
-        return
-    try:
-        cmds.optionVar(intValue=(DEV_MODE_PREF_KEY, 1 if enabled else 0))
-        logger.info("Dev mode %s", "enabled" if enabled else "disabled")
-    except Exception as e:
-        logger.error("Failed to set dev mode: %s", e)
+    prefs = get_prefs()
+    prefs.set_dev_mode_enabled(enabled)
+    logger.info("Dev mode %s", "enabled" if enabled else "disabled")
+
+
+def is_testing_temp_versions():
+    """Check if testing temp versions is enabled."""
+    prefs = get_prefs()
+    return prefs.includes_test_versions()
+
+
+def set_testing_temp_versions(enabled):
+    """Set testing temp versions state."""
+    prefs = get_prefs()
+    prefs.set_include_test_versions(enabled)
 
 
 def get_temp_version():
     """Get the temporarily installed version, if any."""
-    if not MAYA_AVAILABLE:
-        return None
-    try:
-        if cmds.optionVar(exists=TEMP_VERSION_PREF_KEY):
-            return cmds.optionVar(query=TEMP_VERSION_PREF_KEY)
-    except:
-        pass
-    return None
+    prefs = get_prefs()
+    temp_info = prefs.get_temp_install_info()
+    return temp_info.get('version', None)
 
 
 def set_temp_version(version):
     """Set the temporarily installed version."""
-    if not MAYA_AVAILABLE:
-        return
-    try:
-        if version:
-            cmds.optionVar(stringValue=(TEMP_VERSION_PREF_KEY, version))
-            logger.info("Temporary version set to: %s", version)
-        else:
-            if cmds.optionVar(exists=TEMP_VERSION_PREF_KEY):
-                cmds.optionVar(remove=TEMP_VERSION_PREF_KEY)
-            logger.info("Temporary version cleared")
-    except Exception as e:
-        logger.error("Failed to set temp version: %s", e)
+    prefs = get_prefs()
+    if version:
+        # For now, just store the version. In a full implementation,
+        # we'd need the stable version too
+        current_version = get_prof_tools_version()
+        prefs.set_temp_install(version, current_version)
+        logger.info("Temporary version set to: %s", version)
+    else:
+        prefs.clear_temp_install()
+        logger.info("Temporary version cleared")
+
+
+def _on_dev_mode_toggle(value):
+    """Handle developer mode checkbox toggle."""
+    set_dev_mode(bool(value))
+    
+    # Note: In a full implementation, this would refresh the UI
+    # to show/hide test version options
+    if MAYA_AVAILABLE:
+        try:
+            from maya import cmds
+            cmds.inViewMessage(
+                amg=f'Developer Mode: <span style="color:#FF0000;">{("Enabled" if value else "Disabled")}</span>',
+                pos='botLeft', fade=True, alpha=0.9
+            )
+        except:
+            pass
 
 
 def clear_temp_version():
@@ -281,15 +296,29 @@ def _create_version_info_section(parent, current_version, latest_version, status
     cmds.text(label="Developer Mode:", font="boldLabelFont")
     
     dev_toggle = cmds.checkBox(
-        label="Enable Test Versions",
+        label="Enable Developer Mode", 
         value=dev_mode_enabled,
         changeCommand=lambda value: _on_dev_mode_toggle(value)
     )
     cmds.setParent("..")
     
-    # Test version info (only show if dev mode enabled)
+    # Test version checkbox (only show if dev mode enabled)
     if dev_mode_enabled:
-        _create_test_version_section(info_layout, effective_version)
+        cmds.rowLayout(
+            numberOfColumns=2,
+            columnWidth2=(150, 250),
+            columnAlign2=("left", "left"),
+            columnAttach2=("left", "left"),
+            parent=info_layout
+        )
+        cmds.text(label="Test Versions:", font="boldLabelFont")
+        
+        test_toggle = cmds.checkBox(
+            label="Include Pre-release Versions",
+            value=is_testing_temp_versions(),
+            changeCommand=lambda value: set_testing_temp_versions(bool(value))
+        )
+        cmds.setParent("..")
     
     # Status row
     cmds.rowLayout(
