@@ -507,13 +507,13 @@ class LessonRubric(object):
         
         # Create layout for comments and copy button
         comments_and_button_layout = cmds.rowLayout(
-            numberOfColumns=2,
-            columnAlign=[(1, 'left'), (2, 'center')],
-            columnWidth=[(1, 590), (2, 120)],  # Comments span to end of Performance Level, Copy button in Points column
+            numberOfColumns=4,
+            columnAlign=[(1, 'left'), (2, 'left'), (3, 'left'), (4, 'center')],
+            columnWidth=[(1, 150), (2, 120), (3, 320), (4, 120)],  # Match table structure: comments span columns 1-3, copy button in column 4
             parent=parent
         )
         
-        # Comments section (left side)
+        # Comments section (spans first 3 columns)
         comment_layout = cmds.columnLayout(
             adjustableColumn=True,
             parent=comments_and_button_layout
@@ -538,18 +538,17 @@ class LessonRubric(object):
         )
         self.ui_elements[f"{criterion_name}_comment_field"] = comment_field
         
-        # Copy button section (right side, under Points column)
-        button_layout = cmds.columnLayout(
-            adjustableColumn=True,
-            parent=comments_and_button_layout
-        )
+        # Empty spacers for columns 2 and 3 to maintain table alignment
+        cmds.text(label="", parent=comments_and_button_layout)  # Column 2 spacer
+        cmds.text(label="", parent=comments_and_button_layout)  # Column 3 spacer
         
+        # Copy button in column 4 (Points column)
         cmds.button(
             label="Copy",
             command=lambda *args, cn=criterion_name: self._copy_criterion_comment(cn),
-            height=20,
+            height=40,
             width=80,
-            parent=button_layout
+            parent=comments_and_button_layout
         )
         
         cmds.separator(height=8, parent=parent)
