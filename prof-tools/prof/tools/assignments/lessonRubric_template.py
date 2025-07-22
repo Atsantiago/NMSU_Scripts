@@ -401,17 +401,20 @@ class LessonRubric(object):
         """
         # Table header row with column labels and styling
         header_layout = cmds.rowLayout(
-            numberOfColumns=4,  # Four main columns for the table
-            columnAlign=[(1, 'left'), (2, 'center'), (3, 'center'), (4, 'right')],  # Text alignment per column
-            columnWidth=[(1, 150), (2, 120), (3, 280), (4, 120)],  # Fixed widths for consistent layout
+            numberOfColumns=7,  # Four data columns + three separators
+            columnAlign=[(1, 'left'), (2, 'center'), (3, 'center'), (4, 'center'), (5, 'center'), (6, 'center'), (7, 'right')],  # Text alignment per column
+            columnWidth=[(1, 150), (2, 2), (3, 120), (4, 2), (5, 320), (6, 2), (7, 120)],  # Data columns + 2px separators
             backgroundColor=(0.3, 0.3, 0.3),  # Dark gray header background for contrast
             parent=parent
         )
         
-        # Column headers using bold font to distinguish from data
+        # Column headers with separators using bold font to distinguish from data
         cmds.text(label="Criteria", font="boldLabelFont", parent=header_layout)
+        cmds.separator(style="in", width=2, parent=header_layout)  # Vertical separator
         cmds.text(label="Score %", font="boldLabelFont", parent=header_layout)
+        cmds.separator(style="in", width=2, parent=header_layout)  # Vertical separator
         cmds.text(label="Performance Level", font="boldLabelFont", parent=header_layout)
+        cmds.separator(style="in", width=2, parent=header_layout)  # Vertical separator
         cmds.text(label="Points", font="boldLabelFont", parent=header_layout)
         
         cmds.setParent(parent)  # Return to parent for adding data rows
@@ -425,14 +428,17 @@ class LessonRubric(object):
         """Create a single criterion row in the table."""
         # Main criterion row
         row_layout = cmds.rowLayout(
-            numberOfColumns=4,
-            columnAlign=[(1, 'left'), (2, 'center'), (3, 'center'), (4, 'right')],
-            columnWidth=[(1, 150), (2, 120), (3, 280), (4, 120)],
+            numberOfColumns=7,  # Four data columns + three separators
+            columnAlign=[(1, 'left'), (2, 'center'), (3, 'center'), (4, 'center'), (5, 'center'), (6, 'center'), (7, 'right')],
+            columnWidth=[(1, 150), (2, 2), (3, 120), (4, 2), (5, 320), (6, 2), (7, 120)],  # Match header column widths with separators
             parent=parent
         )
         
         # Criterion name
         cmds.text(label=criterion_name, parent=row_layout)
+        
+        # Vertical separator
+        cmds.separator(style="in", width=2, parent=row_layout)
         
         # Score percentage with dropdown and manual input
         percentage_layout = cmds.rowLayout(
@@ -472,10 +478,14 @@ class LessonRubric(object):
         
         cmds.setParent(row_layout)
         
+        # Vertical separator
+        cmds.separator(style="in", width=2, parent=row_layout)
+        
         # Performance level indicators
         level_layout = cmds.rowLayout(
             numberOfColumns=5,
             columnAlign=[(i, 'center') for i in range(1, 6)],
+            columnWidth=[(i, 60) for i in range(1, 6)],  # Wider columns for better visibility
             parent=row_layout
         )
         
@@ -485,10 +495,16 @@ class LessonRubric(object):
             cmds.text(
                 label=level_name.split()[0],  # Show just first word
                 backgroundColor=color,
+                font="boldLabelFont",  # Larger, bold font for better visibility
+                width=55,  # Explicit width for consistent sizing
+                height=25,  # Taller for better readability
                 parent=level_layout
             )
         
         cmds.setParent(row_layout)
+        
+        # Vertical separator
+        cmds.separator(style="in", width=2, parent=row_layout)
         
         # Points display
         calculated_score = self._calculate_criterion_score(criterion_name)
