@@ -514,21 +514,26 @@ class LessonRubric(object):
         
         # Create layout for comments and copy button
         comments_and_button_layout = cmds.rowLayout(
-            numberOfColumns=4,
-            columnAlign=[(1, 'left'), (2, 'left'), (3, 'left'), (4, 'center')],
-            columnWidth=[(1, 150), (2, 120), (3, 320), (4, 120)],  # Match table structure: comments span columns 1-3, copy button in column 4
+            numberOfColumns=2,
+            columnAlign=[(1, 'left'), (2, 'center')],
+            columnWidth=[(1, 590), (2, 120)],  # Comments area (150+120+320=590px), copy button (120px)
             parent=parent
         )
         
-        # Comments label
+        # Comments section (spans equivalent of first 3 columns)
+        comment_column_layout = cmds.columnLayout(
+            adjustableColumn=True,
+            parent=comments_and_button_layout
+        )
+        
         cmds.text(
             label="Comments:",
             font="boldLabelFont",
             align="left",
-            parent=comments_and_button_layout
+            parent=comment_column_layout
         )
         
-        # Copyable comments field spanning columns 1-3
+        # Copyable comments field
         comments = self._generate_comments(criterion_name)
         comment_field = cmds.scrollField(
             text=comments,
@@ -536,12 +541,14 @@ class LessonRubric(object):
             wordWrap=True,
             height=40,
             font="plainLabelFont",
-            columnSpan=3,  # Span across columns 1, 2, and 3
-            parent=comments_and_button_layout
+            parent=comment_column_layout
         )
         self.ui_elements[f"{criterion_name}_comment_field"] = comment_field
         
-        # Copy button in column 4 (Points column)
+        # Return to comments_and_button_layout for copy button
+        cmds.setParent(comments_and_button_layout)
+        
+        # Copy button in column 2
         cmds.button(
             label="Copy",
             command=lambda *args, cn=criterion_name: self._copy_criterion_comment(cn),
