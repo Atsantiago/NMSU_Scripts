@@ -99,18 +99,44 @@ def _build_developer_section(parent_menu):
     """
     Add the 'Developer Tools' submenu to the main menu (only shown if dev mode is enabled).
     """
-    from prof.core.tools.dev_prefs import should_show_dev_features
+    from prof.core.tools.dev_prefs import should_show_dev_features, get_prefs
     if should_show_dev_features():
         # Add divider before developer tools
         cmds.menuItem(divider=True, parent=parent_menu)
         
+        # Check for temporary installation status
+        prefs = get_prefs()
+        temp_status = ""
+        if prefs.is_temp_install_active():
+            temp_info = prefs.get_temp_install_info()
+            temp_version = temp_info.get("version", "unknown")
+            temp_status = " (Test {} active)".format(temp_version)
+        
         # Developer submenu at main menu level
         dev_submenu = cmds.menuItem(
-            label="Developer Tools",
+            label="Developer Tools{}".format(temp_status),
             subMenu=True,
             tearOff=True,
             parent=parent_menu
         )
+        
+        # Show temporary installation status if active
+        if prefs.is_temp_install_active():
+            temp_info = prefs.get_temp_install_info()
+            temp_version = temp_info.get("version", "unknown")
+            stable_version = temp_info.get("stable_version", "unknown")
+            
+            cmds.menuItem(
+                label="Status: Test {} Temporarily Installed".format(temp_version),
+                parent=dev_submenu,
+                enable=False  # Disabled - just a status indicator
+            )
+            cmds.menuItem(
+                label="Will revert to {} on restart".format(stable_version),
+                parent=dev_submenu,
+                enable=False  # Disabled - just a status indicator
+            )
+            cmds.menuItem(divider=True, parent=dev_submenu)
         
         # Check for test updates - moved here from help menu
         cmds.menuItem(
@@ -135,16 +161,25 @@ def _build_developer_section(parent_menu):
         
         cmds.menuItem(divider=True, parent=dev_submenu)
         
-        cmds.menuItem(
-            label="Install Test Version Temporarily…",
-            parent=dev_submenu,
-            command=lambda *args: _install_test_version_temporarily()
-        )
+        # Conditional menu items based on temp installation status
+        if prefs.is_temp_install_active():
+            cmds.menuItem(
+                label="Install Different Test Version…",
+                parent=dev_submenu,
+                command=lambda *args: _install_test_version_temporarily()
+            )
+        else:
+            cmds.menuItem(
+                label="Install Test Version Temporarily…",
+                parent=dev_submenu,
+                command=lambda *args: _install_test_version_temporarily()
+            )
         
         cmds.menuItem(
             label="Revert to Stable Version",
             parent=dev_submenu,
-            command=lambda *args: _revert_to_stable()
+            command=lambda *args: _revert_to_stable(),
+            enable=prefs.is_temp_install_active()  # Only enabled if temp install is active
         )
         
         cmds.setParent('..', menu=True)  # close Developer Tools submenu
@@ -358,15 +393,115 @@ def _test_silent_update():
 def _install_test_version_temporarily():
     """Install a test version temporarily (reverts on Maya restart)."""
     try:
-        # This would show a dialog to select and install a test version temporarily
-        cmds.confirmDialog(
-            title="Temporary Test Installation",
-            message="This feature allows you to temporarily install a test version that automatically reverts to stable when Maya restarts.\n\nThis feature is coming soon!",
-            button=["OK"]
+        from prof.core.version_utils import get_prof_tools_version, get_manifest_data
+        from prof.core.updater import get_latest_version, _install_specific_version
+        from prof.core.tools.dev_prefs import get_prefs
+        
+        # Get current version and available test versions
+        current_version = get_prof_tools_version()
+        manifest = get_manifest_data()
+        
+        if not manifest:
+            cmds.confirmDialog(
+                title="Error",
+                message="Could not retrieve version information. Please check your internet connection.",
+                button=["OK"]
+            )
+            return
+        
+        # Find test versions
+        releases = manifest.get('releases', [])
+        test_versions = []
+        
+        for release in releases:
+            if release.get('test_version', False):
+                test_versions.append(release.get('version'))
+        
+        if not test_versions:
+            cmds.confirmDialog(
+                title="No Test Versions",
+                message="No test versions are currently available.",
+                button=["OK"]
+            )
+            return
+        
+        # Sort test versions (newest first)
+        test_versions.sort(key=lambda v: [int(x) for x in v.split('.')], reverse=True)
+        
+        # Show selection dialog
+        if len(test_versions) == 1:
+            selected_version = test_versions[0]
+            message = "Install test version {} temporarily?\n\nThis will revert to version {} when Maya restarts.".format(
+                selected_version, current_version
+            )
+        else:
+            # For multiple versions, use the latest for now
+            selected_version = test_versions[0]
+            message = "Install latest test version {} temporarily?\n\nThis will revert to version {} when Maya restarts.\n\n(Multiple test versions available: {})".format(
+                selected_version, current_version, ", ".join(test_versions)
+            )
+        
+        result = cmds.confirmDialog(
+            title="Install Test Version Temporarily",
+            message=message,
+            button=["Install", "Cancel"],
+            defaultButton="Install",
+            cancelButton="Cancel"
         )
-        logger.info("Temporary test installation requested (not yet implemented)")
+        
+        if result == "Install":
+            # Check if there's already a temp installation
+            prefs = get_prefs()
+            if prefs.is_temp_install_active():
+                temp_info = prefs.get_temp_install_info()
+                current_temp = temp_info.get("version", "unknown")
+                
+                override_result = cmds.confirmDialog(
+                    title="Temporary Installation Active",
+                    message="Test version {} is already temporarily installed.\n\nReplace with version {}?".format(
+                        current_temp, selected_version
+                    ),
+                    button=["Replace", "Cancel"],
+                    defaultButton="Replace",
+                    cancelButton="Cancel"
+                )
+                
+                if override_result != "Replace":
+                    return
+            
+            # Set up temporary installation tracking
+            prefs.set_temp_install(selected_version, current_version)
+            
+            # Install the test version
+            success = _install_specific_version(selected_version, temporary=True)
+            
+            if success:
+                cmds.confirmDialog(
+                    title="Installation Complete",
+                    message="Test version {} installed temporarily.\n\nThis will automatically revert to {} when Maya restarts.\n\nUse 'Developer Tools > Revert to Stable Version' to revert immediately.".format(
+                        selected_version, current_version
+                    ),
+                    button=["OK"]
+                )
+                logger.info("Temporarily installed test version %s", selected_version)
+            else:
+                prefs.clear_temp_install()
+                cmds.confirmDialog(
+                    title="Installation Failed",
+                    message="Failed to install test version {}. Please check the console for details.".format(
+                        selected_version
+                    ),
+                    button=["OK"]
+                )
+                logger.error("Failed to install test version %s", selected_version)
+        
     except Exception as e:
         logger.error("Failed to install test version temporarily: %s", e)
+        cmds.confirmDialog(
+            title="Error",
+            message="Failed to install test version temporarily. Please check the console for details.",
+            button=["OK"]
+        )
 
 
 def _revert_to_stable():

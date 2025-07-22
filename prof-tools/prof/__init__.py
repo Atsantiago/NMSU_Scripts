@@ -296,6 +296,16 @@ def _initialize_package():
             maya_version = get_maya_version()
             logger.info("Maya %s detected", maya_version if maya_version else "version unknown")
             
+            # Check for and handle temporary installations
+            try:
+                from .core.tools.dev_prefs import get_prefs
+                prefs = get_prefs()
+                if prefs.check_and_revert_temp_install():
+                    logger.info("Temporary installation detected and reverted on startup")
+            except Exception as e:
+                logger.debug("Temporary installation check failed: %s", e)
+                # Don't fail the entire initialization for this
+            
             # Initialize silent update checking if in Maya environment
             try:
                 from .core.tools.silent_updater import initialize_silent_updates

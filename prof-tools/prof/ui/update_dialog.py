@@ -21,7 +21,7 @@ except ImportError:
     MAYA_AVAILABLE = False
 
 # Import version utilities
-from ..core.version_utils import get_prof_tools_version
+from ..core.version_utils import get_prof_tools_version, get_stable_version_string
 from ..core.updater import get_latest_version, compare_versions
 from ..core.tools.dev_prefs import get_prefs
 
@@ -166,8 +166,13 @@ def show_update_dialog():
     
     # Get version information
     current_version = get_prof_tools_version()
-    include_test = is_testing_temp_versions()  # Check if test versions should be included
+    dev_mode_enabled = is_dev_mode_enabled()
+    include_test = is_testing_temp_versions() and dev_mode_enabled  # Only include test if dev mode is on
     latest_version = get_latest_version(include_test=include_test)
+    
+    # For display purposes, show stable versions when dev mode is off
+    display_current_version = current_version if dev_mode_enabled else get_stable_version_string(current_version)
+    display_latest_version = latest_version if dev_mode_enabled else get_stable_version_string(latest_version) if latest_version else "Unknown"
     
     # Determine update status
     if latest_version and compare_versions(current_version, latest_version, include_test):
@@ -204,9 +209,9 @@ def show_update_dialog():
     
     # Build the UI sections
     _create_header_section(main_layout)
-    _create_version_info_section(main_layout, current_version, latest_version, status_message, status_color)
-    _create_details_section(main_layout, update_available, latest_version)
-    _create_button_section(main_layout, update_available, latest_version)
+    _create_version_info_section(main_layout, display_current_version, display_latest_version, status_message, status_color)
+    _create_details_section(main_layout, update_available, display_latest_version)
+    _create_button_section(main_layout, update_available, latest_version, display_latest_version)
     
     # Show window
     cmds.showWindow(window)
@@ -248,7 +253,7 @@ def _create_header_section(parent):
     )
 
 
-def _create_version_info_section(parent, current_version, latest_version, status_message, status_color):
+def _create_version_info_section(parent, display_current_version, display_latest_version, status_message, status_color):
     """Create the version information section with dev mode support."""
     info_frame = cmds.frameLayout(
         label="Version Information",
@@ -264,6 +269,7 @@ def _create_version_info_section(parent, current_version, latest_version, status
     dev_mode_enabled = is_dev_mode_enabled()
     temp_version = get_temp_version()
     effective_version = get_effective_version()
+    actual_current_version = get_prof_tools_version()  # Always get the actual version for internal use
     
     # Current version row (show effective version if different)
     cmds.rowLayout(
@@ -279,7 +285,7 @@ def _create_version_info_section(parent, current_version, latest_version, status
         # Show temp version with indicator
         cmds.text(label=f"v{effective_version} (TEMP)", backgroundColor=COLOR_WARNING)
     else:
-        cmds.text(label=f"v{current_version}", backgroundColor=COLOR_INFO)
+        cmds.text(label=f"v{display_current_version}", backgroundColor=COLOR_INFO)
     cmds.setParent("..")
     
     # Show stable version if temp is active
@@ -292,7 +298,8 @@ def _create_version_info_section(parent, current_version, latest_version, status
             parent=info_layout
         )
         cmds.text(label="Stable Version:", font="boldLabelFont")
-        cmds.text(label=f"v{current_version}", backgroundColor=COLOR_INFO)
+        stable_current = get_stable_version_string(actual_current_version)
+        cmds.text(label=f"v{stable_current}", backgroundColor=COLOR_INFO)
         cmds.setParent("..")
     
     # Latest version row
@@ -304,7 +311,7 @@ def _create_version_info_section(parent, current_version, latest_version, status
         parent=info_layout
     )
     cmds.text(label="Latest Release:", font="boldLabelFont")
-    cmds.text(label=f"v{latest_version}")
+    cmds.text(label=f"v{display_latest_version}")
     cmds.setParent("..")
     
     # Dev mode section (only show if developer mode is already enabled)
@@ -413,16 +420,37 @@ def _create_details_section(parent, update_available, latest_version):
         )
 
 
-def _create_button_section(parent, update_available, latest_version):
-    """Create the action buttons section."""
-    button_layout = cmds.rowLayout(
-        numberOfColumns=3,
-        columnWidth3=(120, 120, 120),
-        columnAlign3=("center", "center", "center"),
-        columnAttach3=("both", "both", "both"),
-        columnOffset3=(5, 5, 5),
-        parent=parent
-    )
+def _create_button_section(parent, update_available, actual_latest_version, display_latest_version):
+    """Create the action buttons section with dev mode support."""
+    dev_mode_enabled = is_dev_mode_enabled()
+    
+    # Check if there's a test version available when dev mode is on
+    test_version_available = False
+    if dev_mode_enabled and actual_latest_version:
+        from ..core.version_utils import is_test_version
+        test_version_available = is_test_version(actual_latest_version)
+    
+    # Determine button layout based on dev mode and test version availability
+    if dev_mode_enabled and test_version_available:
+        # 4 buttons: Refresh, Update Stable, Install Test, Close
+        button_layout = cmds.rowLayout(
+            numberOfColumns=4,
+            columnWidth4=(90, 90, 90, 90),
+            columnAlign4=("center", "center", "center", "center"),
+            columnAttach4=("both", "both", "both", "both"),
+            columnOffset4=(2, 2, 2, 2),
+            parent=parent
+        )
+    else:
+        # 3 buttons: Refresh, Update/View, Close
+        button_layout = cmds.rowLayout(
+            numberOfColumns=3,
+            columnWidth3=(120, 120, 120),
+            columnAlign3=("center", "center", "center"),
+            columnAttach3=("both", "both", "both"),
+            columnOffset3=(5, 5, 5),
+            parent=parent
+        )
     
     # Refresh button (always available)
     cmds.button(
@@ -435,13 +463,35 @@ def _create_button_section(parent, update_available, latest_version):
     
     # Update/View button (context-dependent)
     if update_available:
-        cmds.button(
-            label="Update Now",
-            height=35,
-            backgroundColor=COLOR_WARNING,
-            command=lambda *args: _launch_update_process(),
-            annotation=f"Automatically download and install v{latest_version}"
-        )
+        if dev_mode_enabled and test_version_available:
+            # Stable update button
+            from ..core.version_utils import get_stable_version_string
+            stable_version = get_stable_version_string(actual_latest_version)
+            cmds.button(
+                label="Update Stable",
+                height=35,
+                backgroundColor=COLOR_INFO,
+                command=lambda *args: _launch_update_process(test_version=False),
+                annotation=f"Install stable version v{stable_version}"
+            )
+            
+            # Test version button
+            cmds.button(
+                label="Install Test",
+                height=35,
+                backgroundColor=COLOR_WARNING,
+                command=lambda *args: _launch_update_process(test_version=True),
+                annotation=f"Install test version v{actual_latest_version} (⚠️ Development use only)"
+            )
+        else:
+            # Single update button
+            cmds.button(
+                label="Update Now",
+                height=35,
+                backgroundColor=COLOR_WARNING,
+                command=lambda *args: _launch_update_process(),
+                annotation=f"Automatically download and install v{display_latest_version}"
+            )
     else:
         cmds.button(
             label="View Releases",
@@ -450,6 +500,15 @@ def _create_button_section(parent, update_available, latest_version):
             command=lambda *args: _view_releases(),
             annotation="View all releases on GitHub"
         )
+        
+        # Add placeholder button if dev mode with test version to maintain layout
+        if dev_mode_enabled and test_version_available:
+            cmds.button(
+                label="",
+                height=35,
+                enable=False,
+                annotation=""
+            )
     
     # Close button (always available)
     cmds.button(
@@ -519,44 +578,56 @@ def _refresh_update_dialog():
                 pass
 
 
-def _launch_update_process():
+def _launch_update_process(test_version=False):
     """Launch the automatic update process."""
     try:
+        # Customize message based on version type
+        if test_version:
+            title = "Install Test Version"
+            message = "⚠️ You are about to install a TEST VERSION!\n\nTest versions are for development purposes only.\nUse at your own risk.\n\nContinue?"
+            button_text = "Install Test"
+        else:
+            title = "Update Prof-Tools"
+            message = "Would you like to update now?\n\nThis will download and install the latest stable version automatically."
+            button_text = "Update Now"
+        
         # Ask user for confirmation
         result = cmds.confirmDialog(
-            title="Update Prof-Tools",
-            message="Would you like to update now?\n\nThis will download and install the latest version automatically.",
-            button=["Update Now", "Cancel"],
-            defaultButton="Update Now",
+            title=title,
+            message=message,
+            button=[button_text, "Cancel"],
+            defaultButton=button_text,
             cancelButton="Cancel",
             dismissString="Cancel"
         )
         
-        if result == "Update Now":
-            logger.info("Starting automatic update process...")
+        if result == button_text:
+            logger.info("Starting automatic update process (test_version=%s)...", test_version)
             
             # Import the update function
             from ..core.updater import perform_automatic_update
             
             # Show progress message
+            progress_text = "Installing test version..." if test_version else "Downloading and installing update..."
             progress_dialog = cmds.confirmDialog(
                 title="Updating Prof-Tools",
-                message="Downloading and installing update...\nThis may take a few moments.",
+                message=f"{progress_text}\nThis may take a few moments.",
                 button=["Please Wait..."],
                 defaultButton="Please Wait..."
             )
             
-            # Perform the update
-            success = perform_automatic_update()
+            # Perform the update with test version flag
+            success = perform_automatic_update(include_test_versions=test_version)
             
             # Close the update dialog first
             _close_update_dialog()
             
             if success:
                 # Show success message
+                version_type = "test version" if test_version else "latest version"
                 cmds.confirmDialog(
                     title="Update Complete",
-                    message="Prof-Tools has been updated successfully!\n\nThe menu has been refreshed with the latest version.",
+                    message=f"Prof-Tools has been updated successfully to the {version_type}!\n\nThe menu has been refreshed.",
                     button=["OK"],
                     defaultButton="OK"
                 )

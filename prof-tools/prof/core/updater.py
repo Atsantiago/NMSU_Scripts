@@ -38,6 +38,7 @@ import json
 import tempfile
 import zipfile
 import shutil
+from datetime import datetime
 
 try:
     # Python 3 built-in
@@ -355,14 +356,19 @@ def _simple_test_update_check():
                      cmds)
 
 
-def perform_automatic_update():
+def perform_automatic_update(include_test_versions=False):
     """
     Perform an automatic update by downloading and installing the latest version.
-    Returns True on success, False on failure.
+    
+    Args:
+        include_test_versions (bool): Whether to include test versions in update selection
+        
+    Returns:
+        True on success, False on failure.
     """
     try:
         import maya.cmds as cmds
-        logger.info("Starting automatic update process...")
+        logger.info("Starting automatic update process (include_test=%s)...", include_test_versions)
         
         # Get the latest version info from manifest
         manifest = get_manifest_data()
@@ -375,9 +381,30 @@ def perform_automatic_update():
             logger.error("No releases found in manifest")
             return False
         
-        latest_release = releases[0]  # First release is latest
-        download_url = latest_release.get('download_url')
-        directory_path = latest_release.get('directory_path', 'prof-tools')
+        # Find the appropriate release based on test version preference
+        target_release = None
+        if include_test_versions:
+            # Get the latest version (including test versions)
+            latest_version = get_latest_version(include_test=True)
+            for release in releases:
+                if release.get('version') == latest_version:
+                    target_release = release
+                    break
+        else:
+            # Get the latest stable version only
+            latest_stable_version = get_latest_version(include_test=False)
+            for release in releases:
+                if release.get('version') == latest_stable_version and not release.get('test_version', False):
+                    target_release = release
+                    break
+        
+        if not target_release:
+            logger.error("Could not find appropriate release for update")
+            return False
+        
+        download_url = target_release.get('download_url')
+        directory_path = target_release.get('directory_path', 'prof-tools')
+        version = target_release.get('version')
         
         if not download_url:
             logger.error("No download URL found in latest release")
@@ -443,7 +470,7 @@ def perform_automatic_update():
                 # Import and rebuild menu
                 from prof.ui import builder
                 builder.build_menu()
-                logger.info("Successfully rebuilt menu with updated code")
+                logger.info("Successfully rebuilt menu with updated code (version: %s)", version)
                 
                 return True
                 
@@ -502,3 +529,106 @@ def _download_file(url, destination):
     except Exception as e:
         logger.error("Unexpected error during download: %s", e)
         raise
+
+
+def _install_specific_version(version, temporary=False):
+    """
+    Install a specific version of prof-tools.
+    
+    Args:
+        version (str): The specific version to install (e.g., "0.2.13.1")
+        temporary (bool): Whether this is a temporary installation
+        
+    Returns:
+        bool: True if installation was successful, False otherwise
+    """
+    try:
+        from prof.core.version_utils import get_manifest_data
+        
+        logger.info("Installing specific version %s (temporary=%s)", version, temporary)
+        
+        # Get the manifest data
+        manifest = get_manifest_data()
+        if not manifest:
+            logger.error("Could not get manifest data for specific version installation")
+            return False
+        
+        releases = manifest.get('releases', [])
+        if not releases:
+            logger.error("No releases found in manifest")
+            return False
+        
+        # Find the specific release
+        target_release = None
+        for release in releases:
+            if release.get('version') == version:
+                target_release = release
+                break
+        
+        if not target_release:
+            logger.error("Could not find release for version %s", version)
+            return False
+        
+        download_url = target_release.get('download_url')
+        directory_path = target_release.get('directory_path', 'prof-tools')
+        
+        if not download_url:
+            logger.error("No download URL found for version %s", version)
+            return False
+        
+        logger.info("Downloading version %s from: %s", version, download_url)
+        
+        # Create a temporary directory for the download
+        temp_dir = tempfile.mkdtemp()
+        try:
+            # Download the ZIP file
+            zip_path = os.path.join(temp_dir, "update.zip")
+            _download_file(download_url, zip_path)
+            
+            # Extract and install (reuse logic from perform_automatic_update)
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                # Get current script directory (where prof-tools is installed)
+                current_script_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+                parent_dir = os.path.dirname(current_script_dir)
+                
+                # Create backup if not temporary
+                backup_path = None
+                if not temporary:
+                    backup_path = os.path.join(parent_dir, "prof-tools-backup-{0}".format(
+                        datetime.now().strftime("%Y%m%d_%H%M%S")
+                    ))
+                    if os.path.exists(current_script_dir):
+                        shutil.copytree(current_script_dir, backup_path)
+                        logger.info("Created backup at: %s", backup_path)
+                
+                # Extract new version
+                extract_path = os.path.join(temp_dir, "extracted")
+                zip_ref.extractall(extract_path)
+                
+                # Find the prof-tools directory in the extracted content
+                extracted_prof_tools = None
+                for root, dirs, files in os.walk(extract_path):
+                    if os.path.basename(root) == directory_path:
+                        extracted_prof_tools = root
+                        break
+                
+                if not extracted_prof_tools:
+                    logger.error("Could not find prof-tools directory in extracted content")
+                    return False
+                
+                # Install the new version
+                if os.path.exists(current_script_dir):
+                    shutil.rmtree(current_script_dir)
+                
+                shutil.copytree(extracted_prof_tools, current_script_dir)
+                logger.info("Successfully installed version %s", version)
+                
+                return True
+                
+        finally:
+            # Clean up temporary directory
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            
+    except Exception as e:
+        logger.error("Failed to install specific version %s: %s", version, e)
+        return False
