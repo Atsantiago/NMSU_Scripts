@@ -10,7 +10,7 @@
   ],
   "releases": [
     {
-      "version": "0.2.8.1",
+      "version": "0.2.7.2",
       "date": "2025-07-21",
       "commit_hash": "test-branch",
       "description": "TEST VERSION: Enhanced versioning system with MAJOR.MINOR.PATCH.TEST support",
