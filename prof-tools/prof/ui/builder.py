@@ -100,17 +100,23 @@ def _build_developer_section(parent_menu):
     Add the 'Developer Tools' submenu to the main menu (only shown if dev mode is enabled).
     """
     from prof.core.tools.dev_prefs import should_show_dev_features, get_prefs
+    from prof.core.version_utils import get_prof_tools_version, is_test_version
+    
     if should_show_dev_features():
         # Add divider before developer tools
         cmds.menuItem(divider=True, parent=parent_menu)
         
         # Check for temporary installation status
         prefs = get_prefs()
+        current_version = get_prof_tools_version()
         temp_status = ""
+        
         if prefs.is_temp_install_active():
             temp_info = prefs.get_temp_install_info()
             temp_version = temp_info.get("version", "unknown")
-            temp_status = " (Test {} active)".format(temp_version)
+            temp_status = " (Test {} temp)".format(temp_version)
+        elif is_test_version(current_version):
+            temp_status = " (Test {} permanent)".format(current_version)
         
         # Developer submenu at main menu level
         dev_submenu = cmds.menuItem(
@@ -120,7 +126,7 @@ def _build_developer_section(parent_menu):
             parent=parent_menu
         )
         
-        # Show temporary installation status if active
+        # Show installation status
         if prefs.is_temp_install_active():
             temp_info = prefs.get_temp_install_info()
             temp_version = temp_info.get("version", "unknown")
@@ -133,6 +139,18 @@ def _build_developer_section(parent_menu):
             )
             cmds.menuItem(
                 label="Will revert to {} on restart".format(stable_version),
+                parent=dev_submenu,
+                enable=False  # Disabled - just a status indicator
+            )
+            cmds.menuItem(divider=True, parent=dev_submenu)
+        elif is_test_version(current_version):
+            cmds.menuItem(
+                label="Status: Test {} Permanently Installed".format(current_version),
+                parent=dev_submenu,
+                enable=False  # Disabled - just a status indicator
+            )
+            cmds.menuItem(
+                label="Use 'Revert to Stable' to downgrade",
                 parent=dev_submenu,
                 enable=False  # Disabled - just a status indicator
             )
@@ -161,7 +179,7 @@ def _build_developer_section(parent_menu):
         
         cmds.menuItem(divider=True, parent=dev_submenu)
         
-        # Conditional menu items based on temp installation status
+        # Conditional menu items based on installation status
         if prefs.is_temp_install_active():
             cmds.menuItem(
                 label="Install Different Test Version…",
@@ -175,11 +193,13 @@ def _build_developer_section(parent_menu):
                 command=lambda *args: _install_test_version_temporarily()
             )
         
+        # Revert option - enabled if any test version is active
+        has_test_version = prefs.is_temp_install_active() or is_test_version(current_version)
         cmds.menuItem(
             label="Revert to Stable Version",
             parent=dev_submenu,
             command=lambda *args: _revert_to_stable(),
-            enable=prefs.is_temp_install_active()  # Only enabled if temp install is active
+            enable=has_test_version
         )
         
         cmds.setParent('..', menu=True)  # close Developer Tools submenu
@@ -518,15 +538,20 @@ def _revert_to_stable():
     """Revert from test version to stable version."""
     try:
         from prof.core.tools.dev_prefs import get_prefs
-        prefs = get_prefs()
+        from prof.core.version_utils import get_prof_tools_version, is_test_version
+        from prof.core.updater import perform_automatic_update
         
+        prefs = get_prefs()
+        current_version = get_prof_tools_version()
+        
+        # Check if we have a temporary installation
         if prefs.is_temp_install_active():
             temp_info = prefs.get_temp_install_info()
             stable_version = temp_info.get("stable_version", "unknown")
             
             result = cmds.confirmDialog(
                 title="Revert to Stable",
-                message="Revert from test version to stable version {}?".format(stable_version),
+                message="Revert from temporary test version to stable version {}?".format(stable_version),
                 button=["Yes", "No"],
                 defaultButton="Yes",
                 cancelButton="No"
@@ -539,11 +564,61 @@ def _revert_to_stable():
                     message="Reverted to stable version. Please restart Maya to complete the process.",
                     button=["OK"]
                 )
-                logger.info("Reverted to stable version")
+                logger.info("Reverted from temporary test version to stable version")
+        
+        # Check if we have a permanently installed test version
+        elif is_test_version(current_version):
+            # Get stable version from manifest
+            from prof.core.version_utils import get_manifest_data
+            manifest = get_manifest_data()
+            stable_version = manifest.get('current_version', 'latest stable') if manifest else 'latest stable'
+            
+            result = cmds.confirmDialog(
+                title="Revert to Stable",
+                message="You have test version {} permanently installed.\n\nRevert to stable version {}?\n\nThis will download and install the stable version.".format(
+                    current_version, stable_version
+                ),
+                button=["Yes", "No"],
+                defaultButton="Yes",
+                cancelButton="No"
+            )
+            
+            if result == "Yes":
+                # Remove the installed version file to revert to manifest version
+                try:
+                    from prof.core.version_utils import get_current_file_directory, clear_version_cache
+                    import os
+                    current_dir = get_current_file_directory()
+                    version_file = os.path.join(current_dir, '..', 'installed_version.txt')
+                    if os.path.exists(version_file):
+                        os.remove(version_file)
+                        logger.info("Removed installed version file")
+                        # Clear cache so the manifest version is used immediately
+                        clear_version_cache()
+                        logger.debug("Cleared version cache after removing version file")
+                except Exception as e:
+                    logger.warning("Could not remove installed version file: %s", e)
+                
+                # Install the stable version
+                success = perform_automatic_update(include_test_versions=False)
+                
+                if success:
+                    cmds.confirmDialog(
+                        title="Reverted to Stable",
+                        message="Successfully reverted to stable version {}.\n\nThe menu has been refreshed.".format(stable_version),
+                        button=["OK"]
+                    )
+                    logger.info("Successfully reverted from permanent test version to stable")
+                else:
+                    cmds.confirmDialog(
+                        title="Reversion Failed",
+                        message="Failed to revert to stable version. Please try updating manually or check the console for details.",
+                        button=["OK"]
+                    )
         else:
             cmds.confirmDialog(
-                title="No Temporary Installation",
-                message="No temporary test version installation found.",
+                title="No Test Version",
+                message="No test version installation found. You are already running a stable version ({}).".format(current_version),
                 button=["OK"]
             )
             

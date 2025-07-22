@@ -472,6 +472,25 @@ def perform_automatic_update(include_test_versions=False):
                 builder.build_menu()
                 logger.info("Successfully rebuilt menu with updated code (version: %s)", version)
                 
+                # Create installed version file to track the actual installed version
+                # This is especially important for test versions that are permanently installed
+                try:
+                    parent_dir = os.path.dirname(install_path)
+                    version_file = os.path.join(parent_dir, 'installed_version.txt')
+                    with open(version_file, 'w') as f:
+                        f.write(version)
+                    logger.info("Created installed version file: %s", version)
+                except Exception as e:
+                    logger.warning("Failed to create installed version file: %s", e)
+                
+                # Clear version cache so new version is detected immediately
+                try:
+                    from prof.core.version_utils import clear_version_cache
+                    clear_version_cache()
+                    logger.debug("Cleared version cache after update")
+                except Exception as e:
+                    logger.debug("Could not clear version cache: %s", e)
+                
                 return True
                 
             except Exception as e:
@@ -622,6 +641,23 @@ def _install_specific_version(version, temporary=False):
                 
                 shutil.copytree(extracted_prof_tools, current_script_dir)
                 logger.info("Successfully installed version %s", version)
+                
+                # Create installed version file to track the actual installed version
+                # This is especially important for test versions
+                if not temporary:  # Only create for permanent installations
+                    try:
+                        parent_dir = os.path.dirname(current_script_dir)
+                        version_file = os.path.join(parent_dir, 'installed_version.txt')
+                        with open(version_file, 'w') as f:
+                            f.write(version)
+                        logger.info("Created installed version file for version: %s", version)
+                        
+                        # Clear version cache so new version is detected immediately
+                        from prof.core.version_utils import clear_version_cache
+                        clear_version_cache()
+                        logger.debug("Cleared version cache after installation")
+                    except Exception as e:
+                        logger.warning("Failed to create installed version file: %s", e)
                 
                 return True
                 
