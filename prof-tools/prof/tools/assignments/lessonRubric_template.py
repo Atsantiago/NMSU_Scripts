@@ -513,6 +513,9 @@ class LessonRubric(object):
         cmds.setParent(parent)
         
         # Create layout for comments and copy button
+        col_widths = [150, 120, 320, 120]
+        comment_span_width = sum(col_widths[:3])  # 590px to span columns 1-3
+        
         comments_and_button_layout = cmds.rowLayout(
             numberOfColumns=4,
             columnAlign=[(1, 'left'), (2, 'left'), (3, 'left'), (4, 'center')],
@@ -520,13 +523,7 @@ class LessonRubric(object):
             parent=parent
         )
         
-        # Create a single scrollField that spans the first 3 columns by using a nested rowLayout
-        comments_row = cmds.rowLayout(
-            numberOfColumns=3,
-            columnWidth=[(1, 150), (2, 120), (3, 320)],  # Match column widths exactly
-            parent=comments_and_button_layout
-        )
-        
+        # 1st column: scrollField that visually spans columns 1-3
         comments = self._generate_comments(criterion_name)
         comment_field = cmds.scrollField(
             text=comments,
@@ -534,19 +531,16 @@ class LessonRubric(object):
             wordWrap=True,
             height=40,
             font="plainLabelFont",
-            width=590,  # Explicit width to span across 3 columns
-            parent=comments_row
+            width=comment_span_width,  # 590px spans all 3 columns
+            parent=comments_and_button_layout
         )
         self.ui_elements[f"{criterion_name}_comment_field"] = comment_field
         
-        # Return to main layout for remaining columns
-        cmds.setParent(comments_and_button_layout)
+        # 2nd & 3rd columns: invisible spacers to preserve layout grid
+        cmds.text(label="", width=1, parent=comments_and_button_layout)  # col 2 spacer
+        cmds.text(label="", width=1, parent=comments_and_button_layout)  # col 3 spacer
         
-        # Empty spacers for columns 2 and 3 (they're handled by the wide scrollField)
-        cmds.text(label="", width=1, parent=comments_and_button_layout)  # Column 2 placeholder
-        cmds.text(label="", width=1, parent=comments_and_button_layout)  # Column 3 placeholder
-        
-        # Copy button in column 4
+        # 4th column: Copy button
         cmds.button(
             label="Copy",
             command=lambda *args, cn=criterion_name: self._copy_criterion_comment(cn),
