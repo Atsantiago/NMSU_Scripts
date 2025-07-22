@@ -198,20 +198,21 @@ def compare_versions_extended(local, remote, include_test_versions=True):
             return False
         
         # Create comparison tuples
-        # For stable versions: (major, minor, patch, 999999) - high test number ensures stability precedence
-        # For test versions: (major, minor, patch, test_number)
+        # For stable versions: (major, minor, patch, 0) - test number 0 means stable release
+        # For test versions: (major, minor, patch, test_number) - where test_number > 0
+        # This ensures: 1.0.0 (0) < 1.0.0.1 (1) < 1.0.0.2 (2) < 1.0.1 (0)
         local_tuple = (
             local_parsed['major'], 
             local_parsed['minor'], 
             local_parsed['patch'],
-            local_parsed['test'] if local_parsed['test'] is not None else 999999
+            local_parsed['test'] if local_parsed['test'] is not None else 0
         )
         
         remote_tuple = (
             remote_parsed['major'], 
             remote_parsed['minor'], 
             remote_parsed['patch'],
-            remote_parsed['test'] if remote_parsed['test'] is not None else 999999
+            remote_parsed['test'] if remote_parsed['test'] is not None else 0
         )
         
         is_newer = remote_tuple > local_tuple

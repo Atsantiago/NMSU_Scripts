@@ -99,15 +99,18 @@ def get_latest_version(include_test=False):
         from prof.core.version_utils import compare_versions_extended
         
         highest_version = latest_version
+        
         for release in releases:
             release_version = release.get('version')
-            if release_version and compare_versions_extended(highest_version, release_version, True):
-                highest_version = release_version
+            if release_version:
+                if compare_versions_extended(highest_version, release_version, True):
+                    highest_version = release_version
         
-        logger.debug("Latest version from manifest (include_test=%s): %s", include_test, highest_version)
         return highest_version
         
     except Exception as e:
+        logger.error("Failed to parse latest version from manifest: %s", e)
+        return None
         logger.error("Failed to parse latest version from manifest: %s", e)
         return None
 
