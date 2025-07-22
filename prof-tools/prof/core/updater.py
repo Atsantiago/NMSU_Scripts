@@ -64,11 +64,21 @@ def _merge_release_with_defaults(release, manifest):
     merged = defaults.copy()
     merged.update(release)
     
+    # Debug logging
+    logger.debug("Merging release: %s", release.get('version', 'unknown'))
+    logger.debug("Release data: %s", release)
+    logger.debug("Defaults: %s", defaults)
+    logger.debug("Merged before URL substitution: %s", merged)
+    
     # Handle dynamic download URL substitution
     if 'download_url' in merged and '{commit_hash}' in merged['download_url']:
         commit_hash = merged.get('commit_hash', 'master')
+        original_url = merged['download_url']
         merged['download_url'] = merged['download_url'].format(commit_hash=commit_hash)
+        logger.debug("URL substitution: %s -> %s (commit_hash: %s)", 
+                    original_url, merged['download_url'], commit_hash)
     
+    logger.debug("Final merged release: %s", merged)
     return merged
 
 # Import version utilities for robust version handling
@@ -76,7 +86,8 @@ from .version_utils import get_prof_tools_version, parse_semantic_version, is_va
 
 # Configure logging for debug output
 logger = logging.getLogger(__name__)
-logging.basicConfig()
+logger.setLevel(logging.DEBUG)  # Enable debug logging
+logging.basicConfig(level=logging.DEBUG)
 
 # Manifest URL - pointing to our releases.json file
 MANIFEST_URL = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/prof-tools/releases.json"
@@ -420,12 +431,19 @@ def perform_automatic_update(include_test_versions=False):
             logger.error("Could not find appropriate release for update")
             return False
         
+        logger.debug("Found target release before merge: %s", target_release)
+        
         # Merge release with defaults
         target_release = _merge_release_with_defaults(target_release, manifest)
+        
+        logger.debug("Target release after merge: %s", target_release)
         
         download_url = target_release.get('download_url')
         directory_path = target_release.get('directory_path', 'prof-tools')
         version = target_release.get('version')
+        
+        logger.debug("Extracted values - URL: %s, Directory: %s, Version: %s", 
+                    download_url, directory_path, version)
         
         if not download_url:
             logger.error("No download URL found in latest release")
@@ -609,11 +627,18 @@ def _install_specific_version(version, temporary=False):
             logger.error("Could not find release for version %s", version)
             return False
         
+        logger.debug("Found target release for version %s before merge: %s", version, target_release)
+        
         # Merge release with defaults
         target_release = _merge_release_with_defaults(target_release, manifest)
         
+        logger.debug("Target release for version %s after merge: %s", version, target_release)
+        
         download_url = target_release.get('download_url')
         directory_path = target_release.get('directory_path', 'prof-tools')
+        
+        logger.debug("Extracted values for version %s - URL: %s, Directory: %s", 
+                    version, download_url, directory_path)
         
         if not download_url:
             logger.error("No download URL found for version %s", version)
