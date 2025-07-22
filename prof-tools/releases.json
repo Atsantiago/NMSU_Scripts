@@ -33,9 +33,7 @@
       "version": "0.2.17",
       "date": "2025-07-22",
       "commit_hash": "dev-grader",
-      "description": "Enhanced rubric UI with dynamic URL system, compact window sizing, improved button spacing, and larger header fonts for better readability",
-      "test_version": true,
-      "testing_notes": "WARNING: This is a test version for development purposes. Includes rubric improvements and dynamic branch URL support."
+      "description": "Enhanced rubric UI with dynamic URL system, compact window sizing, improved button spacing, and larger header fonts for better readability"
     },
     {
       "version": "0.2.16.2",
