@@ -403,7 +403,7 @@ class LessonRubric(object):
         header_layout = cmds.rowLayout(
             numberOfColumns=4,  # Four main columns for the table
             columnAlign=[(1, 'left'), (2, 'center'), (3, 'center'), (4, 'right')],  # Text alignment per column
-            columnWidth=[(1, 150), (2, 120), (3, 320), (4, 120)],  # Fixed widths for consistent layout (wider Performance Level column)
+            columnWidth=[(1, 150), (2, 120), (3, 320), (4, 80)],  # Fixed widths for consistent layout (narrower Points column)
             backgroundColor=(0.3, 0.3, 0.3),  # Dark gray header background for contrast
             parent=parent
         )
@@ -427,7 +427,7 @@ class LessonRubric(object):
         row_layout = cmds.rowLayout(
             numberOfColumns=4,
             columnAlign=[(1, 'left'), (2, 'center'), (3, 'center'), (4, 'right')],
-            columnWidth=[(1, 150), (2, 120), (3, 320), (4, 120)],  # Match header column widths
+            columnWidth=[(1, 150), (2, 120), (3, 320), (4, 80)],  # Match header column widths
             parent=parent
         )
         
@@ -513,13 +513,13 @@ class LessonRubric(object):
         cmds.setParent(parent)
         
         # Create layout for comments and copy button
-        col_widths = [150, 120, 320, 120]
+        col_widths = [150, 120, 320, 80]
         comment_span_width = sum(col_widths[:3])  # 590px to span columns 1-3
         
         comments_and_button_layout = cmds.rowLayout(
             numberOfColumns=4,
             columnAlign=[(1, 'left'), (2, 'left'), (3, 'left'), (4, 'center')],
-            columnWidth=[(1, 150), (2, 120), (3, 320), (4, 120)],  # Match table structure exactly
+            columnWidth=[(1, 150), (2, 120), (3, 320), (4, 80)],  # Match table structure exactly
             parent=parent
         )
         
@@ -545,7 +545,7 @@ class LessonRubric(object):
             label="Copy",
             command=lambda *args, cn=criterion_name: self._copy_criterion_comment(cn),
             height=40,
-            width=80,
+            width=70,  # Narrower button to fit in smaller column
             parent=comments_and_button_layout
         )
         
