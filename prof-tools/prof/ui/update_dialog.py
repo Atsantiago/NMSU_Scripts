@@ -545,14 +545,28 @@ def _close_update_dialog():
 
 
 # Convenience functions for integration
-def check_for_updates_with_dialog():
+def check_for_updates_with_dialog(include_test_versions=False):
     """
     Check for updates and show the dialog.
     
     This is the main function that should be called from the Prof-Tools menu
     or other parts of the system to show the update dialog.
+    
+    Args:
+        include_test_versions (bool): If True, temporarily enable test versions
+                                    for this update check
     """
-    show_update_dialog()
+    if include_test_versions:
+        # Temporarily enable test versions for this check
+        original_setting = is_testing_temp_versions()
+        set_testing_temp_versions(True)
+        try:
+            show_update_dialog()
+        finally:
+            # Restore original setting
+            set_testing_temp_versions(original_setting)
+    else:
+        show_update_dialog()
 
 
 if __name__ == "__main__":
