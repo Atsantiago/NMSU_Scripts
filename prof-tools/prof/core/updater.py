@@ -75,8 +75,18 @@ def _merge_release_with_defaults(release, manifest):
         commit_hash = merged.get('commit_hash', 'master')
         original_url = merged['download_url']
         merged['download_url'] = merged['download_url'].format(commit_hash=commit_hash)
-        logger.debug("URL substitution: %s -> %s (commit_hash: %s)", 
+        logger.debug("Download URL substitution: %s -> %s (commit_hash: %s)", 
                     original_url, merged['download_url'], commit_hash)
+    
+    # Handle dynamic manifest URL substitution in update_system if present
+    if 'update_system' in manifest and 'manifest_url' in manifest['update_system']:
+        manifest_url = manifest['update_system']['manifest_url']
+        if '{commit_hash}' in manifest_url:
+            commit_hash = merged.get('commit_hash', 'master')
+            original_manifest_url = manifest_url
+            substituted_manifest_url = manifest_url.format(commit_hash=commit_hash)
+            logger.debug("Manifest URL substitution: %s -> %s (commit_hash: %s)", 
+                        original_manifest_url, substituted_manifest_url, commit_hash)
     
     logger.debug("Final merged release: %s", merged)
     return merged
@@ -89,8 +99,43 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Enable debug logging
 logging.basicConfig(level=logging.DEBUG)
 
-# Manifest URL - pointing to our releases.json file
-MANIFEST_URL = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/prof-tools/releases.json"
+# Manifest URL - will be dynamically determined based on current branch
+# Fallback order: dev-grader -> master for development workflow
+MANIFEST_URL_TEMPLATE = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/{branch}/prof-tools/releases.json"
+MANIFEST_BRANCHES = ["dev-grader", "master"]  # Try dev-grader first, then master
+
+def _get_manifest_url():
+    """
+    Dynamically determine the manifest URL by trying different branches.
+    Returns the first working manifest URL.
+    """
+    import sys
+    
+    if sys.version_info[0] >= 3:
+        from urllib.request import urlopen, Request
+        from urllib.error import URLError, HTTPError
+    else:
+        from urllib2 import urlopen, Request, URLError, HTTPError
+    
+    for branch in MANIFEST_BRANCHES:
+        url = MANIFEST_URL_TEMPLATE.format(branch=branch)
+        try:
+            request = Request(url)
+            request.add_header('User-Agent', 'Prof-Tools-Updater/1.0')
+            response = urlopen(request, timeout=5)
+            response.close()
+            logger.debug("Found working manifest URL: %s", url)
+            return url
+        except (URLError, HTTPError) as e:
+            logger.debug("Manifest URL %s failed: %s", url, e)
+            continue
+    
+    # Fallback to master if nothing else works
+    fallback_url = MANIFEST_URL_TEMPLATE.format(branch="master")
+    logger.warning("All manifest URLs failed, using fallback: %s", fallback_url)
+    return fallback_url
+
+MANIFEST_URL = _get_manifest_url()
 _HTTP_TIMEOUT = 10  # seconds
 
 

@@ -86,7 +86,7 @@
   ],
   "update_system": {
     "type": "automatic",
-    "manifest_url": "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/prof-tools/releases.json",
+    "manifest_url": "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/{commit_hash}/prof-tools/releases.json",
     "check_frequency": "on_demand",
     "auto_download": true,
     "auto_install": true,
