@@ -401,20 +401,17 @@ class LessonRubric(object):
         """
         # Table header row with column labels and styling
         header_layout = cmds.rowLayout(
-            numberOfColumns=7,  # Four data columns + three separators
-            columnAlign=[(1, 'left'), (2, 'center'), (3, 'center'), (4, 'center'), (5, 'center'), (6, 'center'), (7, 'right')],  # Text alignment per column
-            columnWidth=[(1, 150), (2, 2), (3, 120), (4, 2), (5, 320), (6, 2), (7, 120)],  # Data columns + 2px separators
+            numberOfColumns=4,  # Four main columns for the table
+            columnAlign=[(1, 'left'), (2, 'center'), (3, 'center'), (4, 'right')],  # Text alignment per column
+            columnWidth=[(1, 150), (2, 120), (3, 320), (4, 120)],  # Fixed widths for consistent layout (wider Performance Level column)
             backgroundColor=(0.3, 0.3, 0.3),  # Dark gray header background for contrast
             parent=parent
         )
         
-        # Column headers with separators using bold font to distinguish from data
+        # Column headers using bold font to distinguish from data
         cmds.text(label="Criteria", font="boldLabelFont", parent=header_layout)
-        cmds.separator(style="in", width=2, parent=header_layout)  # Vertical separator
         cmds.text(label="Score %", font="boldLabelFont", parent=header_layout)
-        cmds.separator(style="in", width=2, parent=header_layout)  # Vertical separator
         cmds.text(label="Performance Level", font="boldLabelFont", parent=header_layout)
-        cmds.separator(style="in", width=2, parent=header_layout)  # Vertical separator
         cmds.text(label="Points", font="boldLabelFont", parent=header_layout)
         
         cmds.setParent(parent)  # Return to parent for adding data rows
@@ -428,17 +425,14 @@ class LessonRubric(object):
         """Create a single criterion row in the table."""
         # Main criterion row
         row_layout = cmds.rowLayout(
-            numberOfColumns=7,  # Four data columns + three separators
-            columnAlign=[(1, 'left'), (2, 'center'), (3, 'center'), (4, 'center'), (5, 'center'), (6, 'center'), (7, 'right')],
-            columnWidth=[(1, 150), (2, 2), (3, 120), (4, 2), (5, 320), (6, 2), (7, 120)],  # Match header column widths with separators
+            numberOfColumns=4,
+            columnAlign=[(1, 'left'), (2, 'center'), (3, 'center'), (4, 'right')],
+            columnWidth=[(1, 150), (2, 120), (3, 320), (4, 120)],  # Match header column widths
             parent=parent
         )
         
         # Criterion name
         cmds.text(label=criterion_name, parent=row_layout)
-        
-        # Vertical separator
-        cmds.separator(style="in", width=2, parent=row_layout)
         
         # Score percentage with dropdown and manual input
         percentage_layout = cmds.rowLayout(
@@ -478,9 +472,6 @@ class LessonRubric(object):
         
         cmds.setParent(row_layout)
         
-        # Vertical separator
-        cmds.separator(style="in", width=2, parent=row_layout)
-        
         # Performance level indicators
         level_layout = cmds.rowLayout(
             numberOfColumns=5,
@@ -503,9 +494,6 @@ class LessonRubric(object):
         
         cmds.setParent(row_layout)
         
-        # Vertical separator
-        cmds.separator(style="in", width=2, parent=row_layout)
-        
         # Points display
         calculated_score = self._calculate_criterion_score(criterion_name)
         points_text = cmds.text(
@@ -514,37 +502,29 @@ class LessonRubric(object):
         )
         self.ui_elements[f"{criterion_name}_points"] = points_text
         
-        # Comments row
+        # Comments row - spans only to the end of Performance Level column
         cmds.setParent(parent)
-        comment_layout = cmds.columnLayout(
-            adjustableColumn=True,
+        
+        # Create layout for comments and copy button
+        comments_and_button_layout = cmds.rowLayout(
+            numberOfColumns=2,
+            columnAlign=[(1, 'left'), (2, 'center')],
+            columnWidth=[(1, 590), (2, 120)],  # Comments span to end of Performance Level, Copy button in Points column
             parent=parent
         )
         
-        # Comments header with copy button
-        header_layout = cmds.rowLayout(
-            numberOfColumns=2,
-            columnAlign=[(1, 'left'), (2, 'right')],
-            columnWidth=[(1, 500), (2, 100)],
-            parent=comment_layout
+        # Comments section (left side)
+        comment_layout = cmds.columnLayout(
+            adjustableColumn=True,
+            parent=comments_and_button_layout
         )
         
         cmds.text(
             label="Comments:",
             font="boldLabelFont",
             align="left",
-            parent=header_layout
+            parent=comment_layout
         )
-        
-        cmds.button(
-            label="Copy",
-            command=lambda *args, cn=criterion_name: self._copy_criterion_comment(cn),
-            height=20,
-            width=80,
-            parent=header_layout
-        )
-        
-        cmds.setParent(comment_layout)
         
         # Copyable comments field
         comments = self._generate_comments(criterion_name)
@@ -557,6 +537,20 @@ class LessonRubric(object):
             parent=comment_layout
         )
         self.ui_elements[f"{criterion_name}_comment_field"] = comment_field
+        
+        # Copy button section (right side, under Points column)
+        button_layout = cmds.columnLayout(
+            adjustableColumn=True,
+            parent=comments_and_button_layout
+        )
+        
+        cmds.button(
+            label="Copy",
+            command=lambda *args, cn=criterion_name: self._copy_criterion_comment(cn),
+            height=20,
+            width=80,
+            parent=button_layout
+        )
         
         cmds.separator(height=8, parent=parent)
     
