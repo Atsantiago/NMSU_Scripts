@@ -38,6 +38,7 @@ def build_menu():
     menu = cmds.menu(MENU_NAME, label=MENU_LABEL, parent=main_win, tearOff=True)
 
     _build_grading_section(menu)   # add grading tools section
+    _build_developer_section(menu) # add developer tools section (if enabled)
     _build_help_section(menu)      # add help section
 
     logger.info("Prof-Tools menu created")
@@ -94,6 +95,60 @@ def _build_grading_section(parent_menu):
 
     cmds.setParent('..', menu=True)    # close Grading Tools submenu
 
+def _build_developer_section(parent_menu):
+    """
+    Add the 'Developer Tools' submenu to the main menu (only shown if dev mode is enabled).
+    """
+    from prof.core.tools.dev_prefs import should_show_dev_features
+    if should_show_dev_features():
+        # Add divider before developer tools
+        cmds.menuItem(divider=True, parent=parent_menu)
+        
+        # Developer submenu at main menu level
+        dev_submenu = cmds.menuItem(
+            label="Developer Tools",
+            subMenu=True,
+            tearOff=True,
+            parent=parent_menu
+        )
+        
+        # Check for test updates - moved here from help menu
+        cmds.menuItem(
+            label="Check for Test Updates…",
+            parent=dev_submenu,
+            command=lambda *args: _check_for_test_updates()
+        )
+        
+        cmds.menuItem(divider=True, parent=dev_submenu)
+        
+        cmds.menuItem(
+            label="Configure Auto-Updates…",
+            parent=dev_submenu,
+            command=lambda *args: _configure_auto_updates()
+        )
+        
+        cmds.menuItem(
+            label="Test Silent Update Check",
+            parent=dev_submenu,
+            command=lambda *args: _test_silent_update()
+        )
+        
+        cmds.menuItem(divider=True, parent=dev_submenu)
+        
+        cmds.menuItem(
+            label="Install Test Version Temporarily…",
+            parent=dev_submenu,
+            command=lambda *args: _install_test_version_temporarily()
+        )
+        
+        cmds.menuItem(
+            label="Revert to Stable Version",
+            parent=dev_submenu,
+            command=lambda *args: _revert_to_stable()
+        )
+        
+        cmds.setParent('..', menu=True)  # close Developer Tools submenu
+
 def _build_help_section(parent_menu):
     """
     Add the 'Help' submenu with version info, update checking, and helpful links.
@@ -134,58 +189,10 @@ def _build_help_section(parent_menu):
         command=lambda *args: check_for_updates()
     )
     
-    # Command to check for test updates (MAJOR.MINOR.PATCH.TEST format)
-    cmds.menuItem(
-        label="Check for Test Updates…",
-        parent=help_menu,
-        command=lambda *args: _check_for_test_updates()
-    )
-    
-    # Developer mode features (only show if dev mode is enabled)
-    from prof.core.dev_prefs import should_show_dev_features
-    if should_show_dev_features():
-        cmds.menuItem(divider=True, parent=help_menu)
-        
-        # Developer submenu
-        dev_submenu = cmds.menuItem(
-            label="Developer Tools",
-            subMenu=True,
-            tearOff=True,
-            parent=help_menu
-        )
-        
-        cmds.menuItem(
-            label="Configure Auto-Updates…",
-            parent=dev_submenu,
-            command=lambda *args: _configure_auto_updates()
-        )
-        
-        cmds.menuItem(
-            label="Test Silent Update Check",
-            parent=dev_submenu,
-            command=lambda *args: _test_silent_update()
-        )
-        
-        cmds.menuItem(divider=True, parent=dev_submenu)
-        
-        cmds.menuItem(
-            label="Install Test Version Temporarily…",
-            parent=dev_submenu,
-            command=lambda *args: _install_test_version_temporarily()
-        )
-        
-        cmds.menuItem(
-            label="Revert to Stable Version",
-            parent=dev_submenu,
-            command=lambda *args: _revert_to_stable()
-        )
-        
-        cmds.setParent('..', menu=True)  # close Developer Tools submenu
-    
     # Toggle developer mode
     cmds.menuItem(divider=True, parent=help_menu)
     
-    from prof.core.dev_prefs import is_dev_mode_enabled
+    from prof.core.tools.dev_prefs import is_dev_mode_enabled
     dev_mode_label = "Disable Developer Mode" if is_dev_mode_enabled() else "Enable Developer Mode"
     cmds.menuItem(
         label=dev_mode_label,
@@ -300,7 +307,7 @@ def _check_for_test_updates():
 def _toggle_developer_mode():
     """Toggle developer mode on/off and rebuild menu to show/hide dev features."""
     try:
-        from prof.core.dev_prefs import toggle_dev_mode
+        from prof.core.tools.dev_prefs import toggle_dev_mode
         new_state = toggle_dev_mode()
         
         # Rebuild menu to reflect new state
@@ -321,7 +328,7 @@ def _toggle_developer_mode():
 def _configure_auto_updates():
     """Open the auto-update configuration dialog."""
     try:
-        from prof.core.silent_updater import configure_auto_updates
+        from prof.core.tools.silent_updater import configure_auto_updates
         configure_auto_updates()
         logger.info("Opened auto-update configuration")
     except Exception as e:
@@ -336,7 +343,7 @@ def _configure_auto_updates():
 def _test_silent_update():
     """Test the silent update checking system."""
     try:
-        from prof.core.silent_updater import silently_check_for_updates
+        from prof.core.tools.silent_updater import silently_check_for_updates
         silently_check_for_updates()
         logger.info("Triggered silent update check")
     except Exception as e:
@@ -365,7 +372,7 @@ def _install_test_version_temporarily():
 def _revert_to_stable():
     """Revert from test version to stable version."""
     try:
-        from prof.core.dev_prefs import get_prefs
+        from prof.core.tools.dev_prefs import get_prefs
         prefs = get_prefs()
         
         if prefs.is_temp_install_active():

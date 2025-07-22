@@ -34,7 +34,7 @@ def silently_check_for_updates():
     3. Runs update check in background thread
     4. Only shows update dialog if update is available
     """
-    from prof.core.dev_prefs import get_prefs
+    from prof.core.tools.dev_prefs import get_prefs
     
     prefs = get_prefs()
     
@@ -156,7 +156,7 @@ def _show_update_notification(current_version, latest_version, is_test_version):
             _open_update_manager(include_test_versions=is_test_version)
         elif result == "Don't Ask Again":
             # Disable auto-check
-            from prof.core.dev_prefs import get_prefs
+            from prof.core.tools.dev_prefs import get_prefs
             prefs = get_prefs()
             prefs.set_auto_check_enabled(False)
             cmds.inViewMessage(
@@ -195,7 +195,7 @@ def configure_auto_updates():
         logger.warning("Auto-update configuration requires Maya")
         return
     
-    from prof.core.dev_prefs import get_prefs
+    from prof.core.tools.dev_prefs import get_prefs
     prefs = get_prefs()
     
     # Get current settings
@@ -393,7 +393,7 @@ def _apply_auto_update_settings(window, prefs, auto_checkbox, test_checkbox):
 def _test_update_check():
     """Test the update checking system immediately."""
     try:
-        from prof.core.dev_prefs import get_prefs
+        from prof.core.tools.dev_prefs import get_prefs
         prefs = get_prefs()
         
         # Force an immediate check
@@ -421,7 +421,7 @@ def initialize_silent_updates():
     Safe to call multiple times - will not create duplicate checkers.
     """
     try:
-        from prof.core.dev_prefs import get_prefs
+        from prof.core.tools.dev_prefs import get_prefs
         
         prefs = get_prefs()
         

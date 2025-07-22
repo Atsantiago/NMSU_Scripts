@@ -298,7 +298,7 @@ def _initialize_package():
             
             # Initialize silent update checking if in Maya environment
             try:
-                from .core.silent_updater import initialize_silent_updates
+                from .core.tools.silent_updater import initialize_silent_updates
                 initialize_silent_updates()
                 logger.debug("Silent update system initialized")
             except Exception as e:
