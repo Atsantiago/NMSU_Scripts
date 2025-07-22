@@ -9,207 +9,65 @@
     "FDMA 1510 - Intro 3D Animation",
     "FDMA 2530 - Introduction to Modeling"
   ],
+  "release_defaults": {
+    "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/master.zip",
+    "directory_path": "prof-tools",
+    "breaking_changes": false,
+    "requirements": {
+      "maya_version": "2020+",
+      "python_version": "3.x",
+      "platforms": [
+        "Windows",
+        "macOS",
+        "Linux"
+      ]
+    },
+    "installation": {
+      "method": "drag_and_drop",
+      "installer_file": "setup_drag_drop_maya_prof-tools.py",
+      "target_location": "Maya menu bar"
+    }
+  },
   "releases": [
     {
       "version": "0.2.16.1",
       "date": "2025-07-22",
       "commit_hash": "master",
-      "description": "TEST VERSION: Cosmetic improvements to rubric text readability",
-      "features": [
-        "Increased text size in rubrics for better readability - text is now twice as large",
-        "Enhanced font sizes for headers, criteria text, and comments",
-        "Improved visual hierarchy in rubric interface",
-        "Added vertical scrolling support for larger text content"
-      ],
-      "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/master.zip",
-      "directory_path": "prof-tools",
-      "breaking_changes": false,
+      "description": "TEST: Improved rubric text readability with 2x larger fonts, enhanced font hierarchy, and better vertical scrolling support",
       "test_version": true,
-      "requirements": {
-        "maya_version": "2020+",
-        "python_version": "3.x",
-        "platforms": [
-          "Windows",
-          "macOS",
-          "Linux"
-        ]
-      },
-      "installation": {
-        "method": "drag_and_drop",
-        "installer_file": "setup_drag_drop_maya_prof-tools.py",
-        "target_location": "Maya menu bar"
-      },
       "testing_notes": "WARNING: This is a test version for development purposes. Use at your own risk."
     },
     {
       "version": "0.2.16",
       "date": "2025-07-22",
       "commit_hash": "master",
-      "description": "Enhanced version system with clean stable/test separation and developer mode integration",
-      "features": [
-        "Implemented clean separation between stable and test version systems",
-        "Added developer mode conditional access to test features",
-        "Enhanced version detection with installed_version.txt support for permanent test installations",
-        "Restructured releases.json with separate current_version and latest_test_version fields",
-        "Updated get_latest_version() function with developer mode awareness",
-        "Enhanced update dialog to respect developer mode settings for test version access",
-        "Improved version comparison logic for MAJOR.MINOR.PATCH.TEST format",
-        "Added permanent test version installation capabilities",
-        "Protected normal update flow from test version interference",
-        "Enhanced Help menu to show full version format in developer mode"
-      ],
-      "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/master.zip",
-      "directory_path": "prof-tools",
-      "breaking_changes": false,
-      "requirements": {
-        "maya_version": "2020+",
-        "python_version": "3.x",
-        "platforms": [
-          "Windows",
-          "macOS",
-          "Linux"
-        ]
-      },
-      "installation": {
-        "method": "drag_and_drop",
-        "installer_file": "setup_drag_drop_maya_prof-tools.py",
-        "target_location": "Maya menu bar"
-      }
+      "description": "Enhanced version system with clean stable/test separation, developer mode conditional access, enhanced version detection with permanent test installations, and protected normal update flow"
     },
     {
       "version": "0.2.15",
       "date": "2025-07-22",
       "commit_hash": "test-branch",
-      "description": "TEST VERSION: Enhanced versioning system with MAJOR.MINOR.PATCH.TEST support",
-      "features": [
-        "Added support for MAJOR.MINOR.PATCH.TEST versioning format",
-        "Enhanced version comparison for test versions",
-        "Added 'Check for Test Updates' menu option",
-        "Test versions support for development and pre-release testing",
-        "Improved semantic version parsing with test component",
-        "Fixed Maya UI compatibility issues in rubric templates"
-      ],
-      "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/master.zip",
-      "directory_path": "prof-tools",
-      "breaking_changes": false,
+      "description": "TEST: Enhanced versioning system with MAJOR.MINOR.PATCH.TEST format support, enhanced version comparison, and test versions support",
       "test_version": true,
-      "requirements": {
-        "maya_version": "2020+",
-        "python_version": "3.x",
-        "platforms": [
-          "Windows",
-          "macOS",
-          "Linux"
-        ]
-      },
-      "installation": {
-        "method": "drag_and_drop",
-        "installer_file": "setup_drag_drop_maya_prof-tools.py",
-        "target_location": "Maya menu bar"
-      },
       "testing_notes": "WARNING: This is a test version for development purposes. Use at your own risk."
     },
     {
       "version": "0.2.7",
       "date": "2025-07-21",
       "commit_hash": "master",
-      "description": "Removed obsolete borderStyle warnings and improved Maya compatibility",
-      "features": [
-        "Removed obsolete borderStyle parameters from frameLayout controls",
-        "Eliminated Maya warnings about deprecated UI flags",
-        "Improved compatibility with newer Maya versions",
-        "Enhanced UI stability and reduced console noise"
-      ],
-      "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/master.zip",
-      "directory_path": "prof-tools",
-      "breaking_changes": false,
-      "requirements": {
-        "maya_version": "2020+",
-        "python_version": "3.x",
-        "platforms": [
-          "Windows",
-          "macOS",
-          "Linux"
-        ]
-      },
-      "installation": {
-        "method": "drag_and_drop",
-        "installer_file": "setup_drag_drop_maya_prof-tools.py",
-        "target_location": "Maya menu bar"
-      }
+      "description": "Removed obsolete borderStyle warnings, eliminated Maya warnings, and improved Maya version compatibility"
     },
     {
       "version": "0.2.3",
       "date": "2025-07-09",
       "commit_hash": "master",
-      "description": "Bug fix release - Fixed Maya UI parameter compatibility issues",
-      "features": [
-        "Fixed 'Invalid flag' errors in update dialog Maya UI",
-        "Removed incompatible spacing and margin parameters from columnLayout",
-        "Improved Maya UI compatibility across different Maya versions",
-        "Enhanced error handling in update dialog components"
-      ],
-      "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/master.zip",
-      "directory_path": "prof-tools",
-      "breaking_changes": false,
-      "requirements": {
-        "maya_version": "2020+",
-        "python_version": "3.x",
-        "platforms": [
-          "Windows",
-          "macOS",
-          "Linux"
-        ]
-      },
-      "installation": {
-        "method": "drag_and_drop",
-        "installer_file": "setup_drag_drop_maya_prof-tools.py",
-        "target_location": "Maya menu bar"
-      }
+      "description": "Bug fix release - Fixed 'Invalid flag' errors in update dialog, improved Maya UI compatibility, and enhanced error handling"
     },
     {
       "version": "0.2.2",
       "date": "2025-07-08",
       "commit_hash": "master",
-      "description": "Initial release of Prof-Tools framework with core functionality and manifest-based versioning",
-      "features": [
-        "Project structure and architecture established",
-        "Basic menu system framework implemented",
-        "Core grading engine implementation",
-        "Rubric configuration system foundation",
-        "Drag-and-drop installer with simple installation process",
-        "Universal grading engine for consistent logic across courses",
-        "Configurable rubrics for class and assignment-specific criteria",
-        "Automated analysis capabilities for file validation and scene checks",
-        "Menu-based interface integrated into Maya's main interface",
-        "Manifest-based versioning and update system",
-        "Robust version utilities with caching and fallback mechanisms",
-        "SSL-secured manifest fetching with proper error handling",
-        "Local-first manifest reading with remote fallback",
-        "Fixed commit hash to use master branch for automatic updates",
-        "Professional update dialog with comprehensive version comparison",
-        "Enhanced Help menu with about dialog and quick links",
-        "User-friendly update interface designed for advanced Maya users",
-        "Automatic update system with one-click download and installation",
-        "Immediate menu loading after installation - no Maya restart required"
-      ],
-      "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/master.zip",
-      "directory_path": "prof-tools",
-      "breaking_changes": false,
-      "requirements": {
-        "maya_version": "2020+",
-        "python_version": "3.x",
-        "platforms": [
-          "Windows",
-          "macOS",
-          "Linux"
-        ]
-      },
-      "installation": {
-        "method": "drag_and_drop",
-        "installer_file": "setup_drag_drop_maya_prof-tools.py",
-        "target_location": "Maya menu bar"
-      }
+      "description": "Initial Prof-Tools framework release with core grading engine and rubric system, Maya menu integration, manifest-based versioning and auto-updates, drag-and-drop installer, and professional update dialog"
     }
   ],
   "update_system": {

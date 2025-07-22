@@ -48,6 +48,23 @@ except ImportError:
     # Python 2 fallback
     from urllib2 import urlopen, Request, URLError
 
+
+def _merge_release_with_defaults(release, manifest):
+    """
+    Merge a release entry with default values from release_defaults.
+    
+    Args:
+        release (dict): Individual release entry
+        manifest (dict): Full manifest with release_defaults
+        
+    Returns:
+        dict: Release with defaults applied
+    """
+    defaults = manifest.get('release_defaults', {})
+    merged = defaults.copy()
+    merged.update(release)
+    return merged
+
 # Import version utilities for robust version handling
 from .version_utils import get_prof_tools_version, parse_semantic_version, is_valid_semantic_version, get_manifest_data
 
@@ -397,6 +414,9 @@ def perform_automatic_update(include_test_versions=False):
             logger.error("Could not find appropriate release for update")
             return False
         
+        # Merge release with defaults
+        target_release = _merge_release_with_defaults(target_release, manifest)
+        
         download_url = target_release.get('download_url')
         directory_path = target_release.get('directory_path', 'prof-tools')
         version = target_release.get('version')
@@ -582,6 +602,9 @@ def _install_specific_version(version, temporary=False):
         if not target_release:
             logger.error("Could not find release for version %s", version)
             return False
+        
+        # Merge release with defaults
+        target_release = _merge_release_with_defaults(target_release, manifest)
         
         download_url = target_release.get('download_url')
         directory_path = target_release.get('directory_path', 'prof-tools')
