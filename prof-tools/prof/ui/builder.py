@@ -207,9 +207,19 @@ def _build_help_section(parent_menu):
     # Divider before version
     cmds.menuItem(divider=True, parent=help_menu)
 
-    # Display current version
+    # Display current version (show full version including test component if active)
+    from prof.core.tools.dev_prefs import get_prefs
+    prefs = get_prefs()
+    
+    if prefs.is_temp_install_active():
+        temp_info = prefs.get_temp_install_info()
+        temp_version = temp_info.get("version", __version__)
+        version_label = "Version: {} (Test)".format(temp_version)
+    else:
+        version_label = "Version: {}".format(__version__)
+    
     cmds.menuItem(
-        label="Version: {}".format(__version__),
+        label=version_label,
         enable=False,
         parent=help_menu
     )
