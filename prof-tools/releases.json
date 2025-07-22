@@ -22,7 +22,7 @@
         "Improved semantic version parsing with test component",
         "Fixed Maya UI compatibility issues in rubric templates"
       ],
-      "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/test-branch.zip",
+      "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/master.zip",
       "directory_path": "prof-tools",
       "breaking_changes": false,
       "test_version": true,
@@ -40,7 +40,7 @@
         "installer_file": "setup_drag_drop_maya_prof-tools.py",
         "target_location": "Maya menu bar"
       },
-      "testing_notes": "⚠️ This is a test version for development purposes. Use at your own risk."
+      "testing_notes": "WARNING: This is a test version for development purposes. Use at your own risk."
     },
     {
       "version": "0.2.7",
