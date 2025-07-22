@@ -30,8 +30,12 @@ logger = logging.getLogger(__name__)
 # Window constants
 WINDOW_NAME = "prof_tools_update_dialog"
 WINDOW_TITLE = "Prof-Tools Update Manager"
-WINDOW_WIDTH = 450
-WINDOW_HEIGHT = 320
+WINDOW_WIDTH = 500  # Increased width for dev mode
+WINDOW_HEIGHT = 380  # Increased height for dev mode
+
+# Dev mode constants
+DEV_MODE_PREF_KEY = "prof_tools_dev_mode"
+TEMP_VERSION_PREF_KEY = "prof_tools_temp_version"
 
 # Colors (Maya-friendly RGB values 0-1)
 COLOR_BACKGROUND = (0.25, 0.25, 0.25)
@@ -41,6 +45,69 @@ COLOR_WARNING = (0.9, 0.7, 0.3)
 COLOR_ERROR = (0.8, 0.4, 0.4)
 COLOR_INFO = (0.5, 0.7, 0.9)
 COLOR_TEXT = (0.9, 0.9, 0.9)
+
+
+# Dev Mode Utility Functions
+def is_dev_mode_enabled():
+    """Check if development mode is enabled."""
+    if not MAYA_AVAILABLE:
+        return False
+    try:
+        return cmds.optionVar(query=DEV_MODE_PREF_KEY) if cmds.optionVar(exists=DEV_MODE_PREF_KEY) else False
+    except:
+        return False
+
+
+def set_dev_mode(enabled):
+    """Enable or disable development mode."""
+    if not MAYA_AVAILABLE:
+        return
+    try:
+        cmds.optionVar(intValue=(DEV_MODE_PREF_KEY, 1 if enabled else 0))
+        logger.info("Dev mode %s", "enabled" if enabled else "disabled")
+    except Exception as e:
+        logger.error("Failed to set dev mode: %s", e)
+
+
+def get_temp_version():
+    """Get the temporarily installed version, if any."""
+    if not MAYA_AVAILABLE:
+        return None
+    try:
+        if cmds.optionVar(exists=TEMP_VERSION_PREF_KEY):
+            return cmds.optionVar(query=TEMP_VERSION_PREF_KEY)
+    except:
+        pass
+    return None
+
+
+def set_temp_version(version):
+    """Set the temporarily installed version."""
+    if not MAYA_AVAILABLE:
+        return
+    try:
+        if version:
+            cmds.optionVar(stringValue=(TEMP_VERSION_PREF_KEY, version))
+            logger.info("Temporary version set to: %s", version)
+        else:
+            if cmds.optionVar(exists=TEMP_VERSION_PREF_KEY):
+                cmds.optionVar(remove=TEMP_VERSION_PREF_KEY)
+            logger.info("Temporary version cleared")
+    except Exception as e:
+        logger.error("Failed to set temp version: %s", e)
+
+
+def clear_temp_version():
+    """Clear any temporary version and revert to stable."""
+    set_temp_version(None)
+
+
+def get_effective_version():
+    """Get the current effective version (temp version if active, otherwise installed version)."""
+    temp_version = get_temp_version()
+    if temp_version:
+        return temp_version
+    return get_prof_tools_version()
 
 
 def show_update_dialog():
@@ -142,7 +209,7 @@ def _create_header_section(parent):
 
 
 def _create_version_info_section(parent, current_version, latest_version, status_message, status_color):
-    """Create the version information section."""
+    """Create the version information section with dev mode support."""
     info_frame = cmds.frameLayout(
         label="Version Information",
         collapsable=False,
@@ -153,7 +220,12 @@ def _create_version_info_section(parent, current_version, latest_version, status
     
     info_layout = cmds.columnLayout(adjustableColumn=True, parent=info_frame)
     
-    # Current version row
+    # Check for dev mode and temp version
+    dev_mode_enabled = is_dev_mode_enabled()
+    temp_version = get_temp_version()
+    effective_version = get_effective_version()
+    
+    # Current version row (show effective version if different)
     cmds.rowLayout(
         numberOfColumns=2,
         columnWidth2=(150, 250),
@@ -162,8 +234,26 @@ def _create_version_info_section(parent, current_version, latest_version, status
         parent=info_layout
     )
     cmds.text(label="Installed Version:", font="boldLabelFont")
-    cmds.text(label=f"v{current_version}", backgroundColor=COLOR_INFO)
+    
+    if temp_version:
+        # Show temp version with indicator
+        cmds.text(label=f"v{effective_version} (TEMP)", backgroundColor=COLOR_WARNING)
+    else:
+        cmds.text(label=f"v{current_version}", backgroundColor=COLOR_INFO)
     cmds.setParent("..")
+    
+    # Show stable version if temp is active
+    if temp_version:
+        cmds.rowLayout(
+            numberOfColumns=2,
+            columnWidth2=(150, 250),
+            columnAlign2=("left", "left"),
+            columnAttach2=("left", "left"),
+            parent=info_layout
+        )
+        cmds.text(label="Stable Version:", font="boldLabelFont")
+        cmds.text(label=f"v{current_version}", backgroundColor=COLOR_INFO)
+        cmds.setParent("..")
     
     # Latest version row
     cmds.rowLayout(
@@ -176,6 +266,30 @@ def _create_version_info_section(parent, current_version, latest_version, status
     cmds.text(label="Latest Release:", font="boldLabelFont")
     cmds.text(label=f"v{latest_version}")
     cmds.setParent("..")
+    
+    # Dev mode section
+    cmds.separator(height=10, parent=info_layout)
+    
+    # Dev mode toggle
+    cmds.rowLayout(
+        numberOfColumns=2,
+        columnWidth2=(150, 250),
+        columnAlign2=("left", "left"),
+        columnAttach2=("left", "left"),
+        parent=info_layout
+    )
+    cmds.text(label="Developer Mode:", font="boldLabelFont")
+    
+    dev_toggle = cmds.checkBox(
+        label="Enable Test Versions",
+        value=dev_mode_enabled,
+        changeCommand=lambda value: _on_dev_mode_toggle(value)
+    )
+    cmds.setParent("..")
+    
+    # Test version info (only show if dev mode enabled)
+    if dev_mode_enabled:
+        _create_test_version_section(info_layout, effective_version)
     
     # Status row
     cmds.rowLayout(

@@ -377,16 +377,16 @@ POINT DISTRIBUTION STRATEGIES:
 CRITERIA WRITING BEST PRACTICES:
 
 1. USE SPECIFIC, MEASURABLE LANGUAGE:
-   ✅ Good: "All objects named using camelCase convention"
-   ❌ Poor: "Good naming"
+   Good: "All objects named using camelCase convention"
+   Poor: "Good naming"
 
 2. INCLUDE TECHNICAL REQUIREMENTS:
-   ✅ Good: "Polygon count between 1000-5000 faces"
-   ❌ Poor: "Appropriate detail level"
+   Good: "Polygon count between 1000-5000 faces"
+   Poor: "Appropriate detail level"
 
 3. SET CLEAR EXPECTATIONS:
-   ✅ Good: "Clean quad topology with proper edge loops around joints"
-   ❌ Poor: "Good topology"
+   Good: "Clean quad topology with proper edge loops around joints"
+   Poor: "Good topology"
 
 EXTENDING THE RUBRIC SYSTEM:
 

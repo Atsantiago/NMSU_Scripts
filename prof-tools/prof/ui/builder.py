@@ -141,6 +141,58 @@ def _build_help_section(parent_menu):
         command=lambda *args: _check_for_test_updates()
     )
     
+    # Developer mode features (only show if dev mode is enabled)
+    from prof.core.dev_prefs import should_show_dev_features
+    if should_show_dev_features():
+        cmds.menuItem(divider=True, parent=help_menu)
+        
+        # Developer submenu
+        dev_submenu = cmds.menuItem(
+            label="Developer Tools",
+            subMenu=True,
+            tearOff=True,
+            parent=help_menu
+        )
+        
+        cmds.menuItem(
+            label="Configure Auto-Updates…",
+            parent=dev_submenu,
+            command=lambda *args: _configure_auto_updates()
+        )
+        
+        cmds.menuItem(
+            label="Test Silent Update Check",
+            parent=dev_submenu,
+            command=lambda *args: _test_silent_update()
+        )
+        
+        cmds.menuItem(divider=True, parent=dev_submenu)
+        
+        cmds.menuItem(
+            label="Install Test Version Temporarily…",
+            parent=dev_submenu,
+            command=lambda *args: _install_test_version_temporarily()
+        )
+        
+        cmds.menuItem(
+            label="Revert to Stable Version",
+            parent=dev_submenu,
+            command=lambda *args: _revert_to_stable()
+        )
+        
+        cmds.setParent('..', menu=True)  # close Developer Tools submenu
+    
+    # Toggle developer mode
+    cmds.menuItem(divider=True, parent=help_menu)
+    
+    from prof.core.dev_prefs import is_dev_mode_enabled
+    dev_mode_label = "Disable Developer Mode" if is_dev_mode_enabled() else "Enable Developer Mode"
+    cmds.menuItem(
+        label=dev_mode_label,
+        parent=help_menu,
+        command=lambda *args: _toggle_developer_mode()
+    )
+    
     # Divider before links
     cmds.menuItem(divider=True, parent=help_menu)
     
@@ -243,6 +295,114 @@ def _check_for_test_updates():
             message="Failed to check for test updates. Please check the console for details.",
             button=["OK"]
         )
+
+
+def _toggle_developer_mode():
+    """Toggle developer mode on/off and rebuild menu to show/hide dev features."""
+    try:
+        from prof.core.dev_prefs import toggle_dev_mode
+        new_state = toggle_dev_mode()
+        
+        # Rebuild menu to reflect new state
+        build_menu()
+        
+        state_msg = "enabled" if new_state else "disabled"
+        logger.info("Developer mode %s", state_msg)
+        
+    except Exception as e:
+        logger.error("Failed to toggle developer mode: %s", e)
+        cmds.confirmDialog(
+            title="Error",
+            message="Failed to toggle developer mode. Please check the console for details.",
+            button=["OK"]
+        )
+
+
+def _configure_auto_updates():
+    """Open the auto-update configuration dialog."""
+    try:
+        from prof.core.silent_updater import configure_auto_updates
+        configure_auto_updates()
+        logger.info("Opened auto-update configuration")
+    except Exception as e:
+        logger.error("Failed to open auto-update configuration: %s", e)
+        cmds.confirmDialog(
+            title="Error",
+            message="Failed to open auto-update configuration. Please check the console for details.",
+            button=["OK"]
+        )
+
+
+def _test_silent_update():
+    """Test the silent update checking system."""
+    try:
+        from prof.core.silent_updater import silently_check_for_updates
+        silently_check_for_updates()
+        logger.info("Triggered silent update check")
+    except Exception as e:
+        logger.error("Failed to test silent update: %s", e)
+        cmds.confirmDialog(
+            title="Error",
+            message="Failed to test silent update. Please check the console for details.",
+            button=["OK"]
+        )
+
+
+def _install_test_version_temporarily():
+    """Install a test version temporarily (reverts on Maya restart)."""
+    try:
+        # This would show a dialog to select and install a test version temporarily
+        cmds.confirmDialog(
+            title="Temporary Test Installation",
+            message="This feature allows you to temporarily install a test version that automatically reverts to stable when Maya restarts.\n\nThis feature is coming soon!",
+            button=["OK"]
+        )
+        logger.info("Temporary test installation requested (not yet implemented)")
+    except Exception as e:
+        logger.error("Failed to install test version temporarily: %s", e)
+
+
+def _revert_to_stable():
+    """Revert from test version to stable version."""
+    try:
+        from prof.core.dev_prefs import get_prefs
+        prefs = get_prefs()
+        
+        if prefs.is_temp_install_active():
+            temp_info = prefs.get_temp_install_info()
+            stable_version = temp_info.get("stable_version", "unknown")
+            
+            result = cmds.confirmDialog(
+                title="Revert to Stable",
+                message="Revert from test version to stable version {}?".format(stable_version),
+                button=["Yes", "No"],
+                defaultButton="Yes",
+                cancelButton="No"
+            )
+            
+            if result == "Yes":
+                prefs.clear_temp_install()
+                cmds.confirmDialog(
+                    title="Reverted",
+                    message="Reverted to stable version. Please restart Maya to complete the process.",
+                    button=["OK"]
+                )
+                logger.info("Reverted to stable version")
+        else:
+            cmds.confirmDialog(
+                title="No Temporary Installation",
+                message="No temporary test version installation found.",
+                button=["OK"]
+            )
+            
+    except Exception as e:
+        logger.error("Failed to revert to stable version: %s", e)
+        cmds.confirmDialog(
+            title="Error",
+            message="Failed to revert to stable version. Please check the console for details.",
+            button=["OK"]
+        )
+
 
 if __name__ == "__main__":
     # When run directly in Maya script editor, build the menu

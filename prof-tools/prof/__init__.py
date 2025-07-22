@@ -295,6 +295,16 @@ def _initialize_package():
         if is_maya_available():
             maya_version = get_maya_version()
             logger.info("Maya %s detected", maya_version if maya_version else "version unknown")
+            
+            # Initialize silent update checking if in Maya environment
+            try:
+                from .core.silent_updater import initialize_silent_updates
+                initialize_silent_updates()
+                logger.debug("Silent update system initialized")
+            except Exception as e:
+                logger.debug("Silent update initialization failed: %s", e)
+                # Don't fail the entire initialization for this
+                
         else:
             logger.warning("Maya modules not found; UI features will be limited.")
             
