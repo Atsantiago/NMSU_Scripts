@@ -283,7 +283,7 @@ class LessonRubric(object):
         self.ui_elements['window'] = cmds.window(
             self.window_name,
             title=f"Grading Rubric - {self.assignment_name}",
-            widthHeight=(900, 700),  # Larger size to accommodate improved layout
+            widthHeight=(720, 800),  # Compact width matching table layout + padding
             resizeToFitChildren=True,  # Auto-adjust if content is larger
             sizeable=True  # Allow user to resize window
         )
@@ -298,8 +298,9 @@ class LessonRubric(object):
         # Header section with assignment information
         cmds.text(
             label=f"Assignment: {self.assignment_name}",
-            font="boldLabelFont",  # Use Maya's bold font for emphasis
-            height=30,  # Fixed height for consistent spacing
+            font="fixedWidthFont",  # Use Maya's larger fixed-width font for emphasis
+            align="left",
+            wordWrap=True,
             parent=main_layout
         )
         
@@ -337,7 +338,7 @@ class LessonRubric(object):
         
         self.ui_elements['total_score'] = cmds.text(
             label=f"Total Grade: {self.calculate_total_score():.1f}/{self.total_points}",
-            font="boldLabelFont",
+            font="fixedWidthFont",
             parent=total_layout
         )
         
@@ -349,6 +350,7 @@ class LessonRubric(object):
             numberOfColumns=3,  # Three buttons in a horizontal row
             columnAlign=[(1, 'center'), (2, 'center'), (3, 'center')],  # Center-align all buttons
             columnWidth=[(1, 200), (2, 200), (3, 200)],  # Fixed width for each button column
+            columnAttach=[(1, 'left', 20), (2, 'both', 10), (3, 'right', 20)],  # Add padding
             parent=main_layout
         )
         
@@ -405,11 +407,11 @@ class LessonRubric(object):
             parent=parent
         )
         
-        # Column headers using bold font to distinguish from data
-        cmds.text(label="Criteria", font="boldLabelFont", parent=header_layout)
-        cmds.text(label="Score %", font="boldLabelFont", parent=header_layout)
-        cmds.text(label="Performance Level", font="boldLabelFont", parent=header_layout)
-        cmds.text(label="Points", font="boldLabelFont", parent=header_layout)
+        # Column headers using larger bold font to distinguish from data
+        cmds.text(label="Criteria", font="fixedWidthFont", parent=header_layout)
+        cmds.text(label="Score %", font="fixedWidthFont", parent=header_layout)
+        cmds.text(label="Performance Level", font="fixedWidthFont", parent=header_layout)
+        cmds.text(label="Points", font="fixedWidthFont", parent=header_layout)
         
         cmds.setParent(parent)  # Return to parent for adding data rows
         
@@ -484,7 +486,7 @@ class LessonRubric(object):
         
         cmds.text(
             label="Comments:",
-            font="smallBoldLabelFont",
+            font="boldLabelFont",
             align="left",
             parent=header_layout
         )
