@@ -311,7 +311,7 @@ class LessonRubric(object):
         cmds.text(
             label=f"Assignment: {self.assignment_name}",
             font="boldLabelFont",  # Use Maya's bold font for emphasis
-            align="center",
+            align="left",
             wordWrap=True,
             parent=main_layout
         )
@@ -348,8 +348,6 @@ class LessonRubric(object):
         # Total score section
         cmds.separator(height=15, parent=main_layout)
         
-        total_container = cmds.columnLayout(columnAlign='center', parent=main_layout)
-        
         # Calculate initial total and determine background color
         initial_total = self.calculate_total_score()
         if initial_total < 6.0:
@@ -366,9 +364,9 @@ class LessonRubric(object):
             label=f"Total Grade: {initial_total:.1f}/{self.total_points}",
             font="fixedWidthFont",  # Larger, more prominent font
             height=30,  # Taller text for better visibility
-            width=220, # Set a fixed width to help centering
+            align="center",  # Center the text within the element
             backgroundColor=total_background_color,  # Dynamic color based on score
-            parent=total_container
+            parent=main_layout
         )
         
         # Action buttons section with improved sizing and spacing
@@ -456,12 +454,13 @@ class LessonRubric(object):
             criterion_data (dict): The data for the criterion.
         """
         # The formLayout acts as a container for one criterion's entire UI
-        form = cmds.formLayout(height=85, parent=parent)
+        # Increased height to accommodate spacing between criteria and comments
+        form = cmds.formLayout(height=95, parent=parent)
 
         # --- A. Create all UI Elements for this row ---
         
         # Top row elements
-        crit_name_ui = cmds.text(label=criterion_name, align='left')
+        crit_name_ui = cmds.text(label=criterion_name, align='left', width=150, wordWrap=True)  # Fixed width with word wrap for long names
         score_layout = self._create_score_input_layout(criterion_name, criterion_data)
         perf_layout = self._create_performance_indicators_layout(criterion_name, criterion_data)
         points_layout = self._create_points_display_layout(criterion_name, criterion_data)
@@ -496,9 +495,9 @@ class LessonRubric(object):
                 (perf_layout, 'left', 5, score_layout),
                 (points_layout, 'left', 5, perf_layout),
                 
-                # Bottom row controls
-                (comment_field, 'top', 5, crit_name_ui), # Position below the top row
-                (copy_button, 'top', 5, crit_name_ui),
+                # Bottom row controls - increased spacing from 5 to 15 pixels
+                (comment_field, 'top', 15, crit_name_ui), # Position below the top row with more spacing
+                (copy_button, 'top', 15, crit_name_ui),
                 
                 # THE KEY TO SPANNING: Attach the right side of the comment field
                 # to the left side of the copy button.
@@ -508,7 +507,7 @@ class LessonRubric(object):
 
     def _create_score_input_layout(self, criterion_name, criterion_data):
         """Helper to create the score input UI (dropdown + field)."""
-        layout = cmds.rowLayout(numberOfColumns=2, columnWidth=[(1, 60), (2, 55)])
+        layout = cmds.rowLayout(numberOfColumns=2, columnWidth=[(1, 60), (2, 55)], width=120)  # Fixed width to match header
         
         dropdown = cmds.optionMenu(changeCommand=lambda sel: self._on_dropdown_change(criterion_name, sel))
         for p in self.PERCENTAGE_OPTIONS:
@@ -533,7 +532,7 @@ class LessonRubric(object):
 
     def _create_performance_indicators_layout(self, criterion_name, criterion_data):
         """Helper to create the performance level indicators."""
-        layout = cmds.rowLayout(numberOfColumns=5, columnAlign=[(i, 'center') for i in range(1, 6)], columnWidth=[(i, 60) for i in range(1, 6)])
+        layout = cmds.rowLayout(numberOfColumns=5, columnAlign=[(i, 'center') for i in range(1, 6)], columnWidth=[(i, 60) for i in range(1, 6)], width=320)  # Fixed width to match header
         
         current_level = self._get_score_level_for_percentage(criterion_data['percentage'])
         for level_name in self.SCORE_LEVELS.keys():
@@ -546,7 +545,7 @@ class LessonRubric(object):
 
     def _create_points_display_layout(self, criterion_name, criterion_data):
         """Helper to create the points display UI."""
-        layout = cmds.rowLayout(numberOfColumns=2, columnWidth=[(1, 20), (2, 35)])
+        layout = cmds.rowLayout(numberOfColumns=2, columnWidth=[(1, 20), (2, 35)], width=60)  # Fixed width to match header
         
         calculated_score = self._calculate_criterion_score(criterion_name)
         cmds.text(label=f"{calculated_score:.1f}/")
