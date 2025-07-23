@@ -557,8 +557,8 @@ class LessonRubric(object):
         self.ui_elements[f"{criterion_name}_comment_field"] = comment_field
         
         # 2nd & 3rd columns: invisible spacers to preserve layout grid
-        cmds.text(label="", width=0, parent=comments_and_button_layout)  # col 2 spacer
-        cmds.text(label="", width=0, parent=comments_and_button_layout)  # col 3 spacer
+        cmds.text(label="", width=1, parent=comments_and_button_layout)  # col 2 spacer
+        cmds.text(label="", width=1, parent=comments_and_button_layout)  # col 3 spacer
         
         # 4th column: Copy button
         cmds.button(
