@@ -385,6 +385,9 @@ class LessonRubric(object):
             parent=button_layout
         )
         
+        # Add bottom padding to match left/right margins
+        cmds.separator(height=20, parent=main_layout)
+        
         # Show window
         cmds.showWindow(self.ui_elements['window'])
     
@@ -510,7 +513,7 @@ class LessonRubric(object):
         calculated_score = self._calculate_criterion_score(criterion_name)
         points_layout = cmds.rowLayout(
             numberOfColumns=2,
-            columnWidth=[(1, 25), (2, 30)],
+            columnWidth=[(1, 20), (2, 35)],  # Reduced to fit in 60px column (20+35=55px with margins)
             parent=row_layout
         )
         
@@ -533,9 +536,6 @@ class LessonRubric(object):
         cmds.setParent(parent)
         
         # Create layout for comments and copy button
-        col_widths = [150, 120, 320, 60]
-        comment_span_width = sum(col_widths[:3])  # 590px to span columns 1-3
-        
         comments_and_button_layout = cmds.rowLayout(
             numberOfColumns=4,
             columnAlign=[(1, 'left'), (2, 'left'), (3, 'left'), (4, 'center')],
@@ -543,7 +543,7 @@ class LessonRubric(object):
             parent=parent
         )
         
-        # 1st column: scrollField that visually spans columns 1-3
+        # 1st column: scrollField that spans columns 1-3 (no fixed width to prevent extension)
         comments = self._generate_comments(criterion_name)
         comment_field = cmds.scrollField(
             text=comments,
@@ -551,7 +551,6 @@ class LessonRubric(object):
             wordWrap=True,
             height=40,
             font="plainLabelFont",
-            width=comment_span_width,  # 590px spans all 3 columns
             parent=comments_and_button_layout
         )
         self.ui_elements[f"{criterion_name}_comment_field"] = comment_field
