@@ -143,11 +143,11 @@ class LessonRubric(object):
         Determine which score level a percentage falls into.
         
         This maps percentage scores to descriptive level names:
-        - 0-5%: "No Marks" 
-        - 6-15%: "Low Marks"
-        - 16-45%: "Partial Marks" 
-        - 46-75%: "High Marks"
-        - 76-100%: "Full Marks"
+        - 0%: "No Marks" 
+        - 1-69%: "Low Marks"
+        - 70-84%: "Partial Marks" 
+        - 85-99%: "High Marks"
+        - 100%: "Full Marks"
         
         Args:
             percentage (float): Percentage score (0-100)
@@ -155,12 +155,23 @@ class LessonRubric(object):
         Returns:
             str: Score level name for display and comment generation
         """
-        # Iterate through score levels to find which range the percentage fits
-        for level, data in self.SCORE_LEVELS.items():
-            if data['min'] <= percentage <= data['max']:
-                return level
-        # Fallback if percentage is outside expected ranges
-        return 'No Marks'
+        # Convert to int to ensure whole percentage comparison
+        percentage = int(percentage)
+        
+        # New percentage-based ranges
+        if percentage == 0:
+            return 'No Marks'
+        elif 1 <= percentage <= 69:
+            return 'Low Marks'
+        elif 70 <= percentage <= 84:
+            return 'Partial Marks'
+        elif 85 <= percentage <= 99:
+            return 'High Marks'
+        elif percentage == 100:
+            return 'Full Marks'
+        else:
+            # Fallback for any unexpected values
+            return 'No Marks'
     
     def _calculate_criterion_score(self, criterion_name):
         """
@@ -307,14 +318,14 @@ class LessonRubric(object):
         
         cmds.text(
             label=f"Total Points: {self.total_points}",
-            font="smallPlainLabelFont",  # Smaller font for secondary info
+            font="plainLabelFont",  # Smaller font for secondary info
             parent=main_layout
         )
         
         # Warning message for empty files - helps instructors understand default scoring
         if self.is_empty_file:
             cmds.text(
-                label="⚠️ Empty or minimal file detected - scores defaulted to Low Marks",
+                label="⚠️ Empty detected - scores defaulted to Low Marks",
                 backgroundColor=(1.0, 0.8, 0.0),  # Yellow warning background (RGB values 0-1)
                 parent=main_layout
             )
@@ -337,10 +348,23 @@ class LessonRubric(object):
         
         cmds.text(label="", parent=total_layout)  # Spacer
         
+        # Calculate initial total and determine background color
+        initial_total = self.calculate_total_score()
+        if initial_total < 6.0:
+            # Red for scores below 6
+            total_background_color = (1.0, 0.3, 0.3)  # Red
+        elif initial_total <= 7.5:
+            # Muted yellow for scores between 6 and 7.5 (less bright than warning)
+            total_background_color = (1.0, 0.9, 0.5)  # Muted yellow
+        else:
+            # Green for scores above 7.5 (same as performance level indicator)
+            total_background_color = (0.4, 0.7, 0.4)  # Green
+        
         self.ui_elements['total_score'] = cmds.text(
-            label=f"Total Grade: {self.calculate_total_score():.1f}/{self.total_points}",
+            label=f"Total Grade: {initial_total:.1f}/{self.total_points}",
             font="fixedWidthFont",  # Larger, more prominent font
             height=30,  # Taller text for better visibility
+            backgroundColor=total_background_color,  # Dynamic color based on score
             parent=total_layout
         )
         
@@ -673,13 +697,26 @@ class LessonRubric(object):
             )
     
     def _update_total_score_display(self):
-        """Update the total score display."""
+        """Update the total score display with dynamic background color."""
         if 'total_score' in self.ui_elements:
             total = self.calculate_total_score()
+            
+            # Determine background color based on score
+            if total < 6.0:
+                # Red for scores below 6
+                background_color = (1.0, 0.3, 0.3)  # Red
+            elif total <= 7.5:
+                # Muted yellow for scores between 6 and 7.5 (less bright than warning)
+                background_color = (1.0, 0.9, 0.5)  # Muted yellow
+            else:
+                # Green for scores above 7.5 (same as performance level indicator)
+                background_color = (0.4, 0.7, 0.4)  # Green
+            
             cmds.text(
                 self.ui_elements['total_score'],
                 edit=True,
-                label=f"Total Grade: {total:.1f}/{self.total_points}"
+                label=f"Total Grade: {total:.1f}/{self.total_points}",
+                backgroundColor=background_color
             )
     
     def _update_all_scores(self):
