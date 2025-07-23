@@ -283,7 +283,7 @@ class LessonRubric(object):
         self.ui_elements['window'] = cmds.window(
             self.window_name,
             title=f"Grading Rubric - {self.assignment_name}",
-            widthHeight=(680, 600),  # Reduced width to fit compact layout better
+            widthHeight=(670, 600),  # Further reduced width to fit optimized compact layout
             resizeToFitChildren=True,  # Auto-adjust if content is larger
             sizeable=True  # Allow user to resize window
         )
@@ -535,15 +535,15 @@ class LessonRubric(object):
         # Comments row - spans only to the end of Performance Level column
         cmds.setParent(parent)
         
-        # Create layout for comments and copy button - use a different approach for spanning
+        # Create layout for comments and copy button - align comment field to end of Performance Level
         comments_and_button_layout = cmds.rowLayout(
             numberOfColumns=2,  # Only 2 columns: wide comment field + button
             columnAlign=[(1, 'left'), (2, 'center')],
-            columnWidth=[(1, 590), (2, 60)],  # Comment spans 590px (150+120+320), button gets 60px
+            columnWidth=[(1, 590), (2, 55)],  # Comment spans exactly to end of Performance Level (150+120+320=590)
             parent=parent
         )
         
-        # 1st column: scrollField that naturally spans the first 3 logical columns
+        # 1st column: scrollField that spans exactly to the end of Performance Level column
         comments = self._generate_comments(criterion_name)
         comment_field = cmds.scrollField(
             text=comments,
@@ -560,7 +560,7 @@ class LessonRubric(object):
             label="Copy",
             command=lambda *args, cn=criterion_name: self._copy_criterion_comment(cn),
             height=40,
-            width=50,  # Narrower button to fit in 60px column
+            width=40,  # Narrower button to fit in 60px column
             parent=comments_and_button_layout
         )
         
