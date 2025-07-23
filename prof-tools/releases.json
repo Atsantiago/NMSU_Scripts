@@ -1,7 +1,7 @@
 {
   "tool_name": "prof-tools",
-  "current_version": "0.2.18",
-  "latest_test_version": "0.2.18",
+  "current_version": "0.3.0",
+  "latest_test_version": "0.3.0",
   "description": "Maya instructor tools for grading and managing student assignments across NMSU's FDMA courses for the Creative Media Institute (CMI)",
   "author": "Alexander T. Santiago",
   "repository": "https://github.com/Atsantiago/NMSU_Scripts",
@@ -29,6 +29,12 @@
     }
   },
   "releases": [
+    {
+      "version": "0.3.0",
+      "date": "2025-07-22",
+      "commit_hash": "master",
+      "description": "Enhanced rubric UI with update system: Implemented branch policy enforcement ensuring stable releases always use master branch, added error handling, and completed major rubric UI improvements"
+    },
     {
       "version": "0.2.18",
       "date": "2025-07-22",
