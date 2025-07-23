@@ -417,17 +417,13 @@ class LessonRubric(object):
     
     def _create_criteria_table(self, parent):
         """
-        Create the criteria scoring table - REBUILT FROM SCRATCH.
-        
-        Simple approach:
-        - Header row with column labels
-        - Each criterion gets 2 rows: main data row + comments row
-        - Comments row spans columns 1-3 with copy button in column 4
+        Create the criteria scoring table using the formLayout approach.
+        This is the most robust method for complex, non-grid layouts in Maya.
         
         Args:
-            parent: Maya UI parent element to attach the table to
+            parent: Maya UI parent element to attach the table to.
         """
-        # Table header row
+        # Table header row (remains a simple rowLayout for clarity)
         header_layout = cmds.rowLayout(
             numberOfColumns=4,
             columnAlign=[(1, 'left'), (2, 'center'), (3, 'center'), (4, 'right')],
@@ -435,7 +431,6 @@ class LessonRubric(object):
             backgroundColor=(0.3, 0.3, 0.3),
             parent=parent
         )
-        
         cmds.text(label="Criteria", font="boldLabelFont", parent=header_layout)
         cmds.text(label="Score %", font="boldLabelFont", parent=header_layout)
         cmds.text(label="Performance Level", font="boldLabelFont", parent=header_layout)
@@ -443,147 +438,100 @@ class LessonRubric(object):
         
         cmds.setParent(parent)
         
-        # Create each criterion as a pair of rows
+        # Create each criterion using a dedicated formLayout for precise control
         for criterion_name, criterion_data in self.criteria.items():
-            self._create_criterion_pair(parent, criterion_name, criterion_data)
-    
-    def _create_criterion_pair(self, parent, criterion_name, criterion_data):
+            self._create_criterion_form_layout(parent, criterion_name, criterion_data)
+            cmds.separator(height=10, style='none', parent=parent) # Add spacing between criteria
+
+    def _create_criterion_form_layout(self, parent, criterion_name, criterion_data):
         """
-        Create a criterion as a pair of rows: main data + comments.
-        
-        Row 1: Criterion name | Score input | Performance indicators | Points
-        Row 2: Comments spanning columns 1-3 | Copy button in column 4
+        Creates a single criterion "row" using a formLayout for robust spanning.
         
         Args:
-            parent: Parent UI element
-            criterion_name (str): Name of the criterion
-            criterion_data (dict): Criterion data
+            parent: The parent UI element.
+            criterion_name (str): The name of the criterion.
+            criterion_data (dict): The data for the criterion.
         """
-        # ROW 1: Main criterion data
-        main_row = cmds.rowLayout(
-            numberOfColumns=4,
-            columnAlign=[(1, 'left'), (2, 'center'), (3, 'center'), (4, 'right')],
-            columnWidth=[(1, 150), (2, 120), (3, 320), (4, 60)],
-            parent=parent
-        )
+        # Define column widths for easy reference
+        col1_width = 150
+        col2_width = 120
+        col3_width = 320
+        col4_width = 60
+
+        # Create a formLayout for this criterion. It will manage all elements.
+        form = cmds.formLayout(height=80, parent=parent)
+
+        # --- Create UI Elements ---
+        # These are created first, then attached within the formLayout.
         
-        # Column 1: Criterion name
-        cmds.text(label=criterion_name, parent=main_row)
-        
-        # Column 2: Score percentage (dropdown + input)
-        score_layout = cmds.rowLayout(
-            numberOfColumns=2,
-            columnWidth=[(1, 60), (2, 55)],
-            parent=main_row
-        )
-        
-        # Dropdown for common percentages
-        percentage_dropdown = cmds.optionMenu(
-            parent=score_layout,
-            changeCommand=lambda selection: self._on_dropdown_change(criterion_name, selection)
-        )
-        
-        for percentage in self.PERCENTAGE_OPTIONS:
-            cmds.menuItem(label=f"{percentage}%", parent=percentage_dropdown)
-        cmds.menuItem(label="Custom", parent=percentage_dropdown)
-        
-        # Set initial dropdown selection
-        current_percentage = criterion_data['percentage']
-        if current_percentage in self.PERCENTAGE_OPTIONS:
-            dropdown_index = self.PERCENTAGE_OPTIONS.index(current_percentage) + 1
-            cmds.optionMenu(percentage_dropdown, edit=True, select=dropdown_index)
-        else:
-            custom_index = len(self.PERCENTAGE_OPTIONS) + 1
-            cmds.optionMenu(percentage_dropdown, edit=True, select=custom_index)
-        
-        # Manual input field
-        percentage_field = cmds.intField(
-            value=current_percentage,
-            minValue=0,
-            maxValue=100,
-            changeCommand=lambda *args: self._on_percentage_field_change(criterion_name),
-            parent=score_layout
-        )
-        
-        self.ui_elements[f"{criterion_name}_percentage_dropdown"] = percentage_dropdown
-        self.ui_elements[f"{criterion_name}_percentage_field"] = percentage_field
-        
-        # Column 3: Performance level indicators
-        cmds.setParent(main_row)
-        performance_layout = cmds.rowLayout(
-            numberOfColumns=5,
-            columnAlign=[(i, 'center') for i in range(1, 6)],
-            columnWidth=[(i, 60) for i in range(1, 6)],
-            parent=main_row
-        )
-        
+        # Column 1: Criterion Name
+        crit_name_ui = cmds.text(label=criterion_name, align='left')
+
+        # Column 2: Score Percentage (using a rowLayout for the dropdown and field)
+        score_layout = cmds.rowLayout(numberOfColumns=2, columnWidth=[(1, 60), (2, 55)])
+        percentage_dropdown = cmds.optionMenu(changeCommand=lambda sel: self._on_dropdown_change(criterion_name, sel))
+        for p in self.PERCENTAGE_OPTIONS:
+            cmds.menuItem(label=f"{p}%")
+        cmds.menuItem(label="Custom")
+        percentage_field = cmds.intField(value=criterion_data['percentage'], minValue=0, maxValue=100, changeCommand=lambda *args: self._on_percentage_field_change(criterion_name))
+        cmds.setParent('..') # End score_layout
+
+        # Column 3: Performance Level Indicators
+        perf_layout = cmds.rowLayout(numberOfColumns=5, columnAlign=[(i, 'center') for i in range(1, 6)], columnWidth=[(i, 60) for i in range(1, 6)])
         current_level = self._get_score_level_for_percentage(criterion_data['percentage'])
         for level_name in self.SCORE_LEVELS.keys():
             color = (0.4, 0.7, 0.4) if level_name == current_level else (0.6, 0.6, 0.6)
-            level_indicator = cmds.text(
-                label=level_name.split()[0],  # Show just first word
-                backgroundColor=color,
-                font="boldLabelFont",
-                width=55,
-                height=25,
-                parent=performance_layout
-            )
-            self.ui_elements[f"{criterion_name}_level_{level_name.split()[0]}"] = level_indicator
-        
-        # Column 4: Points display
-        cmds.setParent(main_row)
+            indicator = cmds.text(label=level_name.split()[0], backgroundColor=color, font="boldLabelFont", width=55, height=25)
+            self.ui_elements[f"{criterion_name}_level_{level_name.split()[0]}"] = indicator
+        cmds.setParent('..') # End perf_layout
+
+        # Column 4: Points Display
         calculated_score = self._calculate_criterion_score(criterion_name)
-        points_layout = cmds.rowLayout(
-            numberOfColumns=2,
-            columnWidth=[(1, 20), (2, 35)],
-            parent=main_row
-        )
-        
-        cmds.text(label=f"{calculated_score:.1f}/", parent=points_layout)
-        points_text = cmds.text(
-            label=f"{criterion_data['point_value']:.1f}",
-            font="boldLabelFont",
-            parent=points_layout
-        )
-        self.ui_elements[f"{criterion_name}_points"] = points_text
-        self.ui_elements[f"{criterion_name}_points_layout"] = points_layout
-        
-        # ROW 2: Comments spanning + copy button
-        cmds.setParent(parent)
-        comments_row = cmds.rowLayout(
-            numberOfColumns=4,
-            columnAlign=[(1, 'left'), (2, 'left'), (3, 'left'), (4, 'center')],
-            columnWidth=[(1, 590), (2, 1), (3, 1), (4, 60)],  # 590px spans columns 1-3
-            parent=parent
-        )
-        
-        # Wide comment field spanning 590px
+        points_layout = cmds.rowLayout(numberOfColumns=2, columnWidth=[(1, 20), (2, 35)])
+        cmds.text(label=f"{calculated_score:.1f}/")
+        points_text = cmds.text(label=f"{criterion_data['point_value']:.1f}", font="boldLabelFont")
+        cmds.setParent('..') # End points_layout
+
+        # Comments Field and Copy Button
         comments = self._generate_comments(criterion_name)
-        comment_field = cmds.scrollField(
-            text=comments,
-            editable=True,
-            wordWrap=True,
-            height=40,
-            font="plainLabelFont",
-            parent=comments_row
-        )
+        comment_field = cmds.scrollField(text=comments, editable=True, wordWrap=True, height=40, font="plainLabelFont")
+        copy_button = cmds.button(label="Copy", command=lambda *args: self._copy_criterion_comment(criterion_name), height=40, width=50)
+
+        # --- Store UI Elements for Updates ---
+        self.ui_elements[f"{criterion_name}_percentage_dropdown"] = percentage_dropdown
+        self.ui_elements[f"{criterion_name}_percentage_field"] = percentage_field
+        self.ui_elements[f"{criterion_name}_points_layout"] = points_layout
         self.ui_elements[f"{criterion_name}_comment_field"] = comment_field
         
-        # Invisible spacers for columns 2-3
-        cmds.text(label="", parent=comments_row)
-        cmds.text(label="", parent=comments_row)
-        
-        # Copy button in column 4
-        cmds.button(
-            label="Copy",
-            command=lambda *args, cn=criterion_name: self._copy_criterion_comment(cn),
-            height=40,
-            width=50,
-            parent=comments_row
+        # Set initial dropdown value
+        current_percentage = criterion_data['percentage']
+        if current_percentage in self.PERCENTAGE_OPTIONS:
+            cmds.optionMenu(percentage_dropdown, edit=True, select=self.PERCENTAGE_OPTIONS.index(current_percentage) + 1)
+        else:
+            cmds.optionMenu(percentage_dropdown, edit=True, select=len(self.PERCENTAGE_OPTIONS) + 1)
+
+        # --- Define Attachments in formLayout ---
+        # All attachments are grouped into single lists for attachForm and attachControl.
+        cmds.formLayout(form, edit=True,
+            attachForm=[
+                (crit_name_ui, 'top', 5),
+                (crit_name_ui, 'left', 5),
+                (score_layout, 'top', 5),
+                (perf_layout, 'top', 5),
+                (points_layout, 'top', 5),
+                (comment_field, 'left', 5),
+            ],
+            attachControl=[
+                (score_layout, 'left', 5, crit_name_ui),
+                (perf_layout, 'left', 5, score_layout),
+                (points_layout, 'left', 5, perf_layout),
+                (comment_field, 'top', 5, crit_name_ui),
+                (comment_field, 'right', 5, points_layout), # Span comments to the points column
+                (copy_button, 'left', 5, comment_field),
+                (copy_button, 'top', 5, crit_name_ui),
+                (copy_button, 'bottom', 0, comment_field),
+            ]
         )
-        
-        # Small separator between criteria
-        cmds.separator(height=8, parent=parent)
     
     def _on_dropdown_change(self, criterion_name, selection):
         """Handle dropdown selection change for percentage."""
