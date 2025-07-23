@@ -499,7 +499,7 @@ class LessonRubric(object):
             value=current_percentage,
             minValue=0,
             maxValue=100,
-            changeCommand=lambda: self._on_percentage_field_change(criterion_name),
+            changeCommand=lambda *args: self._on_percentage_field_change(criterion_name),
             parent=percentage_layout
         )
         
