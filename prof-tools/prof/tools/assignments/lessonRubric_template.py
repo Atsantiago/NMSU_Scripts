@@ -283,7 +283,7 @@ class LessonRubric(object):
         self.ui_elements['window'] = cmds.window(
             self.window_name,
             title=f"Grading Rubric - {self.assignment_name}",
-            widthHeight=(720, 600),  # Reduced height to fit content better
+            widthHeight=(680, 600),  # Reduced width to fit compact layout better
             resizeToFitChildren=True,  # Auto-adjust if content is larger
             sizeable=True  # Allow user to resize window
         )
@@ -348,7 +348,7 @@ class LessonRubric(object):
         
         # Action buttons section with improved sizing and spacing
         cmds.setParent(main_layout)  # Return to main layout after creating other elements
-        cmds.separator(height=5, parent=main_layout)  # Reduced separator for cleaner look
+        cmds.separator(height=15, parent=main_layout)  # Reduced separator for cleaner look
         
         button_layout = cmds.rowLayout(
             numberOfColumns=3,  # Three buttons in a horizontal row
@@ -535,7 +535,10 @@ class LessonRubric(object):
         # Comments row - spans only to the end of Performance Level column
         cmds.setParent(parent)
         
-        # Create layout for comments and copy button
+        # Create layout for comments and copy button with proper column spanning
+        col_widths = [150, 120, 320, 60]  # Match our table column widths exactly
+        comment_span_width = sum(col_widths[:3])  # 590px spans columns 1-3
+        
         comments_and_button_layout = cmds.rowLayout(
             numberOfColumns=4,
             columnAlign=[(1, 'left'), (2, 'left'), (3, 'left'), (4, 'center')],
@@ -543,7 +546,7 @@ class LessonRubric(object):
             parent=parent
         )
         
-        # 1st column: scrollField that spans columns 1-3 (no fixed width to prevent extension)
+        # 1st column: scrollField with explicit width to span columns 1-3
         comments = self._generate_comments(criterion_name)
         comment_field = cmds.scrollField(
             text=comments,
@@ -551,6 +554,7 @@ class LessonRubric(object):
             wordWrap=True,
             height=40,
             font="plainLabelFont",
+            width=comment_span_width,  # 590px spans all 3 columns
             parent=comments_and_button_layout
         )
         self.ui_elements[f"{criterion_name}_comment_field"] = comment_field
@@ -564,7 +568,7 @@ class LessonRubric(object):
             label="Copy",
             command=lambda *args, cn=criterion_name: self._copy_criterion_comment(cn),
             height=40,
-            width=50,  # Much narrower button to fit in smaller column
+            width=50,  # Narrower button to fit in 60px column
             parent=comments_and_button_layout
         )
         
