@@ -444,6 +444,9 @@ class LessonRubric(object):
         
         cmds.setParent(parent)  # Return to parent for adding data rows
         
+        # Store the main parent reference before creating the column table
+        self.table_parent = parent
+        
         # Create the main table structure using custom ColumnLayout approach
         table_layout = cmds.rowLayout(
             numberOfColumns=4,
@@ -478,6 +481,9 @@ class LessonRubric(object):
         # Create all criterion rows
         for criterion_name, criterion_data in self.criteria.items():
             self._create_criterion_column_row(criterion_name, criterion_data)
+            
+        # Return to main parent for any additional elements
+        cmds.setParent(parent)
     
     def _create_criterion_column_row(self, criterion_name, criterion_data):
         """
@@ -585,56 +591,58 @@ class LessonRubric(object):
         self.ui_elements[f"{criterion_name}_points"] = points_text
         self.ui_elements[f"{criterion_name}_points_layout"] = points_layout
         
+        # Store the parent reference for comments
+        self.table_parent = cmds.setParent(query=True)
+        
         # Now create the comments row that spans columns 1-3 with copy button in column 4
+        # This needs to be outside the column structure to allow true spanning
         self._create_criterion_comments_row(criterion_name)
     
     def _create_criterion_comments_row(self, criterion_name):
         """
         Create a comments row that truly spans across the first 3 columns.
         
-        This uses the column-based approach to create perfect spanning:
-        - Columns 1-3: Single wide comment field
-        - Column 4: Copy button perfectly aligned with points column
+        This creates a separate rowLayout that matches the table column structure
+        to allow true spanning across multiple visual columns.
         
         Args:
             criterion_name (str): Name of the criterion for the comments
         """
-        # Calculate spanning width for columns 1-3
-        spanning_width = 150 + 120 + 320  # Criteria + Score + Performance = 590px
+        # Create comments row using the same 4-column structure as the header
+        comments_layout = cmds.rowLayout(
+            numberOfColumns=4,
+            columnAlign=[(1, 'left'), (2, 'left'), (3, 'left'), (4, 'center')],
+            columnWidth=[(1, 590), (2, 1), (3, 1), (4, 60)],  # Wide field spans 590px, button in column 4
+            parent=self.table_parent
+        )
         
-        # Add spanning comment field to column 1 (it will visually span to column 3)
-        cmds.setParent(self.column_layouts['criteria'])
+        # Column 1: Wide comment field that spans 590px (visual width of columns 1-3)
         comments = self._generate_comments(criterion_name)
         comment_field = cmds.scrollField(
             text=comments,
             editable=True,
             wordWrap=True,
             height=40,
-            width=spanning_width,  # Spans across all 3 columns
-            font="plainLabelFont"
+            font="plainLabelFont",
+            parent=comments_layout
         )
         self.ui_elements[f"{criterion_name}_comment_field"] = comment_field
         
-        # Add empty spacers to columns 2 and 3 to maintain alignment
-        cmds.setParent(self.column_layouts['score'])
-        cmds.text(label="", height=40)  # Spacer for column 2
+        # Columns 2-3: Invisible spacers to maintain grid alignment
+        cmds.text(label="", parent=comments_layout)  # Spacer for column 2
+        cmds.text(label="", parent=comments_layout)  # Spacer for column 3
         
-        cmds.setParent(self.column_layouts['performance'])
-        cmds.text(label="", height=40)  # Spacer for column 3
-        
-        # Add copy button to column 4, perfectly aligned
-        cmds.setParent(self.column_layouts['points'])
+        # Column 4: Copy button aligned with points column
         cmds.button(
             label="Copy",
             command=lambda *args, cn=criterion_name: self._copy_criterion_comment(cn),
             height=40,
-            width=50
+            width=50,
+            parent=comments_layout
         )
         
-        # Add small separators between criteria for visual clarity
-        for col_name in ['criteria', 'score', 'performance', 'points']:
-            cmds.setParent(self.column_layouts[col_name])
-            cmds.separator(height=8)
+        # Add small separator between criteria
+        cmds.separator(height=8, parent=self.table_parent)
     
     def _on_dropdown_change(self, criterion_name, selection):
         """Handle dropdown selection change for percentage."""
