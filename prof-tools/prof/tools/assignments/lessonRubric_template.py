@@ -535,18 +535,15 @@ class LessonRubric(object):
         # Comments row - spans only to the end of Performance Level column
         cmds.setParent(parent)
         
-        # Create layout for comments and copy button with proper column spanning
-        col_widths = [150, 120, 320, 60]  # Match our table column widths exactly
-        comment_span_width = sum(col_widths[:3])  # 590px spans columns 1-3
-        
+        # Create layout for comments and copy button - use a different approach for spanning
         comments_and_button_layout = cmds.rowLayout(
-            numberOfColumns=4,
-            columnAlign=[(1, 'left'), (2, 'left'), (3, 'left'), (4, 'center')],
-            columnWidth=[(1, 150), (2, 120), (3, 320), (4, 60)],  # Match table structure exactly
+            numberOfColumns=2,  # Only 2 columns: wide comment field + button
+            columnAlign=[(1, 'left'), (2, 'center')],
+            columnWidth=[(1, 590), (2, 60)],  # Comment spans 590px (150+120+320), button gets 60px
             parent=parent
         )
         
-        # 1st column: scrollField with explicit width to span columns 1-3
+        # 1st column: scrollField that naturally spans the first 3 logical columns
         comments = self._generate_comments(criterion_name)
         comment_field = cmds.scrollField(
             text=comments,
@@ -554,16 +551,11 @@ class LessonRubric(object):
             wordWrap=True,
             height=40,
             font="plainLabelFont",
-            width=comment_span_width,  # 590px spans all 3 columns
             parent=comments_and_button_layout
         )
         self.ui_elements[f"{criterion_name}_comment_field"] = comment_field
         
-        # 2nd & 3rd columns: invisible spacers to preserve layout grid
-        cmds.text(label="", width=1, parent=comments_and_button_layout)  # col 2 spacer
-        cmds.text(label="", width=1, parent=comments_and_button_layout)  # col 3 spacer
-        
-        # 4th column: Copy button
+        # 2nd column: Copy button
         cmds.button(
             label="Copy",
             command=lambda *args, cn=criterion_name: self._copy_criterion_comment(cn),
