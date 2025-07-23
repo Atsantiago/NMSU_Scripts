@@ -32,7 +32,7 @@
     {
       "version": "0.2.18",
       "date": "2025-07-22",
-      "commit_hash": "dev-grader",
+      "commit_hash": "master",
       "description": "Major rubric UI improvements: Fixed column alignment with consistent widths, added comment field spanning across 3 columns, improved spacing between criteria and comments, centered header elements, added project name field with TODO comment, and enabled text wrapping for long criterion names"
     },
     {

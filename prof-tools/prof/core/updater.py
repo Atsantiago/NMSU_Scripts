@@ -70,6 +70,38 @@ def _merge_release_with_defaults(release, manifest):
     logger.debug("Defaults: %s", defaults)
     logger.debug("Merged before URL substitution: %s", merged)
     
+    # POLICY: Stable releases always use 'master' branch, test releases can use any branch
+    # Robust error handling ensures the policy always works correctly
+    try:
+        is_test_version = merged.get('test_version', False)
+        
+        # Validate test_version field - must be boolean, default to False for safety
+        if not isinstance(is_test_version, bool):
+            logger.warning("Invalid test_version field (%s) in release %s, treating as stable release", 
+                          type(is_test_version).__name__, merged.get('version', 'unknown'))
+            is_test_version = False
+        
+        original_commit_hash = merged.get('commit_hash', 'master')
+        
+        # Validate commit_hash field - must be non-empty string, default to 'master'
+        if not isinstance(original_commit_hash, str) or not original_commit_hash.strip():
+            logger.warning("Invalid commit_hash field (%s) in release %s, defaulting to master", 
+                          original_commit_hash, merged.get('version', 'unknown'))
+            original_commit_hash = 'master'
+            merged['commit_hash'] = 'master'
+        
+        # Apply policy: stable releases must use master branch
+        if not is_test_version and original_commit_hash != 'master':
+            logger.info("Enforcing master branch for stable release %s (was: %s)", 
+                       merged.get('version', 'unknown'), original_commit_hash)
+            merged['commit_hash'] = 'master'
+            
+    except Exception as e:
+        # Ultimate fallback: if anything goes wrong, force master branch for safety
+        logger.error("Error in branch policy enforcement for release %s: %s. Forcing master branch.", 
+                    merged.get('version', 'unknown'), e)
+        merged['commit_hash'] = 'master'
+    
     # Handle dynamic download URL substitution
     if 'download_url' in merged and '{commit_hash}' in merged['download_url']:
         commit_hash = merged.get('commit_hash', 'master')
