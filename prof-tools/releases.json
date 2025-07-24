@@ -35,7 +35,8 @@
       "commit_hash": "dev-grader",
       "description": "TEST: Fixed folder structure import paths after auto-grader reorganization. Renamed auto-grader to auto_grader for Python compatibility and updated all import statements.",
       "test_version": true,
-      "testing_notes": "WARNING: This is a test version for development purposes."
+      "testing_notes": "WARNING: This is a test version for development purposes. Fixes import errors from folder restructuring."
+    },
     {
       "version": "0.3.5.2",
       "date": "2025-07-24",
