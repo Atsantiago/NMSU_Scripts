@@ -117,6 +117,10 @@ class ProfToolsSetup(object):
     def get_installation_path(self):
         return os.path.join(self.get_maya_documents_path(), self.install_dir)
     
+    def get_generic_installation_path(self):
+        """Get the generic installation path (without Maya version specifics)"""
+        return os.path.join(self.get_maya_documents_path(), self.install_dir)
+    
     def install_package(self):
         try:
             log_info("Starting prof-tools installation...")
