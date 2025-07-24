@@ -531,13 +531,20 @@ class LessonRubric(object):
         return layout
 
     def _create_performance_indicators_layout(self, criterion_name, criterion_data):
-        """Helper to create the performance level indicators."""
+        """Helper to create the performance level indicators with clickable buttons."""
         layout = cmds.rowLayout(numberOfColumns=5, columnAlign=[(i, 'center') for i in range(1, 6)], columnWidth=[(i, 60) for i in range(1, 6)], width=320)  # Fixed width to match header
         
         current_level = self._get_score_level_for_percentage(criterion_data['percentage'])
         for level_name in self.SCORE_LEVELS.keys():
             color = (0.4, 0.7, 0.4) if level_name == current_level else (0.6, 0.6, 0.6)
-            indicator = cmds.text(label=level_name.split()[0], backgroundColor=color, font="boldLabelFont", width=55, height=25)
+            # Create clickable button instead of text
+            indicator = cmds.button(
+                label=level_name.split()[0], 
+                backgroundColor=color, 
+                width=55, 
+                height=25,
+                command=lambda x, criterion=criterion_name, level=level_name: self._on_performance_indicator_click(criterion, level)
+            )
             self.ui_elements[f"{criterion_name}_level_{level_name.split()[0]}"] = indicator
             
         cmds.setParent('..')
@@ -575,6 +582,25 @@ class LessonRubric(object):
             self._update_percentage_value(criterion_name, new_percentage)
         except ValueError:
             logger.warning(f"Invalid percentage selection: {selection}")
+    
+    def _on_performance_indicator_click(self, criterion_name, level_name):
+        """Handle performance indicator button click."""
+        # Get the maximum percentage for this performance level
+        level_data = self.SCORE_LEVELS[level_name]
+        max_percentage = level_data['max']
+        
+        # Update the percentage field to the maximum value for this level
+        percentage_field = self.ui_elements[f"{criterion_name}_percentage_field"]
+        cmds.intField(percentage_field, edit=True, value=max_percentage)
+        
+        # Update the dropdown to show "Custom" since we're setting a specific value
+        dropdown = self.ui_elements[f"{criterion_name}_dropdown"]
+        cmds.optionMenu(dropdown, edit=True, value="Custom")
+        
+        # Update the criterion data and displays
+        self._update_percentage_value(criterion_name, max_percentage)
+        
+        logger.info(f"Set {criterion_name} to {max_percentage}% ({level_name})")
     
     def _on_percentage_field_change(self, criterion_name):
         """Handle manual percentage field change."""
@@ -649,7 +675,7 @@ class LessonRubric(object):
             level_key = f"{criterion_name}_level_{level_name.split()[0]}"
             if level_key in self.ui_elements:
                 color = (0.4, 0.7, 0.4) if level_name == current_level else (0.6, 0.6, 0.6)
-                cmds.text(
+                cmds.button(
                     self.ui_elements[level_key],
                     edit=True,
                     backgroundColor=color
