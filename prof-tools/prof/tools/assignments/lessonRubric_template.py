@@ -36,11 +36,11 @@ class LessonRubric(object):
     # Scoring system configuration - defines the 5-tier grading scale
     # Each level has a percentage range and default value for auto-scoring
     SCORE_LEVELS = OrderedDict([
-        ('No Marks', {'min': 0, 'max': 5, 'default': 0}),        # 0-5%: Not attempted or completely wrong
-        ('Low Marks', {'min': 6, 'max': 15, 'default': 10}),     # 6-15%: Minimal effort, major issues
-        ('Partial Marks', {'min': 16, 'max': 45, 'default': 30}), # 16-45%: Basic requirements met
-        ('High Marks', {'min': 46, 'max': 75, 'default': 50}),   # 46-75%: Good work, minor issues
-        ('Full Marks', {'min': 76, 'max': 100, 'default': 85})   # 76-100%: Excellent work, exceeds expectations
+        ('No Marks', {'min': 0, 'max': 0, 'default': 0}),        # 0%: Not attempted or completely wrong
+        ('Low Marks', {'min': 1, 'max': 69, 'default': 65}),     # 1-69%: Minimal effort, major issues
+        ('Partial Marks', {'min': 70, 'max': 84, 'default': 75}), # 70-84%: Basic requirements met
+        ('High Marks', {'min': 85, 'max': 99, 'default': 95}),   # 85-99%: Good work, minor issues
+        ('Full Marks', {'min': 100, 'max': 100, 'default': 100})   #100%: Excellent work, exceeds expectations
     ])
     
     # Common percentage values for quick selection in dropdowns
@@ -585,22 +585,22 @@ class LessonRubric(object):
     
     def _on_performance_indicator_click(self, criterion_name, level_name):
         """Handle performance indicator button click."""
-        # Get the maximum percentage for this performance level
+        # Get the default percentage for this performance level
         level_data = self.SCORE_LEVELS[level_name]
-        max_percentage = level_data['max']
+        default_percentage = level_data['default']
         
-        # Update the percentage field to the maximum value for this level
+        # Update the percentage field to the default value for this level
         percentage_field = self.ui_elements[f"{criterion_name}_percentage_field"]
-        cmds.intField(percentage_field, edit=True, value=max_percentage)
+        cmds.intField(percentage_field, edit=True, value=default_percentage)
         
         # Update the dropdown to show "Custom" since we're setting a specific value
         dropdown = self.ui_elements[f"{criterion_name}_percentage_dropdown"]
         cmds.optionMenu(dropdown, edit=True, value="Custom")
         
         # Update the criterion data and displays
-        self._update_percentage_value(criterion_name, max_percentage)
+        self._update_percentage_value(criterion_name, default_percentage)
         
-        logger.info(f"Set {criterion_name} to {max_percentage}% ({level_name})")
+        logger.info(f"Set {criterion_name} to {default_percentage}% ({level_name})")
     
     def _on_percentage_field_change(self, criterion_name):
         """Handle manual percentage field change."""
