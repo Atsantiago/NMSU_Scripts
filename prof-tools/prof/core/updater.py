@@ -557,7 +557,14 @@ def perform_automatic_update(include_test_versions=False):
             
             # Get the installation paths (both version-specific and generic)
             install_path = setup.get_installation_path()
-            generic_path = setup.get_generic_installation_path()
+            
+            # Try to get generic path if method exists, otherwise use install_path
+            try:
+                generic_path = setup.get_generic_installation_path()
+            except AttributeError:
+                # Fallback for older versions that don't have this method
+                generic_path = install_path
+                logger.info("Using fallback path - get_generic_installation_path() not available")
             
             # Remove existing installations from both paths
             removed_paths = []
