@@ -15,10 +15,121 @@ try:
 except ImportError:
     MAYA_AVAILABLE = False
 
-# Import the base rubric template
 from prof.tools.auto_grader.assignments.lessonRubric_template import LessonRubric
 import re
 
+
+# ==============================================================================
+# RUBRIC CONFIGURATION - Easy to modify criteria and points
+# ==============================================================================
+
+# Assignment Details
+ASSIGNMENT_TITLE = "FDMA 2530 - U01_SS01"
+PROJECT_NAME = "Primitive Modeling"
+TOTAL_POINTS = 10
+
+# Criteria Definition - Modify this list to add/remove/change criteria
+RUBRIC_CRITERIA = [
+    {
+        "name": "File Names",
+        "points": 2.0,
+        "description": "Proper naming conventions for Maya scene file and project structure",
+        "validation_function": "validate_file_name"
+    },
+    {
+        "name": "Outliner Organization",
+        "points": 2.0,
+        "description": "Clean hierarchy, proper grouping, and logical object naming in Maya's Outliner",
+        "validation_function": "validate_outliner_organization"
+    },
+    {
+        "name": "Primitive Design Principles",
+        "points": 2.0,
+        "description": "Effective use of primitive shapes with attention to proportion, balance, and composition",
+        "validation_function": "validate_primitive_design_principles"
+    },
+    {
+        "name": "Technical Execution",
+        "points": 2.0,
+        "description": "Proper modeling techniques, clean geometry, and appropriate use of Maya tools",
+        "validation_function": "validate_technical_execution"
+    },
+    {
+        "name": "Perceived Effort/ Professionalism",
+        "points": 2.0,
+        "description": "Overall quality, attention to detail, and demonstration of effort and professional standards",
+        "validation_function": "validate_effort_professionalism"
+    }
+]
+
+
+# ==============================================================================
+# MAIN RUBRIC CREATION FUNCTION
+# ==============================================================================
+
+def create_u01_ss01_rubric():
+    """
+    Create the FDMA 2530 U01_SS01 Primitives assignment rubric.
+    
+    Assignment Overview:
+    - Students create basic 3D models using primitive shapes
+    - Focus on proper file naming, organization, and technical execution
+    - Introduction to design principles and professionalism standards
+    """
+    # Get current file name for assignment context
+    file_name = "Primitives"
+    if MAYA_AVAILABLE:
+        try:
+            scene_name = cmds.file(query=True, sceneName=True, shortName=True)
+            if scene_name:
+                file_name = scene_name.rsplit('.', 1)[0]
+        except:
+            pass
+    
+    assignment_name = f"{ASSIGNMENT_TITLE}: {file_name}"
+    
+    # Create rubric instance
+    rubric = LessonRubric(
+        assignment_name=assignment_name,
+        assignment_display_name=file_name,
+        total_points=TOTAL_POINTS,
+        project_name=PROJECT_NAME
+    )
+    
+    # Add all criteria from configuration
+    for criterion in RUBRIC_CRITERIA:
+        rubric.add_criterion(
+            criterion["name"],
+            criterion["points"],
+            criterion["description"]
+        )
+    
+    # Run validation logic for each criterion
+    validation_results = {}
+    for criterion in RUBRIC_CRITERIA:
+        validation_func = globals().get(criterion["validation_function"])
+        if validation_func:
+            if criterion["validation_function"] == "validate_file_name":
+                score, comments = validation_func(file_name)
+            else:
+                score, comments = validation_func()
+            validation_results[criterion["name"]] = (score, comments)
+    
+    # Apply validation results to rubric
+    for criterion_name, (score, comments) in validation_results.items():
+        rubric.criteria[criterion_name]["percentage"] = score
+        rubric.criteria[criterion_name]["comments"] = comments
+        rubric.criteria[criterion_name]["manual_override"] = False
+    
+    # Show the rubric UI
+    rubric.show_rubric_ui()
+    
+    return rubric
+
+
+# ==============================================================================
+# VALIDATION FUNCTIONS
+# ==============================================================================
 
 def validate_file_name(file_name):
     """
@@ -31,6 +142,8 @@ def validate_file_name(file_name):
     - SS01: SoftSkill number (must be exactly "SS01") 
     - V##: Version number (must start with "V" + numbers)
     - ZZ/ZZZZ: Iteration number (optional, can be _## or .####)
+    
+    Scoring: 0 errors = 100%, 1 error = 90%, 2 errors = 70%, 3+ errors = 50%
     
     Args:
         file_name (str): The file name to validate
@@ -158,82 +271,80 @@ def validate_file_name(file_name):
     return (score, comments)
 
 
-def create_u01_ss01_rubric():
+def validate_outliner_organization():
     """
-    Create the FDMA 2530 U01_SS01 Primitives assignment rubric.
+    Validate Maya Outliner organization and hierarchy.
     
-    Assignment Overview:
-    - Students create basic 3D models using primitive shapes
-    - Focus on proper file naming, organization, and technical execution
-    - Introduction to design principles and professionalism standards
+    Checks for:
+    - Clean hierarchy structure
+    - Proper grouping of objects
+    - Logical object naming conventions
+    - No unnecessary empty groups
     
-    Total Points: 10 (5 criteria × 2 points each)
+    Scoring: 0 errors = 100%, 1 error = 90%, 2 errors = 70%, 3+ errors = 50%
+    
+    Returns:
+        tuple: (score_percentage, comments)
     """
-    # Get current file name for assignment context
-    file_name = "Primitives"  # Default filename if none found
-    if MAYA_AVAILABLE:
-        try:
-            scene_name = cmds.file(query=True, sceneName=True, shortName=True)
-            if scene_name:
-                # Use only the Maya file name (remove extension)
-                file_name = scene_name.rsplit('.', 1)[0]
-        except:
-            pass
+    # TODO: Implement outliner validation logic
+    return (85, "Manual evaluation required for Outliner Organization.")
+
+
+def validate_primitive_design_principles():
+    """
+    Validate design principles in primitive modeling.
     
-    # Window title will show: "Grading Rubric - FDMA 2530 - U01_SS01: filename"
-    # Assignment label inside will show: just the filename
-    assignment_name = f"FDMA 2530 - U01_SS01: {file_name}"
+    Checks for:
+    - Effective use of primitive shapes
+    - Attention to proportion and balance
+    - Good composition principles
+    - Creative use of basic forms
     
-    # Create rubric instance - 5 criteria × 2 points = 10 total points
-    rubric = LessonRubric(
-        assignment_name=assignment_name,           # Used for window title
-        assignment_display_name=file_name,        # Used for "Assignment:" label (just filename)
-        total_points=10, 
-        project_name="Primitive Modeling"         # Used for "Project Name" field
-    )
+    Scoring: 0 errors = 100%, 1 error = 90%, 2 errors = 70%, 3+ errors = 50%
     
-    # Add the 5 criteria (2 points each)
-    # 1. File Names - with automatic validation
-    rubric.add_criterion(
-        "File Names", 
-        2.0, 
-        "Proper naming conventions for Maya scene file and project structure"
-    )
+    Returns:
+        tuple: (score_percentage, comments)
+    """
+    # TODO: Implement design principles validation logic
+    return (85, "Manual evaluation required for Primitive Design Principles.")
+
+
+def validate_technical_execution():
+    """
+    Validate technical execution of modeling work.
     
-    # Automatically validate the file name and set the score
-    file_score, file_comments = validate_file_name(file_name)
-    rubric.criteria["File Names"]["percentage"] = file_score
-    rubric.criteria["File Names"]["comments"] = file_comments
-    rubric.criteria["File Names"]["manual_override"] = False  # Mark as auto-evaluated
+    Checks for:
+    - Proper modeling techniques
+    - Clean geometry (no overlapping faces, proper normals)
+    - Appropriate use of Maya tools
+    - No construction history issues
     
-    rubric.add_criterion(
-        "Outliner Organization", 
-        2.0, 
-        "Clean hierarchy, proper grouping, and logical object naming in Maya's Outliner"
-    )
+    Scoring: 0 errors = 100%, 1 error = 90%, 2 errors = 70%, 3+ errors = 50%
     
-    rubric.add_criterion(
-        "Primitive Design Principles", 
-        2.0, 
-        "Effective use of primitive shapes with attention to proportion, balance, and composition"
-    )
+    Returns:
+        tuple: (score_percentage, comments)
+    """
+    # TODO: Implement technical execution validation logic
+    return (85, "Manual evaluation required for Technical Execution.")
+
+
+def validate_effort_professionalism():
+    """
+    Validate overall effort and professionalism.
     
-    rubric.add_criterion(
-        "Technical Execution", 
-        2.0, 
-        "Proper modeling techniques, clean geometry, and appropriate use of Maya tools"
-    )
+    Checks for:
+    - Overall quality and attention to detail
+    - Demonstration of effort beyond minimum requirements
+    - Professional presentation and finish
+    - Evidence of learning and skill application
     
-    rubric.add_criterion(
-        "Perceived Effort/ Professionalism", 
-        2.0, 
-        "Overall quality, attention to detail, and demonstration of effort and professional standards"
-    )
+    Scoring: 0 errors = 100%, 1 error = 90%, 2 errors = 70%, 3+ errors = 50%
     
-    # Show the rubric UI
-    rubric.show_rubric_ui()
-    
-    return rubric
+    Returns:
+        tuple: (score_percentage, comments)
+    """
+    # TODO: Implement effort/professionalism validation logic
+    return (85, "Manual evaluation required for Perceived Effort/Professionalism.")
 
 
 if __name__ == "__main__":
