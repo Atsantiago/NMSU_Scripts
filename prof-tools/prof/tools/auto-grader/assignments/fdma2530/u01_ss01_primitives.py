@@ -16,7 +16,7 @@ except ImportError:
     MAYA_AVAILABLE = False
 
 # Import the base rubric template
-from prof.tools.assignments.lessonRubric_template import LessonRubric
+from prof.tools.auto_grader.assignments.lessonRubric_template import LessonRubric
 
 
 def create_u01_ss01_rubric():

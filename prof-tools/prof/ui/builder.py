@@ -346,7 +346,7 @@ def _open_github():
 def _open_grading_rubric():
     """Open the assignment grading rubric system."""
     try:
-        from prof.tools.assignments.example_assignment_rubrics import grade_current_assignment
+        from prof.tools.auto_grader.assignments.example_assignment_rubrics import grade_current_assignment
         grade_current_assignment()
         logger.info("Opened grading rubric system")
     except Exception as e:
@@ -638,7 +638,7 @@ def _revert_to_stable():
 def _open_u01_ss01_rubric():
     """Open the FDMA 2530 U01_SS01 Primitives assignment rubric."""
     try:
-        from prof.tools.assignments.fdma2530.u01_ss01_primitives import create_u01_ss01_rubric
+        from prof.tools.auto_grader.assignments.fdma2530.u01_ss01_primitives import create_u01_ss01_rubric
         create_u01_ss01_rubric()
         logger.info("Opened FDMA 2530 U01_SS01 Primitives rubric")
     except Exception as e:

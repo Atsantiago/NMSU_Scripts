@@ -50,7 +50,7 @@ A comprehensive grading rubric system for Maya assignments that provides standar
 
 #### Basic Template Usage
 ```python
-from prof.tools.assignments.lessonRubric_template import LessonRubric
+from prof.tools.auto_grader.assignments.lessonRubric_template import LessonRubric
 
 # Create rubric instance
 rubric = LessonRubric(assignment_name="My Assignment", total_points=10)

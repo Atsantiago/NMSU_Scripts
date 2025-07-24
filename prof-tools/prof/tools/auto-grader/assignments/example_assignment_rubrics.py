@@ -32,7 +32,7 @@ from __future__ import absolute_import, division, print_function
 # Import handling with graceful fallback for non-Maya environments
 try:
     import maya.cmds as cmds  # Maya's command interface for UI and scene operations
-    from prof.tools.assignments.lessonRubric_template import LessonRubric  # Our custom rubric class
+    from prof.tools.auto_grader.assignments.lessonRubric_template import LessonRubric  # Our custom rubric class
     MAYA_AVAILABLE = True  # Flag to track if Maya is available for UI operations
 except ImportError:
     # Graceful handling when Maya is not available (e.g., during development/testing)
@@ -408,11 +408,11 @@ def _select_and_close_assignment(assignment_type, window_name):
     
     # Route to appropriate rubric
     if assignment_type == "u01_ss01":
-        from prof.tools.assignments.fdma2530.u01_ss01_primitives import create_u01_ss01_rubric
+        from prof.tools.auto_grader.assignments.fdma2530.u01_ss01_primitives import create_u01_ss01_rubric
         return create_u01_ss01_rubric()
     else:
         # Default case: custom/sample rubric
-        from prof.tools.assignments.lessonRubric_template import create_sample_rubric
+        from prof.tools.auto_grader.assignments.lessonRubric_template import create_sample_rubric
         return create_sample_rubric()
 
 if __name__ == "__main__":
