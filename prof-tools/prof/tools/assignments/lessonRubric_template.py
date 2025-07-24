@@ -594,7 +594,7 @@ class LessonRubric(object):
         cmds.intField(percentage_field, edit=True, value=max_percentage)
         
         # Update the dropdown to show "Custom" since we're setting a specific value
-        dropdown = self.ui_elements[f"{criterion_name}_dropdown"]
+        dropdown = self.ui_elements[f"{criterion_name}_percentage_dropdown"]
         cmds.optionMenu(dropdown, edit=True, value="Custom")
         
         # Update the criterion data and displays
