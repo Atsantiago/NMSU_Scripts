@@ -266,50 +266,152 @@ def create_environment_modeling_rubric():
 # Example usage functions
 def grade_current_assignment():
     """
-    Quick function to open a rubric for the current file with assignment type selection.
+    Main entry point for assignment grading selection.
     
     FUNCTIONALITY:
-    - Displays a dialog for instructors to choose assignment type
-    - Automatically loads the appropriate rubric template
-    - Provides fallback to sample rubric for custom assignments
+    - Creates a comprehensive dialog with sections for each course
+    - Provides organized access to all available rubrics
+    - Allows users to access rubrics through menu or dialog
     
-    UI INTERACTION PATTERN:
-    1. Maya's confirmDialog creates a button-based selection interface
-    2. Button selection determines which rubric function to call
-    3. Each rubric function handles its own UI creation and display
-    
-    EXTENSIBILITY:
-    You can add new assignment types by:
-    1. Adding a new button to the dialog
-    2. Creating a corresponding elif condition
-    3. Writing a new rubric creation function
+    TECHNICAL APPROACH:
+    - Uses Maya's window system for better layout control
+    - Sections separated by visual dividers
+    - Consistent with Maya UI patterns and prof-tools design
     """
     if not MAYA_AVAILABLE:
-        print("Maya required for grading functionality")
-        return
+        print("Maya not available - cannot display assignment selection")
+        return None
     
-    # Maya's confirmDialog creates a modal dialog with custom buttons
-    # This provides an intuitive interface for assignment type selection
-    result = cmds.confirmDialog(
-        title="Select Assignment Type",
-        message="What type of assignment would you like to grade?",
-        button=["Modeling Basics", "Character", "Environment", "Custom"],  # Available options
-        defaultButton="Custom",    # Default selection if user just presses Enter
-        cancelButton="Custom",     # What to do if user cancels/closes dialog
-        dismissString="Custom"     # What to return if dialog is dismissed
+    # Create assignment selection window
+    window_name = "assignmentGradingWindow"
+    
+    # Clean up any existing window
+    if cmds.window(window_name, exists=True):
+        cmds.deleteUI(window_name, window=True)
+    
+    # Create main window
+    window = cmds.window(
+        window_name,
+        title="Assignment Grading Rubric",
+        widthHeight=(400, 300),
+        resizeToFitChildren=True,
+        sizeable=False
     )
     
-    # Route to appropriate rubric based on user selection
-    # Each condition calls a different rubric creation function
-    if result == "Modeling Basics":
-        return create_modeling_basics_rubric()
-    elif result == "Character":
-        return create_character_modeling_rubric()
-    elif result == "Environment":
-        return create_environment_modeling_rubric()
+    # Main layout
+    main_layout = cmds.columnLayout(
+        adjustableColumn=True,
+        columnAttach=('both', 20),
+        parent=window
+    )
+    
+    # Header
+    cmds.text(
+        label="Select an Assignment to Grade",
+        font="boldLabelFont",
+        align="center",
+        height=30,
+        parent=main_layout
+    )
+    
+    cmds.separator(height=15, parent=main_layout)
+    
+    # FDMA 1510 Section
+    cmds.text(
+        label="FDMA 1510",
+        font="boldLabelFont",
+        align="left",
+        parent=main_layout
+    )
+    
+    fdma1510_layout = cmds.rowColumnLayout(
+        numberOfColumns=1,
+        columnAlign=[(1, 'left')],
+        columnWidth=[(1, 350)],
+        parent=main_layout
+    )
+    
+    cmds.text(label="(No assignments available yet)", enable=False, parent=fdma1510_layout)
+    
+    cmds.setParent(main_layout)
+    cmds.separator(height=15, parent=main_layout)
+    
+    # FDMA 2530 Section  
+    cmds.text(
+        label="FDMA 2530",
+        font="boldLabelFont",
+        align="left",
+        parent=main_layout
+    )
+    
+    fdma2530_layout = cmds.rowColumnLayout(
+        numberOfColumns=1,
+        columnAlign=[(1, 'left')],
+        columnWidth=[(1, 350)],
+        parent=main_layout
+    )
+    
+    cmds.button(
+        label="U01_L01_Primitives",
+        command=lambda *args: _select_and_close_assignment("u01_ss01", window_name),
+        height=30,
+        parent=fdma2530_layout
+    )
+    
+    cmds.setParent(main_layout)
+    cmds.separator(height=15, parent=main_layout)
+    
+    # Custom Section
+    cmds.text(
+        label="General",
+        font="boldLabelFont", 
+        align="left",
+        parent=main_layout
+    )
+    
+    general_layout = cmds.rowColumnLayout(
+        numberOfColumns=1,
+        columnAlign=[(1, 'left')],
+        columnWidth=[(1, 350)],
+        parent=main_layout
+    )
+    
+    cmds.button(
+        label="Custom",
+        command=lambda *args: _select_and_close_assignment("custom", window_name),
+        height=30,
+        parent=general_layout
+    )
+    
+    cmds.setParent(main_layout)
+    cmds.separator(height=20, parent=main_layout)
+    
+    # Cancel button
+    cmds.button(
+        label="Cancel",
+        command=lambda *args: cmds.deleteUI(window_name, window=True),
+        height=35,
+        width=100,
+        parent=main_layout
+    )
+    
+    cmds.separator(height=10, parent=main_layout)
+    
+    # Show window
+    cmds.showWindow(window)
+
+
+def _select_and_close_assignment(assignment_type, window_name):
+    """Helper function to handle assignment selection and window cleanup."""
+    # Close the selection window
+    cmds.deleteUI(window_name, window=True)
+    
+    # Route to appropriate rubric
+    if assignment_type == "u01_ss01":
+        from prof.tools.assignments.fdma2530.u01_ss01_primitives import create_u01_ss01_rubric
+        return create_u01_ss01_rubric()
     else:
-        # Default case: import and use the generic sample rubric
-        # This allows for custom assignments or testing
+        # Default case: custom/sample rubric
         from prof.tools.assignments.lessonRubric_template import create_sample_rubric
         return create_sample_rubric()
 

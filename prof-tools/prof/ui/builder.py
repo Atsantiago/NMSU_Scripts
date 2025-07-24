@@ -83,14 +83,18 @@ def _build_grading_section(parent_menu):
     cmds.menuItem(label="(no tools yet)", enable=False, parent=fdma1510)
     cmds.setParent('..', menu=True)  # close FDMA 1510 submenu
 
-    # FDMA 2530 placeholder
+    # FDMA 2530 submenu
     fdma2530 = cmds.menuItem(
         label="FDMA 2530",
         subMenu=True,
         tearOff=True,
         parent=grading
     )
-    cmds.menuItem(label="(no tools yet)", enable=False, parent=fdma2530)
+    cmds.menuItem(
+        label="U01_L01_Primitives",
+        parent=fdma2530,
+        command=lambda *args: _open_u01_ss01_rubric()
+    )
     cmds.setParent('..', menu=True)  # close FDMA 2530 submenu
 
     cmds.setParent('..', menu=True)    # close Grading Tools submenu
@@ -627,6 +631,21 @@ def _revert_to_stable():
         cmds.confirmDialog(
             title="Error",
             message="Failed to revert to stable version. Please check the console for details.",
+            button=["OK"]
+        )
+
+
+def _open_u01_ss01_rubric():
+    """Open the FDMA 2530 U01_SS01 Primitives assignment rubric."""
+    try:
+        from prof.tools.assignments.fdma2530.u01_ss01_primitives import create_u01_ss01_rubric
+        create_u01_ss01_rubric()
+        logger.info("Opened FDMA 2530 U01_SS01 Primitives rubric")
+    except Exception as e:
+        logger.error("Failed to open U01_SS01 rubric: %s", e)
+        cmds.confirmDialog(
+            title="Error",
+            message="Failed to open U01_SS01 rubric. Please check the console for details.",
             button=["OK"]
         )
 
