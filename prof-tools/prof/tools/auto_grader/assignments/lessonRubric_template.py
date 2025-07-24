@@ -212,6 +212,9 @@ class LessonRubric(object):
         performance level. This provides consistent, helpful feedback across
         all assignments and instructors.
         
+        IMPORTANT: If comments already exist (e.g., from validation functions),
+        they will be preserved instead of being overwritten with generic comments.
+        
         Args:
             criterion_name (str): Name of the criterion to generate comments for
             
@@ -222,6 +225,15 @@ class LessonRubric(object):
             return ""
             
         criterion = self.criteria[criterion_name]
+        
+        # PRESERVE EXISTING COMMENTS: If comments already exist and are not empty,
+        # return them instead of generating new generic ones. This allows
+        # assignment-specific validation functions to provide detailed feedback
+        # that won't be overwritten by the generic template comments.
+        existing_comments = criterion.get('comments', '').strip()
+        if existing_comments:
+            return existing_comments
+        
         percentage = criterion['percentage']
         level = self._get_score_level_for_percentage(percentage)
         
@@ -481,8 +493,13 @@ class LessonRubric(object):
         )
 
         # Bottom row elements (comments and copy button)
-        comments = self._generate_comments(criterion_name)
-        comment_field = cmds.scrollField(text=comments, editable=True, wordWrap=True, height=40, font="plainLabelFont")
+        # Use existing comments from validation functions if available, 
+        # otherwise generate generic comments
+        existing_comments = criterion_data.get('comments', '').strip()
+        if not existing_comments:
+            existing_comments = self._generate_comments(criterion_name)
+        
+        comment_field = cmds.scrollField(text=existing_comments, editable=True, wordWrap=True, height=40, font="plainLabelFont")
         copy_button = cmds.button(label="Copy", command=lambda *args, cn=criterion_name: self._copy_criterion_comment(cn), height=40, width=50)
 
         # Store UI elements that need updating
@@ -650,7 +667,12 @@ class LessonRubric(object):
         """Update criterion percentage and refresh displays."""
         # Update criterion data
         self.criteria[criterion_name]['percentage'] = new_percentage
-        self.criteria[criterion_name]['comments'] = self._generate_comments(criterion_name)
+        
+        # Only update comments if they don't already exist (preserves validation function comments)
+        # This ensures that specific comments from validation functions aren't overwritten
+        # when the user changes percentages manually
+        if not self.criteria[criterion_name].get('comments', '').strip():
+            self.criteria[criterion_name]['comments'] = self._generate_comments(criterion_name)
         
         # Update displays
         self._update_criterion_display(criterion_name)
@@ -704,11 +726,17 @@ class LessonRubric(object):
         
         # Update comment field if it exists
         if f"{criterion_name}_comment_field" in self.ui_elements:
-            comments = self._generate_comments(criterion_name)
+            # Get existing comments from the criterion data, not from _generate_comments
+            # This preserves specific validation function comments
+            existing_comments = self.criteria[criterion_name].get('comments', '')
+            if not existing_comments.strip():
+                # Only generate generic comments if no specific comments exist
+                existing_comments = self._generate_comments(criterion_name)
+            
             cmds.scrollField(
                 self.ui_elements[f"{criterion_name}_comment_field"],
                 edit=True,
-                text=comments
+                text=existing_comments
             )
     
     def _update_total_score_display(self):
@@ -755,7 +783,12 @@ class LessonRubric(object):
             results.append(f"Criterion: {criterion_name}")
             results.append(f"  Score: {score:.1f}/{criterion_data['point_value']:.1f} ({percentage}%)")
             results.append(f"  Level: {level}")
-            results.append(f"  Comments: {self._generate_comments(criterion_name)}")
+            
+            # Use existing comments from validation functions if available
+            existing_comments = criterion_data.get('comments', '').strip()
+            if not existing_comments:
+                existing_comments = self._generate_comments(criterion_name)
+            results.append(f"  Comments: {existing_comments}")
             results.append("")
         
         total_score = self.calculate_total_score()
