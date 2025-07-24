@@ -1,6 +1,6 @@
 {
   "tool_name": "prof-tools",
-  "current_version": "0.3.4",
+  "current_version": "0.3.5",
   "latest_test_version": "0.3.4.2",
   "description": "Maya instructor tools for grading and managing student assignments across NMSU's FDMA courses for the Creative Media Institute (CMI)",
   "author": "Alexander T. Santiago",
@@ -29,6 +29,12 @@
     }
   },
   "releases": [
+    {
+      "version": "0.3.5",
+      "date": "2025-07-24",
+      "commit_hash": "master",
+      "description": "Enhanced rubric with interactive performance indicators: Click performance level buttons (No, Low, Partial, High, Full) to set default scores (0%, 65%, 75%, 95%, 100%). Fixed KeyError bug, improved grading workflow efficiency, and updated scoring ranges for better grade distribution."
+    },
     {
       "version": "0.3.4.2",
       "date": "2025-07-24",
