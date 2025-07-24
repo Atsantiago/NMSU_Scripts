@@ -46,17 +46,21 @@ class LessonRubric(object):
     # Common percentage values for quick selection in dropdowns
     PERCENTAGE_OPTIONS = [0, 10, 30, 50, 70, 85, 95, 100]
     
-    def __init__(self, assignment_name="Assignment", total_points=10):
+    def __init__(self, assignment_name="Assignment", total_points=10, project_name=None, assignment_display_name=None):
         """
         Initialize the rubric with assignment details.
         
         Args:
-            assignment_name (str): Name of the assignment
+            assignment_name (str): Name of the assignment (used for window title)
             total_points (int): Total points for the assignment (default: 10)
+            project_name (str): Display name for the project (default: None, shows "Project Name")
+            assignment_display_name (str): Name shown in assignment label (default: None, uses assignment_name)
         """
         # Initialize core instance variables
         self.assignment_name = assignment_name
+        self.assignment_display_name = assignment_display_name if assignment_display_name else assignment_name
         self.total_points = total_points
+        self.project_name = project_name if project_name else "Project Name"
         self.criteria = OrderedDict()  # Stores all grading criteria with their data
         self.window_name = "lessonRubricWindow"  # Unique identifier for Maya UI window
         self.ui_elements = {}  # Dictionary to store UI element references for updates
@@ -309,16 +313,16 @@ class LessonRubric(object):
         
         # Header section with assignment information
         cmds.text(
-            label=f"Assignment: {self.assignment_name}",
+            label=f"Assignment: {self.assignment_display_name}",
             font="boldLabelFont",  # Use Maya's bold font for emphasis
             align="left",
             wordWrap=True,
             parent=main_layout
         )
         
-        # TODO: Update this with the project-specific name for each rubric
+        # Project name display - now customizable per assignment
         cmds.text(
-            label="Project Name",
+            label=self.project_name,
             font="plainLabelFont",
             align="center",
             parent=main_layout

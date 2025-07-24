@@ -31,18 +31,27 @@ def create_u01_ss01_rubric():
     Total Points: 10 (5 criteria × 2 points each)
     """
     # Get current file name for assignment context
-    assignment_name = "FDMA 2530 - U01_SS01: Primitives"
+    file_name = "Primitives"  # Default filename if none found
     if MAYA_AVAILABLE:
         try:
             scene_name = cmds.file(query=True, sceneName=True, shortName=True)
             if scene_name:
-                # Use the Maya file name but keep the assignment context
-                assignment_name = f"FDMA 2530 - U01_SS01: {scene_name.rsplit('.', 1)[0]}"
+                # Use only the Maya file name (remove extension)
+                file_name = scene_name.rsplit('.', 1)[0]
         except:
             pass
     
+    # Window title will show: "Grading Rubric - FDMA 2530 - U01_SS01: filename"
+    # Assignment label inside will show: just the filename
+    assignment_name = f"FDMA 2530 - U01_SS01: {file_name}"
+    
     # Create rubric instance - 5 criteria × 2 points = 10 total points
-    rubric = LessonRubric(assignment_name=assignment_name, total_points=10)
+    rubric = LessonRubric(
+        assignment_name=assignment_name,           # Used for window title
+        assignment_display_name=file_name,        # Used for "Assignment:" label (just filename)
+        total_points=10, 
+        project_name="Primitive Modeling"         # Used for "Project Name" field
+    )
     
     # Add the 5 criteria (2 points each)
     rubric.add_criterion(
