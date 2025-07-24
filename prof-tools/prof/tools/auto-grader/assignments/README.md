@@ -99,12 +99,200 @@ rubric.add_criterion("Documentation", 0.5, "Reference usage, process notes")
 ## File Structure
 
 ```
-prof-tools/prof/tools/assignments/
-├── __init__.py                     # Module initialization
-├── lessonRubric_template.py        # Main rubric system
-├── example_assignment_rubrics.py   # Pre-built assignment rubrics
-└── README.md                       # This documentation
+prof/tools/auto-grader/assignments/
+├── __init__.py                      # Package initialization
+├── README.md                       # This documentation
+├── lessonRubric_template.py        # 🎯 Core rubric framework
+├── example_assignment_rubrics.py   # Dialog system and example rubrics
+├── fdma1510/                       # FDMA 1510 course assignments
+│   ├── __init__.py
+│   └── (assignments coming soon)
+└── fdma2530/                       # FDMA 2530 course assignments
+    ├── __init__.py
+    └── u01_ss01_primitives.py      # U01_SS01 Primitives assignment
 ```
+
+## Development Guide
+
+### Creating New Course Assignments
+
+#### 1. Create Course Directory
+```bash
+# Create new course folder
+mkdir prof/tools/auto-grader/assignments/fdma1510
+touch prof/tools/auto-grader/assignments/fdma1510/__init__.py
+```
+
+#### 2. Create Assignment Rubric
+```python
+# prof/tools/auto-grader/assignments/fdma1510/u01_animation_basics.py
+from prof.tools.auto_grader.assignments.lessonRubric_template import LessonRubric
+
+def create_u01_animation_rubric():
+    rubric = LessonRubric("FDMA 1510 - U01: Animation Basics", total_points=10)
+    
+    # Add criteria (must total 10 points)
+    rubric.add_criterion("Keyframe Timing", 2.5, "Proper spacing and timing")
+    rubric.add_criterion("Animation Principles", 2.5, "Squash/stretch, anticipation")
+    rubric.add_criterion("Technical Execution", 2.0, "Clean curves, proper setup")
+    rubric.add_criterion("File Organization", 1.5, "Naming, scene structure")
+    rubric.add_criterion("Creative Interpretation", 1.5, "Artistic choices")
+    
+    rubric.show_rubric_ui()
+    return rubric
+```
+
+#### 3. Update Menu System
+Add the new assignment to `prof/ui/builder.py`:
+```python
+# Add menu item in appropriate course section
+def _build_grading_section(self, parent):
+    # ... existing code ...
+    
+    # FDMA 1510 submenu
+    fdma1510_menu = cmds.menuItem(
+        label="FDMA 1510",
+        subMenu=True,
+        parent=grading_menu
+    )
+    
+    cmds.menuItem(
+        label="U01_Animation_Basics",
+        command=lambda *args: self._open_u01_animation_rubric(),
+        parent=fdma1510_menu
+    )
+
+def _open_u01_animation_rubric(self):
+    """Open the FDMA 1510 U01 Animation Basics rubric."""
+    try:
+        from prof.tools.auto_grader.assignments.fdma1510.u01_animation_basics import create_u01_animation_rubric
+        create_u01_animation_rubric()
+    except Exception as e:
+        logger.error(f"Failed to open U01 Animation rubric: {e}")
+```
+
+#### 4. Update Assignment Dialog
+Add to the dialog in `example_assignment_rubrics.py`:
+```python
+# Add button to FDMA 1510 section
+cmds.button(
+    label="U01_Animation_Basics",
+    command=lambda *args: _select_and_close_assignment("u01_animation", window_name),
+    height=30,
+    parent=fdma1510_layout
+)
+
+# Add routing logic
+def _select_and_close_assignment(assignment_type, window_name):
+    cmds.deleteUI(window_name, window=True)
+    
+    if assignment_type == "u01_animation":
+        from prof.tools.auto_grader.assignments.fdma1510.u01_animation_basics import create_u01_animation_rubric
+        return create_u01_animation_rubric()
+    # ... existing routing ...
+```
+
+### Best Practices
+
+#### For Rubric Design
+1. **Point Distribution**: Always total exactly 10 points
+2. **Criterion Balance**: 
+   - Technical skills: 40-60% of points
+   - Creative/artistic: 20-30% of points  
+   - Organization/process: 15-25% of points
+3. **Clear Descriptions**: Specific, measurable criteria
+4. **Course Alignment**: Match learning objectives
+
+#### For Code Organization
+1. **Naming Convention**: `course_assignment_type.py` (e.g., `u01_primitives.py`)
+2. **Function Names**: `create_[assignment]_rubric()` format
+3. **Documentation**: Include assignment overview and point breakdown
+4. **Error Handling**: Graceful fallbacks for import/execution errors
+
+#### For User Experience
+1. **Consistency**: Use standardized criteria across similar assignments
+2. **Clarity**: Provide clear descriptions for each criterion
+3. **Fairness**: Use percentage ranges consistently
+4. **Documentation**: Export results for gradebook integration
+5. **Feedback**: Use auto-generated comments as starting points
+
+### For Grading Workflow
+1. **Setup**: Create assignment-specific rubrics in advance
+2. **Efficiency**: Use interactive performance indicators for quick scoring
+3. **Review**: Double-check auto-calculations before finalizing
+4. **Export**: Save results before closing Maya
+5. **Consistency**: Apply same standards across all students
+
+## Future Enhancements
+
+### Planned Features
+- **Batch Grading**: Process multiple files automatically
+- **LMS Integration**: Direct export to Canvas/Blackboard gradebooks
+- **Custom Comments**: Save and reuse frequent feedback templates
+- **Rubric Analytics**: Track grade distributions and common issues
+- **Scene Validation**: Automated technical requirement checking
+
+### Technical Improvements
+- **Performance**: Optimize for large scene files and complex geometry
+- **UI/UX**: Enhanced interface with better visual feedback and accessibility
+- **Validation**: Improved error handling and input validation
+- **Documentation**: Interactive tutorials and video guides
+
+## Version History
+
+**v0.3.5** (Current)
+- ✅ Interactive performance indicators with click-to-score
+- ✅ Course-organized assignment structure
+- ✅ Enhanced rubric UI with real-time updates
+- ✅ Multi-Maya version compatibility
+
+**v0.3.0-0.3.4**
+- ✅ Core rubric system with 5-tier scoring
+- ✅ Assignment dialog organization
+- ✅ Export capabilities and auto-comments
+- ✅ Maya integration and menu system
+
+## Support & Contributing
+
+### Getting Help
+- **Documentation**: [Prof-Tools Wiki](https://github.com/Atsantiago/NMSU_Scripts/wiki)
+- **Issues**: [GitHub Issues](https://github.com/Atsantiago/NMSU_Scripts/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Atsantiago/NMSU_Scripts/discussions)
+
+### Contributing
+1. **Fork** the repository
+2. **Create** a feature branch
+3. **Add** your assignment rubrics or improvements
+4. **Test** thoroughly with actual Maya scenes
+5. **Submit** a pull request with clear description
+
+### Development Environment
+```bash
+# Clone repository
+git clone https://github.com/Atsantiago/NMSU_Scripts.git
+cd NMSU_Scripts/prof-tools
+
+# Install development dependencies
+pip install -r requirements-dev.txt
+
+# Run tests
+python -m pytest prof/tests/
+```
+
+## 👨‍💻 Author
+
+**Alexander T. Santiago**  
+Creative Media Institute, New Mexico State University  
+GitHub: [@Atsantiago](https://github.com/Atsantiago)  
+Portfolio: [ArtStation](https://atsantiago.artstation.com/)
+
+---
+
+**Version**: 0.3.5  
+**Compatible with**: Maya 2020+ (Python 3.x)  
+**License**: MIT
+
+> *Built by educators, for educators - streamlining the grading process while maintaining academic rigor and providing meaningful feedback to students.*
 
 ## Technical Details
 
