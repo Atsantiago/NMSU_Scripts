@@ -555,16 +555,28 @@ def perform_automatic_update(include_test_versions=False):
             from prof.core.setup import ProfToolsSetup
             setup = ProfToolsSetup()
             
-            # Get the installation path
+            # Get the installation paths (both version-specific and generic)
             install_path = setup.get_installation_path()
+            generic_path = setup.get_generic_installation_path()
             
-            # Remove existing installation
+            # Remove existing installations from both paths
+            removed_paths = []
             if os.path.exists(install_path):
                 shutil.rmtree(install_path)
+                removed_paths.append(install_path)
+                logger.info("Removed existing installation: %s", install_path)
+                
+            if os.path.exists(generic_path) and generic_path != install_path:
+                shutil.rmtree(generic_path)
+                removed_paths.append(generic_path)
+                logger.info("Removed existing generic installation: %s", generic_path)
             
-            # Copy new files
+            # Install to the version-specific path
             prof_source = os.path.join(prof_tools_source, "prof")
             if os.path.exists(prof_source):
+                # Ensure parent directory exists
+                if not os.path.exists(os.path.dirname(install_path)):
+                    os.makedirs(os.path.dirname(install_path))
                 shutil.copytree(prof_source, install_path)
                 logger.info("Successfully copied updated files to: %s", install_path)
             else:

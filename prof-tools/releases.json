@@ -1,7 +1,7 @@
 {
   "tool_name": "prof-tools",
-  "current_version": "0.3.0",
-  "latest_test_version": "0.3.0",
+  "current_version": "0.3.1",
+  "latest_test_version": "0.3.1",
   "description": "Maya instructor tools for grading and managing student assignments across NMSU's FDMA courses for the Creative Media Institute (CMI)",
   "author": "Alexander T. Santiago",
   "repository": "https://github.com/Atsantiago/NMSU_Scripts",
@@ -29,6 +29,12 @@
     }
   },
   "releases": [
+    {
+      "version": "0.3.1",
+      "date": "2025-07-24",
+      "commit_hash": "master",
+      "description": "Fixed Maya persistence issue: Install to generic path (~/Documents/maya/prof-tools) but create userSetup.mel entries in ALL Maya version folders (2024, 2025, etc.). Tools now persist across Maya sessions and work with multiple Maya versions automatically."
+    },
     {
       "version": "0.3.0",
       "date": "2025-07-22",
