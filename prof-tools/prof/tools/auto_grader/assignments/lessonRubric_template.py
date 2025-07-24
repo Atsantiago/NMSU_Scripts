@@ -464,7 +464,7 @@ class LessonRubric(object):
         # --- A. Create all UI Elements for this row ---
         
         # Top row elements
-        crit_name_ui = cmds.text(label=criterion_name, align='left', width=150, wordWrap=True)
+        crit_name_ui = cmds.text(label=criterion_name, align='left', width=150, wordWrap=True, height=30)
         score_layout = self._create_score_input_layout(criterion_name, criterion_data)
         perf_layout = self._create_performance_indicators_layout(criterion_name, criterion_data)
         points_layout = self._create_points_display_layout(criterion_name, criterion_data)
@@ -475,7 +475,7 @@ class LessonRubric(object):
             label=description_text, 
             align='left', 
             wordWrap=True, 
-            font="smallPlainLabelFont",
+            font="plainLabelFont",
             backgroundColor=(0.25, 0.25, 0.25),
             height=20
         )
