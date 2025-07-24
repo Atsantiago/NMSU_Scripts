@@ -99,7 +99,7 @@ rubric.add_criterion("Documentation", 0.5, "Reference usage, process notes")
 ## File Structure
 
 ```
-prof/tools/auto-grader/assignments/
+prof/tools/auto_grader/assignments/
 ├── __init__.py                      # Package initialization
 ├── README.md                       # This documentation
 ├── lessonRubric_template.py        # 🎯 Core rubric framework
@@ -119,13 +119,13 @@ prof/tools/auto-grader/assignments/
 #### 1. Create Course Directory
 ```bash
 # Create new course folder
-mkdir prof/tools/auto-grader/assignments/fdma1510
-touch prof/tools/auto-grader/assignments/fdma1510/__init__.py
+mkdir prof/tools/auto_grader/assignments/fdma1510
+touch prof/tools/auto_grader/assignments/fdma1510/__init__.py
 ```
 
 #### 2. Create Assignment Rubric
 ```python
-# prof/tools/auto-grader/assignments/fdma1510/u01_animation_basics.py
+# prof/tools/auto_grader/assignments/fdma1510/u01_animation_basics.py
 from prof.tools.auto_grader.assignments.lessonRubric_template import LessonRubric
 
 def create_u01_animation_rubric():
