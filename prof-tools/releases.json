@@ -1,7 +1,7 @@
 {
   "tool_name": "prof-tools",
-  "current_version": "0.3.1",
-  "latest_test_version": "0.3.2",
+  "current_version": "0.3.3",
+  "latest_test_version": "0.3.3.1",
   "description": "Maya instructor tools for grading and managing student assignments across NMSU's FDMA courses for the Creative Media Institute (CMI)",
   "author": "Alexander T. Santiago",
   "repository": "https://github.com/Atsantiago/NMSU_Scripts",
@@ -30,7 +30,13 @@
   },
   "releases": [
     {
-      "version": "0.3.2",
+      "version": "0.3.3",
+      "date": "2025-07-24",
+      "commit_hash": "master",
+      "description": "Fixed updater error: Added missing get_generic_installation_path() method to ProfToolsSetup class. Resolves 'object has no attribute' error during automatic updates."
+    },
+    {
+      "version": "0.3.3.1",
       "date": "2025-07-24",
       "commit_hash": "dev-grader",
       "description": "TEST: Added interactive performance indicators to rubric template - click on performance levels (No, Low, Partial, High, Full) to automatically set score to the maximum percentage for that range",
