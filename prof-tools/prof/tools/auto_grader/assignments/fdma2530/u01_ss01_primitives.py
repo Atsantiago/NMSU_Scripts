@@ -34,31 +34,66 @@ RUBRIC_CRITERIA = [
         "name": "File Names",
         "points": 2.0,
         "description": "Proper naming conventions for Maya scene file and project structure",
-        "validation_function": "validate_file_name"
+        "validation_function": "validate_file_name",
+        "general_performance_comments": {
+            100: "Perfect file naming! Follows XX_U01_SS01_V##[_##|.####] format exactly.",
+            90: "Good file naming with 1 minor error. Review naming convention on Canvas.",
+            70: "File naming has 2 errors. Check the required format: XX_U01_SS01_V##[_##|.####]",
+            50: "File naming has 3+ errors. Please review the naming instructions on Canvas carefully.",
+            0: "No valid file name found or completely incorrect format."
+        }
     },
     {
         "name": "Outliner Organization",
         "points": 2.0,
-        "description": "Clean hierarchy, proper grouping, and logical object naming in Maya's Outliner",
-        "validation_function": "validate_outliner_organization"
+        "description": "Clean hierarchy, proper grouping, and logical object naming in the Outliner",
+        "validation_function": "validate_outliner_organization",
+        "general_performance_comments": {
+            100: "Excellent outliner organization! Clean hierarchy with logical grouping and naming.",
+            90: "Good organization with 1 minor issue. Objects well-grouped with mostly clear naming.",
+            70: "Basic organization present but 2 areas need improvement (grouping/naming/hierarchy).",
+            50: "Poor organization with 3+ issues. Review outliner best practices on Canvas.",
+            0: "No clear organization visible. Objects scattered without logical structure."
+        }
     },
     {
         "name": "Primitive Design Principles",
         "points": 2.0,
-        "description": "Effective use of primitive shapes with attention to proportion, balance, and composition",
-        "validation_function": "validate_primitive_design_principles"
+        "description": "No modification of faces, edges, or verts.",
+        "validation_function": "validate_primitive_design_principles",
+        "general_performance_comments": {
+            100: "Perfect adherence to primitive principles! No face/edge/vertex modifications detected.",
+            90: "Excellent with 1 minor deviation from primitive principles.",
+            70: "Good use of primitives but 2 areas show modified geometry.",
+            50: "Multiple primitive violations detected (3+). Review assignment requirements on Canvas.",
+            0: "Extensive geometry modifications. This should use only primitive shapes."
+        }
     },
     {
         "name": "Technical Execution",
         "points": 2.0,
-        "description": "Proper modeling techniques, clean geometry, and appropriate use of Maya tools",
-        "validation_function": "validate_technical_execution"
+        "description": "Pivot points, duplication, and instances. Simplified complex shapes.",
+        "validation_function": "validate_technical_execution",
+        "general_performance_comments": {
+            100: "Excellent technical execution! Proper pivot points, smart duplication/instancing used.",
+            90: "Strong technical work with 1 minor area for improvement.",
+            70: "Good technical foundation but 2 areas need attention (pivots/duplication/complexity).",
+            50: "Basic technical execution with 3+ issues. Review technical tutorials on Canvas.",
+            0: "Poor technical execution. Multiple fundamental issues need addressing."
+        }
     },
     {
         "name": "Perceived Effort/ Professionalism",
         "points": 2.0,
-        "description": "Overall quality, attention to detail, and demonstration of effort and professional standards",
-        "validation_function": "validate_effort_professionalism"
+        "description": "Project challenged student. Demonstration of effort and professional standards",
+        "validation_function": "validate_effort_professionalism",
+        "general_performance_comments": {
+            100: "Outstanding effort and professionalism! Project shows creativity and exceeds expectations.",
+            90: "Strong effort evident with professional presentation and 1 area to enhance.",
+            70: "Adequate effort shown but project could demonstrate more challenge/professionalism.",
+            50: "Minimal effort apparent. Project needs more development to show learning growth.",
+            0: "Insufficient effort demonstrated. Project appears rushed or incomplete."
+        }
     }
 ]
 
@@ -98,10 +133,24 @@ def create_u01_ss01_rubric():
     
     # Add all criteria from configuration
     for criterion in RUBRIC_CRITERIA:
+        # Get the validation function for this criterion
+        validation_func = globals().get(criterion["validation_function"])
+        
+        # Determine validation arguments based on the function
+        validation_args = []
+        if criterion["validation_function"] == "validate_file_name":
+            validation_args = [file_name]
+        
+        # Get performance comments for this criterion
+        general_performance_comments = criterion.get("general_performance_comments", {})
+        
         rubric.add_criterion(
-            criterion["name"],
-            criterion["points"],
-            criterion["description"]
+            name=criterion["name"],
+            point_value=criterion["points"],
+            description=criterion["description"],
+            validation_function=validation_func,
+            validation_args=validation_args,
+            general_performance_comments=general_performance_comments
         )
     
     # Run validation logic for each criterion

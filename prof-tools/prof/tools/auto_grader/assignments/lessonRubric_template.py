@@ -27,6 +27,15 @@ except ImportError:
 # Set up logging
 logger = logging.getLogger(__name__)
 
+
+# ==============================================================================
+# RUBRIC CONFIGURATION - Scoring system and default settings
+# ==============================================================================
+
+# ==============================================================================
+# RUBRIC CONFIGURATION - Scoring system and default settings
+# ==============================================================================
+
 class LessonRubric(object):
     """
     Main rubric class for grading Maya assignments.
@@ -45,6 +54,11 @@ class LessonRubric(object):
     
     # Common percentage values for quick selection in dropdowns
     PERCENTAGE_OPTIONS = [0, 10, 30, 50, 70, 85, 95, 100]
+
+
+# ==============================================================================
+# CORE RUBRIC CLASS - Initialization and utility methods
+# ==============================================================================
     
     def __init__(self, assignment_name="Assignment", total_points=10, project_name=None, assignment_display_name=None):
         """
@@ -70,15 +84,34 @@ class LessonRubric(object):
         # This affects default scoring (empty files get lower default scores)
         self._check_empty_file()
         
-    def add_criterion(self, name, point_value, description=""):
+    def add_criterion(self, name, point_value, description="", validation_function=None, validation_args=None, general_performance_comments=None):
         """
         Add a grading criterion to the rubric.
+        
+        This method is designed to be flexible and work with various types of
+        validation functions and argument structures for future compatibility.
         
         Args:
             name (str): Name of the criterion
             point_value (float): Point value for this criterion
             description (str): Description of the criterion
+            validation_function (callable, optional): Function to validate this criterion.
+                Can return (score, comments) tuple, just a score, or a dictionary
+            validation_args (list/any, optional): Arguments to pass to the validation function.
+                Can be a list of arguments, a single argument, or None
+            general_performance_comments (dict, optional): Custom performance level comments for this criterion.
+                Format: {score_range: "comment", ...} or {level_name: "comment", ...}
+                Example: {100: "Perfect file naming!", 90: "Good naming with 1 error", 70: "2 errors found", 50: "3+ errors, review instructions"}
         """
+        # Normalize validation_args to ensure consistency
+        if validation_args is None:
+            normalized_args = []
+        elif isinstance(validation_args, list):
+            normalized_args = validation_args
+        else:
+            # Single argument case - wrap in list for consistency
+            normalized_args = [validation_args]
+        
         # Create a new criterion entry with all necessary data
         # Each criterion tracks: points, description, current score percentage, 
         # calculated score, auto-generated comments, and manual override status
@@ -88,8 +121,96 @@ class LessonRubric(object):
             'percentage': 10 if self.is_empty_file else 85,  # Default score: low for empty files, high otherwise
             'score': 0.0,                     # Calculated point score (percentage * point_value)
             'comments': "",                   # Auto-generated feedback comments
-            'manual_override': False          # Whether instructor manually set the score
+            'manual_override': False,         # Whether instructor manually set the score
+            'validation_function': validation_function,  # Function to re-run validation
+            'validation_args': normalized_args,           # Arguments for validation function (normalized to list)
+            'general_performance_comments': general_performance_comments or {}  # Custom performance level comments for this criterion
         }
+    
+    def add_validated_criterion(self, name, point_value, description="", validator=None, general_performance_comments=None, *args, **kwargs):
+        """
+        Convenience method for adding criteria with validation functions.
+        Handles various validation function patterns automatically.
+        
+        Args:
+            name (str): Name of the criterion
+            point_value (float): Point value for this criterion  
+            description (str): Description of the criterion
+            validator (callable): Validation function (can be any callable)
+            general_performance_comments (dict, optional): Custom performance level comments
+            *args: Variable arguments to pass to validator
+            **kwargs: Keyword arguments (special handling for common patterns)
+        
+        Example usage patterns:
+            # Simple function with no args
+            rubric.add_validated_criterion("Check Objects", 2.0, "Objects exist", check_objects_exist)
+            
+            # Function with positional args and custom comments
+            general_performance_comments = {100: "Perfect!", 90: "1 error", 70: "2 errors", 50: "3+ errors"}
+            rubric.add_validated_criterion("Check Count", 2.0, "Correct count", check_object_count, general_performance_comments, 5)
+        """
+        # Convert args to list for storage
+        validation_args = list(args) if args else []
+        
+        # Handle common keyword arguments
+        if kwargs:
+            # Add kwargs as additional arguments (could be enhanced in future)
+            for key, value in kwargs.items():
+                validation_args.extend([key, value])
+        
+        # Use the standard add_criterion method
+        self.add_criterion(name, point_value, description, validator, validation_args, general_performance_comments)
+    
+    def add_criteria_batch(self, criteria_list):
+        """
+        Add multiple criteria at once from a list of dictionaries.
+        Makes it easy to set up complex rubrics with many validated criteria.
+        
+        Args:
+            criteria_list (list): List of dictionaries, each containing criterion data.
+                Each dict should have: name, point_value, description (optional),
+                validation_function (optional), validation_args (optional)
+        
+        Example usage:
+            criteria = [
+                {
+                    'name': 'Object Count',
+                    'point_value': 2.0,
+                    'description': 'Correct number of objects',
+                    'validation_function': check_object_count,
+                    'validation_args': [5]
+                },
+                {
+                    'name': 'Naming Convention', 
+                    'point_value': 1.0,
+                    'description': 'Proper naming used',
+                    'validation_function': check_naming
+                    # validation_args not needed if function takes no args
+                }
+            ]
+            rubric.add_criteria_batch(criteria)
+        """
+        for criterion_data in criteria_list:
+            if not isinstance(criterion_data, dict):
+                logger.warning(f"Skipping invalid criterion data: {criterion_data}")
+                continue
+                
+            # Extract required fields
+            name = criterion_data.get('name')
+            point_value = criterion_data.get('point_value')
+            
+            if not name or point_value is None:
+                logger.warning(f"Skipping criterion missing name or point_value: {criterion_data}")
+                continue
+            
+            # Extract optional fields with defaults
+            description = criterion_data.get('description', '')
+            validation_function = criterion_data.get('validation_function')
+            validation_args = criterion_data.get('validation_args')
+            general_performance_comments = criterion_data.get('general_performance_comments')
+            
+            # Add the criterion
+            self.add_criterion(name, point_value, description, validation_function, validation_args, general_performance_comments)
         
     def _check_empty_file(self):
         """
@@ -142,6 +263,11 @@ class LessonRubric(object):
             logger.warning("Could not check file content: %s", e)
             self.is_empty_file = False
     
+
+# ==============================================================================
+# CONTENT ANALYSIS AND FEEDBACK METHODS
+# ==============================================================================
+
     def _get_score_level_for_percentage(self, percentage):
         """
         Determine which score level a percentage falls into.
@@ -212,8 +338,8 @@ class LessonRubric(object):
         performance level. This provides consistent, helpful feedback across
         all assignments and instructors.
         
-        IMPORTANT: If comments already exist (e.g., from validation functions),
-        they will be preserved instead of being overwritten with generic comments.
+        IMPORTANT: This method preserves existing comments from validation functions
+        UNLESS the criterion has been manually overridden by the instructor.
         
         Args:
             criterion_name (str): Name of the criterion to generate comments for
@@ -226,19 +352,94 @@ class LessonRubric(object):
             
         criterion = self.criteria[criterion_name]
         
-        # PRESERVE EXISTING COMMENTS: If comments already exist and are not empty,
-        # return them instead of generating new generic ones. This allows
-        # assignment-specific validation functions to provide detailed feedback
-        # that won't be overwritten by the generic template comments.
+        # If the criterion has been manually overridden, always generate fresh comments
+        # based on the current performance level
+        if criterion.get('manual_override', False):
+            return self._generate_performance_level_comments(criterion_name, criterion['percentage'])
+        
+        # PRESERVE EXISTING COMMENTS: If comments already exist and the criterion hasn't
+        # been manually overridden, return them instead of generating new generic ones.
+        # This allows assignment-specific validation functions to provide detailed feedback
+        # that won't be overwritten unless the instructor manually changes the score.
         existing_comments = criterion.get('comments', '').strip()
         if existing_comments:
             return existing_comments
         
-        percentage = criterion['percentage']
+        # Generate fresh comments based on performance level for new criteria
+        return self._generate_performance_level_comments(criterion_name, criterion['percentage'])
+    
+    def _generate_performance_level_comments(self, criterion_name, percentage):
+        """
+        Generate comments specifically for a performance level based on percentage.
+        
+        This method uses criterion-specific performance comments when available,
+        otherwise falls back to generic comments. This allows each criterion
+        to have tailored feedback that matches its specific scoring criteria.
+        
+        Args:
+            criterion_name (str): Name of the criterion
+            percentage (float): Percentage score (0-100)
+            
+        Returns:
+            str: Generated feedback comment appropriate for the score level and criterion
+        """
+        if criterion_name not in self.criteria:
+            return ""
+        
+        criterion = self.criteria[criterion_name]
+        general_performance_comments = criterion.get('general_performance_comments', {})
+        
+        # First, try to find criterion-specific comments
+        if general_performance_comments:
+            # Check for exact percentage match first
+            if percentage in general_performance_comments:
+                comment = general_performance_comments[percentage]
+            else:
+                # Check for range-based matches or closest match
+                best_match = None
+                best_diff = float('inf')
+                
+                for score_key, comment in general_performance_comments.items():
+                    if isinstance(score_key, (int, float)):
+                        diff = abs(percentage - score_key)
+                        if diff < best_diff:
+                            best_diff = diff
+                            best_match = comment
+                    elif isinstance(score_key, str):
+                        # Handle level name keys like "Full Marks", "High Marks", etc.
+                        level = self._get_score_level_for_percentage(percentage)
+                        if score_key == level:
+                            best_match = comment
+                            break
+                
+                if best_match:
+                    comment = best_match
+                else:
+                    # Fall back to generic comments if no criterion-specific match found
+                    comment = self._get_generic_performance_comment(percentage)
+            
+            # Add empty file context if relevant
+            if self.is_empty_file and "empty" not in comment.lower():
+                comment = "Empty or minimal file detected. " + comment
+                
+            return comment
+        
+        # Fall back to generic comments if no criterion-specific comments defined
+        return self._get_generic_performance_comment(percentage)
+    
+    def _get_generic_performance_comment(self, percentage):
+        """
+        Get generic performance comments based on score level.
+        
+        Args:
+            percentage (float): Percentage score (0-100)
+            
+        Returns:
+            str: Generic feedback comment for the performance level
+        """
         level = self._get_score_level_for_percentage(percentage)
         
-        # Standard comments for each performance level
-        # These can be customized per assignment by overriding this method
+        # Standard generic comments for each performance level
         comments = {
             'No Marks': "Criterion not met or not attempted.",
             'Low Marks': "Minimal effort shown, significant improvements needed.",
@@ -255,6 +456,11 @@ class LessonRubric(object):
             
         return base_comment
     
+
+# ==============================================================================
+# SCORING AND CALCULATION METHODS
+# ==============================================================================
+
     def calculate_total_score(self):
         """
         Calculate the total assignment score by summing all criteria.
@@ -280,6 +486,104 @@ class LessonRubric(object):
         # math.ceil(8.71 * 10) / 10.0 = math.ceil(87.1) / 10.0 = 88 / 10.0 = 8.8
         return math.ceil(total * 10) / 10.0
     
+    def re_run_validations(self):
+        """
+        Re-run all validation functions to refresh scores and comments.
+        
+        This method is called by the Recalculate button to get fresh validation
+        results, useful when the Maya scene has been modified or when the
+        instructor wants to refresh all automatic validations.
+        
+        Only criteria that haven't been manually overridden will be updated.
+        This method is designed to work with any rubric structure and handles
+        various edge cases gracefully.
+        
+        Returns:
+            int: Number of criteria that were successfully updated
+        """
+        updated_count = 0
+        
+        for criterion_name, criterion in self.criteria.items():
+            # Skip criteria that have been manually overridden by the instructor
+            if criterion.get('manual_override', False):
+                logger.info(f"Skipping {criterion_name} - manually overridden")
+                continue
+                
+            validation_function = criterion.get('validation_function')
+            
+            # Check if we have a valid validation function
+            if not validation_function:
+                logger.debug(f"No validation function for {criterion_name}")
+                continue
+                
+            if not callable(validation_function):
+                logger.warning(f"Validation function for {criterion_name} is not callable")
+                continue
+            
+            try:
+                validation_args = criterion.get('validation_args', [])
+                
+                # Handle different types of validation arguments
+                if isinstance(validation_args, list):
+                    # Standard case: list of arguments
+                    if validation_args:
+                        result = validation_function(*validation_args)
+                    else:
+                        result = validation_function()
+                elif validation_args is not None:
+                    # Single argument case (not in a list)
+                    result = validation_function(validation_args)
+                else:
+                    # No arguments case
+                    result = validation_function()
+                
+                # Handle different return types from validation functions
+                if isinstance(result, tuple) and len(result) >= 2:
+                    # Standard case: (score, comments) tuple
+                    score, comments = result[0], result[1]
+                elif isinstance(result, (int, float)):
+                    # Score only case
+                    score = result
+                    comments = f"Auto-validation: {score}%"
+                elif isinstance(result, dict):
+                    # Dictionary return case
+                    score = result.get('score', result.get('percentage', 85))
+                    comments = result.get('comments', f"Auto-validation: {score}%")
+                else:
+                    logger.warning(f"Unexpected return type from {criterion_name} validation: {type(result)}")
+                    continue
+                
+                # Validate score is within acceptable range
+                if not isinstance(score, (int, float)) or score < 0 or score > 100:
+                    logger.warning(f"Invalid score from {criterion_name} validation: {score}")
+                    continue
+                
+                # Ensure comments is a string
+                if not isinstance(comments, str):
+                    comments = str(comments)
+                
+                # Update the criterion with fresh validation results
+                criterion['percentage'] = float(score)
+                criterion['comments'] = comments
+                updated_count += 1
+                
+                logger.info(f"Updated {criterion_name}: {score}% - {comments[:50]}...")
+                
+            except TypeError as e:
+                logger.error(f"Type error re-running validation for {criterion_name}: {e}")
+                logger.debug(f"Function: {validation_function}, Args: {validation_args}")
+            except Exception as e:
+                logger.error(f"Error re-running validation for {criterion_name}: {e}")
+                # Keep existing values on error
+        
+        logger.info(f"Re-ran validations for {updated_count} criteria")
+        return updated_count
+    
+
+# ==============================================================================
+# UI CREATION AND DISPLAY METHODS
+# ==============================================================================
+
     def show_rubric_ui(self):
         """Display the rubric grading UI."""
         if not MAYA_AVAILABLE:
@@ -397,7 +701,7 @@ class LessonRubric(object):
             parent=main_layout
         )
         
-        # Recalculate button - updates all scores and displays
+        # Recalculate button - re-runs all validation functions and updates scores
         cmds.button(
             label="Recalculate",
             command=lambda *args: self._update_all_scores(),  # Lambda to handle Maya's callback format
@@ -603,6 +907,11 @@ class LessonRubric(object):
         cmds.setParent('..')
         return layout
     
+
+# ==============================================================================
+# UI EVENT HANDLERS - User interaction callbacks
+# ==============================================================================
+
     def _on_dropdown_change(self, criterion_name, selection):
         """Handle dropdown selection change for percentage."""
         # If "Custom" is selected, don't change the percentage field value
@@ -636,6 +945,7 @@ class LessonRubric(object):
         cmds.optionMenu(dropdown, edit=True, value="Custom")
         
         # Update the criterion data and displays
+        # This will now generate performance-level appropriate comments
         self._update_percentage_value(criterion_name, default_percentage)
         
         logger.info(f"Set {criterion_name} to {default_percentage}% ({level_name})")
@@ -668,11 +978,11 @@ class LessonRubric(object):
         # Update criterion data
         self.criteria[criterion_name]['percentage'] = new_percentage
         
-        # Only update comments if they don't already exist (preserves validation function comments)
-        # This ensures that specific comments from validation functions aren't overwritten
-        # when the user changes percentages manually
-        if not self.criteria[criterion_name].get('comments', '').strip():
-            self.criteria[criterion_name]['comments'] = self._generate_comments(criterion_name)
+        # When user manually changes the percentage (via dropdown, field, or performance button),
+        # generate criterion-specific comments that match the new performance level.
+        # This provides detailed, relevant feedback that matches the selected score.
+        self.criteria[criterion_name]['comments'] = self._generate_performance_level_comments(criterion_name, new_percentage)
+        self.criteria[criterion_name]['manual_override'] = True  # Mark as manually adjusted
         
         # Update displays
         self._update_criterion_display(criterion_name)
@@ -763,11 +1073,42 @@ class LessonRubric(object):
             )
     
     def _update_all_scores(self):
-        """Recalculate and update all scores and displays."""
+        """
+        Recalculate and update all scores and displays.
+        
+        This method is called by the Recalculate button and will:
+        1. Re-run all validation functions to get fresh scores and comments
+        2. Update all UI displays with the new values
+        3. Preserve any manual overrides made by the instructor
+        """
+        # Re-run validation functions for fresh results
+        updated_count = self.re_run_validations()
+        
+        # Update all UI displays
         for criterion_name in self.criteria.keys():
             self._update_criterion_display(criterion_name)
         self._update_total_score_display()
+        
+        # Show user feedback about what was updated
+        if MAYA_AVAILABLE:
+            if updated_count > 0:
+                cmds.confirmDialog(
+                    title="Validations Updated",
+                    message=f"Re-ran validations for {updated_count} criteria.\nManually adjusted scores were preserved.",
+                    button=["OK"]
+                )
+            else:
+                cmds.confirmDialog(
+                    title="No Updates",
+                    message="All criteria have been manually adjusted or have no validation functions.",
+                    button=["OK"]
+                )
     
+
+# ==============================================================================
+# EXPORT AND UTILITY METHODS
+# ==============================================================================
+
     def _export_results(self):
         """Export grading results to a text format."""
         results = []
@@ -926,6 +1267,11 @@ class LessonRubric(object):
                 text=True
             )
             self._copy_to_clipboard(f"{criterion_name}: {comment_text}")
+
+
+# ==============================================================================
+# SAMPLE RUBRIC CREATION - Template and example usage
+# ==============================================================================
 
 def create_sample_rubric():
     """
