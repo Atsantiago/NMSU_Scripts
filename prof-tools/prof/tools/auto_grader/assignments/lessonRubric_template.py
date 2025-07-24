@@ -458,16 +458,27 @@ class LessonRubric(object):
             criterion_data (dict): The data for the criterion.
         """
         # The formLayout acts as a container for one criterion's entire UI
-        # Increased height to accommodate spacing between criteria and comments
-        form = cmds.formLayout(height=95, parent=parent)
+        # Increased height to accommodate description, spacing between criteria and comments
+        form = cmds.formLayout(height=125, parent=parent)
 
         # --- A. Create all UI Elements for this row ---
         
         # Top row elements
-        crit_name_ui = cmds.text(label=criterion_name, align='left', width=150, wordWrap=True)  # Fixed width with word wrap for long names
+        crit_name_ui = cmds.text(label=criterion_name, align='left', width=150, wordWrap=True)
         score_layout = self._create_score_input_layout(criterion_name, criterion_data)
         perf_layout = self._create_performance_indicators_layout(criterion_name, criterion_data)
         points_layout = self._create_points_display_layout(criterion_name, criterion_data)
+
+        # Description row element (new)
+        description_text = criterion_data.get('description', '')
+        description_ui = cmds.text(
+            label=description_text, 
+            align='left', 
+            wordWrap=True, 
+            font="smallPlainLabelFont",
+            backgroundColor=(0.25, 0.25, 0.25),
+            height=20
+        )
 
         # Bottom row elements (comments and copy button)
         comments = self._generate_comments(criterion_name)
@@ -488,6 +499,9 @@ class LessonRubric(object):
                 (perf_layout, 'top', 5),
                 (points_layout, 'top', 5), (points_layout, 'right', 5),
                 
+                # Description row
+                (description_ui, 'left', 5), (description_ui, 'right', 5),
+                
                 # Bottom row
                 (comment_field, 'left', 5),
                 (copy_button, 'right', 5)
@@ -499,9 +513,12 @@ class LessonRubric(object):
                 (perf_layout, 'left', 5, score_layout),
                 (points_layout, 'left', 5, perf_layout),
                 
-                # Bottom row controls - increased spacing from 5 to 15 pixels
-                (comment_field, 'top', 15, crit_name_ui), # Position below the top row with more spacing
-                (copy_button, 'top', 15, crit_name_ui),
+                # Description row positioning - below top row with some spacing
+                (description_ui, 'top', 8, crit_name_ui),
+                
+                # Bottom row controls - below description with spacing
+                (comment_field, 'top', 8, description_ui),
+                (copy_button, 'top', 8, description_ui),
                 
                 # THE KEY TO SPANNING: Attach the right side of the comment field
                 # to the left side of the copy button.
