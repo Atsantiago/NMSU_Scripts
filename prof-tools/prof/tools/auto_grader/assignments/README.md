@@ -2,6 +2,15 @@
 
 A comprehensive grading rubric system for Maya assignments that provides standardized, efficient, and fair grading with auto-generated feedback.
 
+## 📁 Directory Structure
+
+- `lessonRubric_template.py` - Core rubric framework and template
+- `example_assignment_rubrics.py` - Example rubric implementations  
+- `fdma1510/` - FDMA 1510 course assignment rubrics
+- `fdma2530/` - FDMA 2530 course assignment rubrics
+
+**Note:** All test files should be placed in `prof-tools/prof/tests/` directory, not in the assignments folder.
+
 ## Features
 
 ### 🎯 5-Tier Scoring System

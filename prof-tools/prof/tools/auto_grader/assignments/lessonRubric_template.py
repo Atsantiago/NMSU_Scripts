@@ -456,6 +456,65 @@ class LessonRubric(object):
             
         return base_comment
     
+    def _create_enhanced_comments(self, criterion_name, score_percentage, validation_comments):
+        """
+        Create enhanced comments by concatenating general performance comments with specific validation errors.
+        
+        This method combines the educational performance level feedback with the specific
+        technical details from validation functions, providing comprehensive feedback.
+        
+        Args:
+            criterion_name (str): Name of the criterion
+            score_percentage (float): Percentage score (0-100)
+            validation_comments (str): Specific comments from validation function
+            
+        Returns:
+            str: Enhanced comments combining performance level and validation details
+        """
+        # Get the general performance comment for this score level
+        performance_comment = self._generate_performance_level_comments(criterion_name, score_percentage)
+        
+        # Clean up validation comments
+        validation_comments = validation_comments.strip() if validation_comments else ""
+        
+        # If validation comments contain specific error details, concatenate them
+        if validation_comments and not self._is_generic_validation_comment(validation_comments):
+            # Combine performance level feedback with specific validation details
+            if performance_comment:
+                enhanced_comment = f"{performance_comment} | Details: {validation_comments}"
+            else:
+                enhanced_comment = validation_comments
+        else:
+            # Use performance comment if validation is generic or empty
+            enhanced_comment = performance_comment if performance_comment else validation_comments
+        
+        return enhanced_comment
+    
+    def _is_generic_validation_comment(self, comment):
+        """
+        Check if a validation comment is generic (like "Auto-validation: 85%").
+        
+        Args:
+            comment (str): Comment to check
+            
+        Returns:
+            bool: True if comment appears to be generic/auto-generated
+        """
+        if not comment:
+            return True
+        
+        comment_lower = comment.lower()
+        generic_patterns = [
+            "auto-validation:",
+            "manual evaluation required",
+            "validation error:",
+            "no validation function",
+            "todo:",
+            "implement"
+        ]
+        
+        return any(pattern in comment_lower for pattern in generic_patterns)
+    
 
 # ==============================================================================
 # SCORING AND CALCULATION METHODS
@@ -466,21 +525,19 @@ class LessonRubric(object):
         Calculate the total assignment score by summing all criteria.
         
         Adds up the calculated scores from all criteria to get the final grade.
-        Supports both auto-calculated scores and manual overrides set by instructors.
+        Always calculates from current percentages to ensure dynamic updates.
         
         Returns:
             float: Total score rounded up to nearest tenth (e.g., 8.7 becomes 8.7, 8.71 becomes 8.8)
         """
         total = 0.0
         
-        # Sum scores from all criteria
+        # Sum scores from all criteria - always calculate from current percentage
+        # This ensures the total updates dynamically when percentages change
         for criterion_name, criterion in self.criteria.items():
-            if criterion['manual_override']:
-                # Use manually entered score if instructor override is active
-                total += criterion['score']
-            else:
-                # Use calculated score based on percentage
-                total += self._calculate_criterion_score(criterion_name)
+            # Always use calculated score based on current percentage
+            # This ensures total updates immediately when percentages change
+            total += self._calculate_criterion_score(criterion_name)
         
         # Round up to nearest tenth for consistent grading
         # math.ceil(8.71 * 10) / 10.0 = math.ceil(87.1) / 10.0 = 88 / 10.0 = 8.8
@@ -564,10 +621,14 @@ class LessonRubric(object):
                 
                 # Update the criterion with fresh validation results
                 criterion['percentage'] = float(score)
-                criterion['comments'] = comments
+                
+                # Enhanced comment generation: concatenate general performance comments with specific errors
+                enhanced_comments = self._create_enhanced_comments(criterion_name, float(score), comments)
+                criterion['comments'] = enhanced_comments
+                
                 updated_count += 1
                 
-                logger.info(f"Updated {criterion_name}: {score}% - {comments[:50]}...")
+                logger.info(f"Updated {criterion_name}: {score}% - {enhanced_comments[:50]}...")
                 
             except TypeError as e:
                 logger.error(f"Type error re-running validation for {criterion_name}: {e}")
@@ -978,13 +1039,18 @@ class LessonRubric(object):
         # Update criterion data
         self.criteria[criterion_name]['percentage'] = new_percentage
         
+        # Calculate and update the score based on the new percentage
+        # This ensures the individual criterion score is always in sync
+        calculated_score = self._calculate_criterion_score(criterion_name)
+        self.criteria[criterion_name]['score'] = calculated_score
+        
         # When user manually changes the percentage (via dropdown, field, or performance button),
         # generate criterion-specific comments that match the new performance level.
         # This provides detailed, relevant feedback that matches the selected score.
         self.criteria[criterion_name]['comments'] = self._generate_performance_level_comments(criterion_name, new_percentage)
         self.criteria[criterion_name]['manual_override'] = True  # Mark as manually adjusted
         
-        # Update displays
+        # Update displays - this will refresh both the criterion display and total score
         self._update_criterion_display(criterion_name)
         self._update_total_score_display()
     
@@ -1077,32 +1143,141 @@ class LessonRubric(object):
         Recalculate and update all scores and displays.
         
         This method is called by the Recalculate button and will:
-        1. Re-run all validation functions to get fresh scores and comments
-        2. Update all UI displays with the new values
-        3. Preserve any manual overrides made by the instructor
+        1. Ask user whether to preserve manual adjustments or recalculate everything
+        2. Re-run validation functions based on user choice
+        3. Update all UI displays with the new values
         """
-        # Re-run validation functions for fresh results
-        updated_count = self.re_run_validations()
+        if not MAYA_AVAILABLE:
+            # Fallback for non-Maya environments
+            updated_count = self.re_run_validations()
+            for criterion_name in self.criteria.keys():
+                self._update_criterion_display(criterion_name)
+            self._update_total_score_display()
+            return
+        
+        # Check if there are any manual adjustments to preserve
+        manual_adjustments = []
+        for criterion_name, criterion in self.criteria.items():
+            if criterion.get('manual_override', False):
+                manual_adjustments.append(criterion_name)
+        
+        # Show different dialogs based on whether manual adjustments exist
+        if manual_adjustments:
+            # Show choice dialog when manual adjustments exist
+            choice = cmds.confirmDialog(
+                title="Recalculate Options",
+                message=f"Found manual adjustments in {len(manual_adjustments)} criteria:\n• " + 
+                       "\n• ".join(manual_adjustments) + 
+                       "\n\nHow would you like to proceed?",
+                button=["Keep Manual Adjustments", "Recalculate Everything", "Cancel"],
+                defaultButton="Keep Manual Adjustments",
+                cancelButton="Cancel",
+                dismissString="Cancel"
+            )
+            
+            if choice == "Cancel":
+                return  # User cancelled, do nothing
+            elif choice == "Recalculate Everything":
+                # Reset all manual overrides and recalculate everything
+                self._recalculate_all_criteria()
+            else:  # "Keep Manual Adjustments"
+                # Only recalculate non-manually adjusted criteria
+                updated_count = self.re_run_validations()
+                self._show_recalculate_results(updated_count, preserve_manual=True)
+        else:
+            # No manual adjustments - show simple confirmation
+            choice = cmds.confirmDialog(
+                title="Recalculate All Criteria",
+                message="This will re-run all validation functions and update scores.\n\nProceed with recalculation?",
+                button=["Recalculate", "Cancel"],
+                defaultButton="Recalculate",
+                cancelButton="Cancel",
+                dismissString="Cancel"
+            )
+            
+            if choice == "Cancel":
+                return  # User cancelled, do nothing
+            else:
+                # Recalculate everything (no manual adjustments to worry about)
+                self._recalculate_all_criteria()
         
         # Update all UI displays
         for criterion_name in self.criteria.keys():
             self._update_criterion_display(criterion_name)
         self._update_total_score_display()
+    
+    def _recalculate_all_criteria(self):
+        """
+        Reset all manual overrides and recalculate all criteria from scratch.
         
-        # Show user feedback about what was updated
-        if MAYA_AVAILABLE:
-            if updated_count > 0:
-                cmds.confirmDialog(
-                    title="Validations Updated",
-                    message=f"Re-ran validations for {updated_count} criteria.\nManually adjusted scores were preserved.",
-                    button=["OK"]
-                )
+        This completely resets the rubric to its initial validated state,
+        discarding any manual adjustments made by the instructor.
+        """
+        recalculated_count = 0
+        
+        for criterion_name, criterion in self.criteria.items():
+            # Reset manual override flag
+            criterion['manual_override'] = False
+            
+            # Re-run validation if function exists
+            validation_func = criterion.get('validation_function')
+            validation_args = criterion.get('validation_args', [])
+            
+            if validation_func:
+                try:
+                    if validation_args:
+                        score, comments = validation_func(*validation_args)
+                    else:
+                        score, comments = validation_func()
+                    
+                    # Update with fresh validation results
+                    criterion['percentage'] = max(0, min(100, score))
+                    
+                    # Enhanced comment generation: concatenate general performance comments with specific errors
+                    enhanced_comments = self._create_enhanced_comments(criterion_name, max(0, min(100, score)), comments)
+                    criterion['comments'] = enhanced_comments
+                    
+                    recalculated_count += 1
+                    
+                except Exception as e:
+                    # Keep existing values if validation fails
+                    criterion['comments'] = f"Validation error: {str(e)}"
+        
+        self._show_recalculate_results(recalculated_count, preserve_manual=False)
+    
+    def _show_recalculate_results(self, updated_count, preserve_manual=True):
+        """
+        Show user feedback about recalculation results.
+        
+        Args:
+            updated_count (int): Number of criteria that were updated
+            preserve_manual (bool): Whether manual adjustments were preserved
+        """
+        if not MAYA_AVAILABLE:
+            return
+        
+        if updated_count > 0:
+            if preserve_manual:
+                message = f"Re-ran validations for {updated_count} criteria.\nManually adjusted scores were preserved."
             else:
-                cmds.confirmDialog(
-                    title="No Updates",
-                    message="All criteria have been manually adjusted or have no validation functions.",
-                    button=["OK"]
-                )
+                message = f"Recalculated all {updated_count} criteria.\nAll manual adjustments were reset to validation results."
+            
+            cmds.confirmDialog(
+                title="Recalculation Complete",
+                message=message,
+                button=["OK"]
+            )
+        else:
+            if preserve_manual:
+                message = "All criteria have been manually adjusted or have no validation functions."
+            else:
+                message = "No criteria were updated - no validation functions available."
+            
+            cmds.confirmDialog(
+                title="No Updates",
+                message=message,
+                button=["OK"]
+            )
     
 
 # ==============================================================================
