@@ -1516,11 +1516,35 @@ class LessonRubric(object):
         results.append(f"TOTAL GRADE: {total_score:.1f}/{self.total_points}")
         results.append("")
         
+        # Add motivational message based on total score
+        motivational_message = self._get_motivational_message(total_score)
+        if motivational_message:
+            results.append(motivational_message)
+            results.append("")
+        
         if self.is_empty_file:
             results.append("Note: Empty or minimal file detected")
         
         # Display results in a scroll field window
         self._show_export_window("\n".join(results))
+    
+    def _get_motivational_message(self, total_score):
+        """Get motivational message based on total score.
+        
+        Args:
+            total_score (float): The student's total score
+            
+        Returns:
+            str: Appropriate motivational message based on score range
+        """
+        if total_score >= 9:
+            return "Great work! :)"
+        elif total_score >= 8:
+            return "Good work :)"
+        elif total_score >= 7:
+            return "Good effort! Just pay closer attention to the following issues in the next assignments"
+        else:
+            return "Not bad, but you might need to give more time to your assignments. If you have any questions, please don't hesitate to reach out to me after class or during office hours or by email :)"
     
     def _show_export_window(self, content):
         """Show export results in a new window."""
