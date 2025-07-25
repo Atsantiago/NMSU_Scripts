@@ -768,10 +768,10 @@ class LessonRubric(object):
         cmds.separator(height=15, parent=main_layout)  # Reduced separator for cleaner look
         
         button_layout = cmds.rowLayout(
-            numberOfColumns=3,  # Three buttons in a horizontal row
-            columnAlign=[(1, 'center'), (2, 'center'), (3, 'center')],  # Center-align all buttons
-            columnWidth=[(1, 200), (2, 200), (3, 200)],  # Fixed width for each button column
-            columnAttach=[(1, 'left', 20), (2, 'both', 10), (3, 'right', 20)],  # Match main layout margins
+            numberOfColumns=4,  # Four buttons in a horizontal row
+            columnAlign=[(1, 'center'), (2, 'center'), (3, 'center'), (4, 'center')],  # Center-align all buttons
+            columnWidth=[(1, 150), (2, 150), (3, 150), (4, 150)],  # Fixed width for each button column
+            columnAttach=[(1, 'left', 20), (2, 'both', 5), (3, 'both', 5), (4, 'right', 20)],  # Match main layout margins
             parent=main_layout
         )
         
@@ -780,7 +780,7 @@ class LessonRubric(object):
             label="Refresh",
             command=lambda *args: self._refresh_for_current_file(),
             height=35,  # Larger button height for better usability
-            width=180,  # Fixed width for consistency
+            width=140,  # Fixed width for consistency
             parent=button_layout
         )
         
@@ -789,7 +789,7 @@ class LessonRubric(object):
             label="Recalculate",
             command=lambda *args: self._update_all_scores(),  # Lambda to handle Maya's callback format
             height=35,  # Larger button height for better usability
-            width=180,  # Fixed width for consistency
+            width=140,  # Fixed width for consistency
             parent=button_layout
         )
         
@@ -798,7 +798,7 @@ class LessonRubric(object):
             label="Export Results",
             command=lambda *args: self._export_results(),
             height=35,
-            width=180,
+            width=140,
             parent=button_layout
         )
         
@@ -807,7 +807,7 @@ class LessonRubric(object):
             label="Close",
             command=lambda *args: cmds.deleteUI(self.window_name, window=True),
             height=35,
-            width=180,
+            width=140,
             parent=button_layout
         )
         
