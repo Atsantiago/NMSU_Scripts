@@ -391,32 +391,51 @@ def validate_outliner_organization():
         
         # Add specific check for unparented lights (these should always be grouped)
         # This catches ALL lights regardless of naming - renamed lights like "key_light" still need grouping
+        # Using proven logic from CMI-tools checklist.py
         unparented_lights = []
-        all_lights = cmds.ls(type=['directionalLight', 'pointLight', 'spotLight', 'areaLight', 'volumeLight', 
-                                   'ambientLight', 'aiAreaLight', 'aiPhotometricLight', 'aiLightPortal',
-                                   'rsPhysicalLight', 'rsIESLight', 'rsPortalLight', 'rsDomeLight']) or []
         
-        # Debug: Print all lights found for troubleshooting
-        print(f"DEBUG: Found {len(all_lights)} lights in scene: {all_lights}")
+        # Light types to check - using same approach as CMI-tools checklist.py
+        maya_light_types = ['pointLight', 'directionalLight', 'spotLight', 'areaLight', 'volumeLight', 'ambientLight']
+        arnold_light_types = ['aiAreaLight', 'aiSkyDomeLight', 'aiPhotometricLight', 'aiMeshLight', 'aiLightPortal']
+        redshift_light_types = ['rsPhysicalLight', 'rsIESLight', 'rsPortalLight', 'rsDomeLight']
         
-        for light in all_lights:
-            # Get the transform node that contains this light shape
-            light_transforms = cmds.listRelatives(light, parent=True, type='transform') or []
-            if light_transforms:
-                light_transform = light_transforms[0]
-                print(f"DEBUG: Checking light transform '{light_transform}' for light shape '{light}'")
-                
-                # Check if light transform is at top level (no parent) - catches renamed lights too
-                light_parents = cmds.listRelatives(light_transform, parent=True, type='transform') or []
-                print(f"DEBUG: Light '{light_transform}' has parents: {light_parents}")
-                
-                if not light_parents:
-                    # Skip startup cameras that might contain light components
-                    if light_transform not in STARTUP_CAMERAS:
-                        print(f"DEBUG: Adding '{light_transform}' to unparented lights list")
-                        unparented_lights.append(light_transform)
-                    else:
-                        print(f"DEBUG: Skipping startup camera '{light_transform}'")
+        all_light_shapes = []
+        all_light_types = maya_light_types + arnold_light_types + redshift_light_types
+        
+        # Find all light shapes using the proven approach from CMI-tools
+        for light_type in all_light_types:
+            lights_of_type = cmds.ls(type=light_type) or []
+            all_light_shapes.extend(lights_of_type)
+        
+        # Debug: Print all light shapes found for troubleshooting
+        print(f"DEBUG: Found {len(all_light_shapes)} light shapes in scene: {all_light_shapes}")
+        
+        # Find the transform nodes that contain these light shapes
+        light_transforms = []
+        for light_shape in all_light_shapes:
+            # Get the transform parent of each light shape
+            light_parents = cmds.listRelatives(light_shape, parent=True, type='transform') or []
+            if light_parents:
+                light_transform = light_parents[0]
+                if light_transform not in light_transforms:
+                    light_transforms.append(light_transform)
+                    print(f"DEBUG: Found light transform '{light_transform}' for light shape '{light_shape}'")
+        
+        print(f"DEBUG: Found {len(light_transforms)} unique light transforms: {light_transforms}")
+        
+        # Check which light transforms are unparented (at world level)
+        for light_transform in light_transforms:
+            # Check if light transform is at top level (no parent)
+            transform_parents = cmds.listRelatives(light_transform, parent=True, type='transform') or []
+            print(f"DEBUG: Light '{light_transform}' has parents: {transform_parents}")
+            
+            if not transform_parents:
+                # Skip startup cameras that might contain light components
+                if light_transform not in STARTUP_CAMERAS:
+                    print(f"DEBUG: Adding '{light_transform}' to unparented lights list")
+                    unparented_lights.append(light_transform)
+                else:
+                    print(f"DEBUG: Skipping startup camera '{light_transform}'")
         
         print(f"DEBUG: Final unparented lights list: {unparented_lights}")
         
@@ -435,7 +454,7 @@ def validate_outliner_organization():
         # ========================================================================
         # This checks that lights are not just grouped, but grouped with appropriate naming
         
-        if all_lights:
+        if light_transforms:
             # Find light groups efficiently using pre-filtered transforms
             light_groups = [group for group in filtered_transforms if 'light' in group.lower()]
             
@@ -451,12 +470,11 @@ def validate_outliner_organization():
                     descendants = cmds.listRelatives(light_group, allDescendents=True, type='transform') or []
                     light_group_descendants.update(descendants)
                 
-                # Check each light's transform
-                for light in all_lights:
-                    light_transforms = cmds.listRelatives(light, parent=True, type='transform') or []
-                    if light_transforms:
-                        light_transform = light_transforms[0]
-                        # Check if this light transform is under any light group
+                # Check each light transform directly
+                for light_transform in light_transforms:
+                    # Check if this light transform is under any light group
+                    if light_transform not in light_group_descendants and light_transform not in light_groups:
+                        ungrouped_lights.append(light_transform)
                         if light_transform not in light_group_descendants and light_transform not in light_groups:
                             ungrouped_lights.append(light_transform)
                 
