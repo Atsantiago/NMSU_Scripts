@@ -35,7 +35,7 @@ DOCUMENTS_FOLDER_NAME = "Documents"
 MAYA_FOLDER_NAME = "maya"
 PREFS_FOLDER_NAME = "prefs"
 SCRIPTS_FOLDER_NAME = "scripts"
-USERSETUP_FILE_NAME = "userSetup.mel"
+USERSETUP_FILE_NAME = "userSetup.mel"  # Keep for backward compatibility cleaning
 
 # Installation constants
 INSTALL_DIRECTORY_NAME = "prof-tools"

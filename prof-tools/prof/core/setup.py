@@ -86,26 +86,80 @@ class ProfToolsSetup(object):
         """
         maya_preferences_dir = self.get_maya_documents_path()
         
+        log_info("Scanning for Maya versions in: {}".format(maya_preferences_dir))
+        
         if not os.path.exists(maya_preferences_dir):
             log_warning("Maya preferences directory not found: {}".format(maya_preferences_dir))
             return {}
         
-        maya_folders = os.listdir(maya_preferences_dir)
+        try:
+            maya_folders = os.listdir(maya_preferences_dir)
+        except Exception as e:
+            log_error("Failed to list Maya preferences directory: {}".format(e))
+            return {}
+        
         existing_folders = {}
         
         for folder in maya_folders:
-            # Look for 4-digit year folders (2020, 2021, etc.)
+            # Look for 4-digit year folders (2020, 2021, etc.) - Maya version pattern
             if folder.isdigit() and len(folder) == 4:
                 full_path = os.path.join(maya_preferences_dir, folder)
                 if os.path.isdir(full_path):
-                    existing_folders[folder] = full_path
+                    # Verify it's actually a Maya version by checking for typical Maya folders
+                    prefs_dir = os.path.join(full_path, "prefs")
+                    scripts_dir = os.path.join(full_path, "scripts")
+                    
+                    # It's a valid Maya version if either prefs or scripts directory exists
+                    if os.path.exists(prefs_dir) or os.path.exists(scripts_dir):
+                        existing_folders[folder] = full_path
+                        log_info("Found Maya version {} at: {}".format(folder, full_path))
         
         if existing_folders:
-            log_info("Found Maya versions: {}".format(", ".join(existing_folders.keys())))
+            log_info("Found {} Maya version(s): {}".format(len(existing_folders), ", ".join(sorted(existing_folders.keys()))))
         else:
             log_warning("No Maya version folders found in: {}".format(maya_preferences_dir))
+            log_info("Expected Maya versions to be in folders like: {}/2024, {}/2025, etc.".format(maya_preferences_dir, maya_preferences_dir))
         
         return existing_folders
+    
+    def get_all_usersetup_files(self, only_existing=False):
+        """
+        Get all userSetup file paths for all Maya versions (both .py and .mel)
+        Following GT Tools pattern for comprehensive userSetup management.
+        
+        Args:
+            only_existing (bool): If True, only return paths to existing files
+            
+        Returns:
+            list: List of userSetup file paths
+        """
+        maya_versions = self.get_available_maya_preferences_dirs()
+        usersetup_files = []
+        
+        for version, version_path in maya_versions.items():
+            scripts_dir = os.path.join(version_path, SCRIPTS_FOLDER_NAME)
+            
+            # Add both Python and MEL userSetup files
+            usersetup_py = os.path.join(scripts_dir, "userSetup.py")
+            usersetup_mel = os.path.join(scripts_dir, USERSETUP_FILE_NAME)
+            
+            if only_existing:
+                if os.path.exists(usersetup_py):
+                    usersetup_files.append(usersetup_py)
+                if os.path.exists(usersetup_mel):
+                    usersetup_files.append(usersetup_mel)
+            else:
+                # Create scripts directory if it doesn't exist for new files
+                if not os.path.exists(scripts_dir):
+                    try:
+                        os.makedirs(scripts_dir)
+                    except Exception as e:
+                        log_warning("Failed to create scripts directory {}: {}".format(scripts_dir, e))
+                        continue
+                
+                usersetup_files.extend([usersetup_py, usersetup_mel])
+        
+        return usersetup_files
     
     def get_maya_documents_path(self):
         """Get Maya documents base path (without version-specific subfolder)"""
@@ -263,86 +317,143 @@ class ProfToolsSetup(object):
         log_info("Copied package files from {} to {}".format(prof_source, prof_dest))
     
     def _update_usersetup_mel(self):
-        """Update userSetup.mel files for ALL Maya versions"""
+        """Update userSetup.py files for ALL Maya versions following GT Tools best practices"""
         maya_versions = self.get_available_maya_preferences_dirs()
         
         if not maya_versions:
-            log_warning("No Maya versions found. Cannot create userSetup.mel entries.")
+            log_warning("No Maya versions found. Cannot create userSetup.py entries.")
             return
+        
+        log_info("Updating userSetup.py files for Maya versions: {}".format(list(maya_versions.keys())))
         
         success_count = 0
         for version, version_path in maya_versions.items():
             try:
                 scripts_dir = os.path.join(version_path, SCRIPTS_FOLDER_NAME)
-                usersetup_path = os.path.join(scripts_dir, USERSETUP_FILE_NAME)
+                # Use .py instead of .mel for Python entry points
+                usersetup_path = os.path.join(scripts_dir, "userSetup.py")
+                
+                log_info("Processing Maya {} - Scripts dir: {}".format(version, scripts_dir))
+                log_info("Target userSetup.py path: {}".format(usersetup_path))
                 
                 # Create scripts directory if it doesn't exist
                 if not os.path.exists(scripts_dir):
                     os.makedirs(scripts_dir)
+                    log_info("Created scripts directory: {}".format(scripts_dir))
                 
-                existing = ""
-                if os.path.exists(usersetup_path):
-                    with open(usersetup_path, 'r') as f:
-                        existing = f.read()
-                
-                # Check if prof-tools entry already exists (avoid duplicates)
-                prof_tools_comment = "// Prof-Tools Auto-Generated Entry"
-                if self.entry_line not in existing and prof_tools_comment not in existing:
-                    with open(usersetup_path, 'a') as f:
-                        # Ensure proper line ending before adding our content
-                        if existing and not existing.endswith('\n'):
-                            f.write('\n')
-                        # Add a blank line for better separation if file has content
-                        if existing.strip():
-                            f.write('\n')
-                        f.write('// Prof-Tools Auto-Generated Entry\n')
-                        f.write(self.entry_line + '\n')
-                    log_info("Added prof-tools entry to Maya {} userSetup.mel".format(version))
+                if self._add_entry_line_to_file(usersetup_path):
+                    log_info("Added prof-tools entry to Maya {} userSetup.py".format(version))
                     success_count += 1
                 else:
-                    log_info("Prof-tools entry already exists in Maya {} userSetup.mel".format(version))
+                    log_info("Prof-tools entry already exists in Maya {} userSetup.py".format(version))
                     success_count += 1
                     
             except Exception as e:
-                log_warning("Failed to update userSetup.mel for Maya {}: {}".format(version, e))
+                log_warning("Failed to update userSetup.py for Maya {}: {}".format(version, e))
         
         if success_count > 0:
-            log_info("Successfully updated userSetup.mel for {} Maya version(s)".format(success_count))
+            log_info("Successfully updated userSetup.py for {} Maya version(s)".format(success_count))
         else:
-            log_error("Failed to update any userSetup.mel files")
+            log_error("Failed to update any userSetup.py files")
+    
+    def _add_entry_line_to_file(self, file_path):
+        """
+        Add entry line to a userSetup file following GT Tools best practices.
+        
+        Args:
+            file_path (str): Path to the userSetup file
+            
+        Returns:
+            bool: True if line was added, False if already exists
+        """
+        try:
+            # Read existing content
+            existing_lines = []
+            if os.path.exists(file_path):
+                with open(file_path, 'r') as f:
+                    existing_lines = f.readlines()
+            
+            # Check if entry already exists
+            python_entry = 'python("import prof.ui.builder as _p; _p.build_menu()");'
+            prof_tools_comment = "# Prof-Tools Auto-Generated Entry"
+            
+            # Look for existing entry
+            for line in existing_lines:
+                if python_entry in line or prof_tools_comment in line:
+                    return False  # Already exists
+            
+            # Add the entry
+            with open(file_path, 'w') as f:
+                # Write existing content
+                f.writelines(existing_lines)
+                
+                # Ensure proper line ending
+                if existing_lines and not existing_lines[-1].endswith('\n'):
+                    f.write('\n')
+                
+                # Add blank line for separation if file has content
+                if existing_lines:
+                    f.write('\n')
+                
+                # Add prof-tools entry
+                f.write('# Prof-Tools Auto-Generated Entry\n')
+                f.write(python_entry + '\n')
+            
+            return True
+            
+        except Exception as e:
+            log_error("Failed to add entry line to {}: {}".format(file_path, e))
+            return False
     
     def _clean_usersetup_mel(self):
-        """Clean userSetup.mel files from ALL Maya versions"""
+        """Clean userSetup.py files from ALL Maya versions following GT Tools best practices"""
         maya_versions = self.get_available_maya_preferences_dirs()
         
         if not maya_versions:
-            log_warning("No Maya versions found for cleaning userSetup.mel files.")
+            log_warning("No Maya versions found for cleaning userSetup.py files.")
             return
         
         success_count = 0
         for version, version_path in maya_versions.items():
             try:
                 scripts_dir = os.path.join(version_path, SCRIPTS_FOLDER_NAME)
-                usersetup_path = os.path.join(scripts_dir, USERSETUP_FILE_NAME)
+                # Clean both .py and .mel files for backward compatibility
+                usersetup_py_path = os.path.join(scripts_dir, "userSetup.py")
+                usersetup_mel_path = os.path.join(scripts_dir, USERSETUP_FILE_NAME)
                 
-                if self._clean_usersetup_file(usersetup_path):
+                cleaned_any = False
+                
+                # Clean Python userSetup file
+                if self._clean_usersetup_file(usersetup_py_path):
+                    log_info("Cleaned prof-tools entries from Maya {} userSetup.py".format(version))
+                    cleaned_any = True
+                
+                # Clean MEL userSetup file (for backward compatibility)
+                if self._clean_usersetup_file(usersetup_mel_path):
                     log_info("Cleaned prof-tools entries from Maya {} userSetup.mel".format(version))
+                    cleaned_any = True
+                
+                if cleaned_any:
                     success_count += 1
                 else:
-                    log_info("No prof-tools entries found in Maya {} userSetup.mel".format(version))
+                    log_info("No prof-tools entries found in Maya {} userSetup files".format(version))
                     
             except Exception as e:
-                log_warning("Failed to clean userSetup.mel for Maya {}: {}".format(version, e))
+                log_warning("Failed to clean userSetup files for Maya {}: {}".format(version, e))
         
         if success_count > 0:
-            log_info("Successfully cleaned userSetup.mel for {} Maya version(s)".format(success_count))
+            log_info("Successfully cleaned userSetup files for {} Maya version(s)".format(success_count))
         else:
             log_info("No prof-tools entries found to clean in any Maya versions")
     
     def _clean_usersetup_file(self, usersetup_path):
         """
-        Clean a specific userSetup.mel file by removing only prof-tools entries.
-        Preserves all other user content.
+        Clean a specific userSetup file by removing only prof-tools entries.
+        Preserves all other user content following GT Tools best practices.
+        
+        Args:
+            usersetup_path (str): Path to the userSetup file
+            
         Returns:
             bool: True if prof-tools entries were found and removed, False otherwise
         """
@@ -353,12 +464,17 @@ class ProfToolsSetup(object):
             with open(usersetup_path, 'r') as f:
                 lines = f.readlines()
         except Exception as e:
-            log_error("Could not read userSetup.mel at {}: {}".format(usersetup_path, e))
+            log_error("Could not read userSetup file at {}: {}".format(usersetup_path, e))
             return False
         
-        cleaned = []
+        cleaned_lines = []
         skip_next = False
         prof_tools_removed = False
+        
+        # Define possible prof-tools entry patterns
+        python_entry = 'python("import prof.ui.builder as _p; _p.build_menu()");'
+        mel_entry = self.entry_line.strip()
+        prof_tools_comments = ["# Prof-Tools Auto-Generated Entry", "// Prof-Tools Auto-Generated Entry"]
         
         for line in lines:
             # If we marked the previous line to skip, skip this one too
@@ -367,28 +483,39 @@ class ProfToolsSetup(object):
                 prof_tools_removed = True
                 continue
             
-            # Check for prof-tools comment marker
-            if "Prof-Tools Auto-Generated Entry" in line:
-                skip_next = True  # Skip the next line (the actual entry)
-                prof_tools_removed = True
+            # Check for prof-tools comment markers
+            is_comment_line = False
+            for comment in prof_tools_comments:
+                if comment in line:
+                    skip_next = True  # Skip the next line (the actual entry)
+                    prof_tools_removed = True
+                    is_comment_line = True
+                    break
+            
+            if is_comment_line:
                 continue
             
-            # Check for direct prof-tools entry line (in case comment is missing)
-            if self.entry_line.strip() in line.strip():
+            # Check for direct prof-tools entry lines (in case comment is missing)
+            if python_entry in line.strip() or mel_entry in line.strip():
                 prof_tools_removed = True
                 continue
                 
             # Keep all other lines
-            cleaned.append(line)
+            cleaned_lines.append(line)
         
         # Only write back if we actually removed something
         if prof_tools_removed:
             try:
-                with open(usersetup_path, 'w') as f:
-                    f.writelines(cleaned)
+                # If file would be empty after cleaning, delete it
+                if not cleaned_lines or all(line.strip() == '' for line in cleaned_lines):
+                    os.remove(usersetup_path)
+                    log_info("Removed empty userSetup file: {}".format(usersetup_path))
+                else:
+                    with open(usersetup_path, 'w') as f:
+                        f.writelines(cleaned_lines)
                 return True
             except Exception as e:
-                log_error("Could not write cleaned userSetup.mel at {}: {}".format(usersetup_path, e))
+                log_error("Could not write cleaned userSetup file at {}: {}".format(usersetup_path, e))
                 return False
         else:
             return False
