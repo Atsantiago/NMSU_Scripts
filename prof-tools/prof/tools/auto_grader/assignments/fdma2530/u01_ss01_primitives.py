@@ -1284,40 +1284,316 @@ def validate_primitive_design_principles():
 
 def validate_technical_execution():
     """
-    Validate technical execution of modeling work.
+    Validate technical execution criteria for U01_SS01 Primitives assignment.
     
     Checks for:
-    - Proper modeling techniques
-    - Clean geometry (no overlapping faces, proper normals)
-    - Appropriate use of Maya tools
-    - No construction history issues
+    1. Pivot points moved from default positions (30% weight)
+    2. Evidence of duplications and/or instances (25% weight)
+    3. Model complexity based on polygon object count (45% weight)
     
-    Scoring: 0 errors = 100%, 1 error = 90%, 2 errors = 70%, 3+ errors = 50%
+    Scoring based on three weighted components:
+    - 400 objects = ~80%, several thousand = 100%
+    - Pivot manipulation and duplication/instancing techniques
     
     Returns:
-        tuple: (score_percentage, comments)
+        tuple: (score_percentage, detailed_comments)
     """
-    # TODO: Implement technical execution validation logic
-    return (85, "Manual evaluation required for Technical Execution.")
+    if not MAYA_AVAILABLE:
+        return (85, "Maya not available - manual evaluation required")
+    
+    try:
+        # Get all mesh objects in the scene
+        all_meshes = cmds.ls(type='mesh')
+        if not all_meshes:
+            return (10, "No mesh objects found in scene")
+        
+        # Get transform nodes for the meshes
+        mesh_transforms = []
+        for mesh in all_meshes:
+            # Get the transform node for this mesh
+            transforms = cmds.listRelatives(mesh, parent=True, type='transform')
+            if transforms:
+                mesh_transforms.extend(transforms)
+        
+        # Remove duplicates
+        mesh_transforms = list(set(mesh_transforms))
+        total_objects = len(mesh_transforms)
+        
+        score_components = []
+        comments = []
+        
+        # COMPONENT 1: Pivot Points Analysis (30% weight)
+        moved_pivots = 0
+        for transform in mesh_transforms:
+            try:
+                # Get the pivot position
+                pivot_pos = cmds.xform(transform, query=True, rotatePivot=True)
+                bounding_box = cmds.exactWorldBoundingBox(transform)
+                
+                # Calculate center of bounding box
+                bb_center = [
+                    (bounding_box[0] + bounding_box[3]) / 2,
+                    (bounding_box[1] + bounding_box[4]) / 2,
+                    (bounding_box[2] + bounding_box[5]) / 2
+                ]
+                
+                # Check if pivot is significantly moved from center (tolerance of 0.1 units)
+                tolerance = 0.1
+                if (abs(pivot_pos[0] - bb_center[0]) > tolerance or
+                    abs(pivot_pos[1] - bb_center[1]) > tolerance or
+                    abs(pivot_pos[2] - bb_center[2]) > tolerance):
+                    moved_pivots += 1
+                    
+            except Exception:
+                continue  # Skip objects that can't be analyzed
+        
+        pivot_percentage = min(moved_pivots / max(total_objects * 0.3, 1), 1.0)  # Expect 30% to have moved pivots
+        pivot_score = pivot_percentage * 30  # 30% weight
+        score_components.append(pivot_score)
+        
+        if moved_pivots > 0:
+            comments.append(f"Good: {moved_pivots} objects have pivots moved from default positions")
+        else:
+            comments.append("Issue: No evidence of pivot manipulation - all pivots at default positions")
+        
+        # COMPONENT 2: Duplications/Instances Analysis (25% weight)
+        duplicated_objects = 0
+        instanced_objects = 0
+        
+        # Check for duplicated objects (objects with similar names indicating duplication)
+        name_patterns = {}
+        for transform in mesh_transforms:
+            # Extract base name (remove trailing numbers)
+            import re
+            base_name = re.sub(r'\d+$', '', transform)
+            if base_name:
+                if base_name not in name_patterns:
+                    name_patterns[base_name] = []
+                name_patterns[base_name].append(transform)
+        
+        for base_name, objects in name_patterns.items():
+            if len(objects) > 1:
+                duplicated_objects += len(objects) - 1  # Count additional copies
+        
+        # Check for instanced objects
+        for transform in mesh_transforms:
+            try:
+                # Get the shape node
+                shapes = cmds.listRelatives(transform, shapes=True, noIntermediate=True)
+                if shapes:
+                    shape = shapes[0]
+                    # Check if this shape is instanced
+                    all_transforms = cmds.listRelatives(shape, allParents=True)
+                    if all_transforms and len(all_transforms) > 1:
+                        instanced_objects += 1
+            except Exception:
+                continue
+        
+        total_duplications = duplicated_objects + instanced_objects
+        duplication_percentage = min(total_duplications / max(total_objects * 0.2, 1), 1.0)  # Expect 20% to be duplications
+        duplication_score = duplication_percentage * 25  # 25% weight
+        score_components.append(duplication_score)
+        
+        if total_duplications > 0:
+            comments.append(f"Good: Found {duplicated_objects} duplicated objects and {instanced_objects} instanced objects")
+        else:
+            comments.append("Issue: No evidence of duplication or instancing techniques")
+        
+        # COMPONENT 3: Model Complexity Analysis (45% weight)
+        # Score based on polygon object count
+        # 400 objects = ~80%, several thousand = 100%
+        if total_objects >= 2000:
+            complexity_score = 45  # Full marks for 2000+ objects
+            comments.append(f"Excellent: High complexity model with {total_objects} polygon objects")
+        elif total_objects >= 1000:
+            complexity_score = 40  # 89% for 1000+ objects
+            comments.append(f"Great: Complex model with {total_objects} polygon objects")
+        elif total_objects >= 400:
+            # Scale from 80% to 89% between 400 and 1000 objects
+            complexity_percentage = 0.8 + (total_objects - 400) / (1000 - 400) * 0.09
+            complexity_score = complexity_percentage * 45
+            comments.append(f"Good: Moderate complexity with {total_objects} polygon objects")
+        elif total_objects >= 100:
+            # Scale from 60% to 80% between 100 and 400 objects
+            complexity_percentage = 0.6 + (total_objects - 100) / (400 - 100) * 0.2
+            complexity_score = complexity_percentage * 45
+            comments.append(f"Basic: Simple model with {total_objects} polygon objects - consider adding more detail")
+        else:
+            complexity_score = 27  # 60% for very simple models
+            comments.append(f"Minimal: Very simple model with only {total_objects} polygon objects - needs much more complexity")
+        
+        score_components.append(complexity_score)
+        
+        # Calculate final score
+        total_score = sum(score_components)
+        
+        # Ensure score is between 0 and 100
+        final_score = max(10, min(100, int(total_score)))
+        
+        # Create detailed comment
+        detailed_comment = f"Technical Execution Analysis:\n"
+        detailed_comment += f"• Total Objects: {total_objects}\n"
+        detailed_comment += f"• Pivot Manipulation: {moved_pivots}/{total_objects} objects ({pivot_score:.1f}/30 pts)\n"
+        detailed_comment += f"• Duplications/Instances: {total_duplications} found ({duplication_score:.1f}/25 pts)\n"
+        detailed_comment += f"• Model Complexity: {complexity_score:.1f}/45 pts\n\n"
+        detailed_comment += "\n".join(comments)
+        
+        return (final_score, detailed_comment)
+        
+    except Exception as e:
+        return (50, f"Error analyzing technical execution: {str(e)}")
 
 
 def validate_effort_professionalism():
     """
-    Validate overall effort and professionalism.
+    Validate overall effort and professionalism based on scene analysis.
     
-    Checks for:
-    - Overall quality and attention to detail
-    - Demonstration of effort beyond minimum requirements
-    - Professional presentation and finish
-    - Evidence of learning and skill application
+    Uses the same underlying metrics as technical execution but provides
+    generic feedback focused on perceived effort and professional approach:
+    - Scene complexity and attention to detail (45% weight)
+    - Evidence of advanced techniques and workflow (25% weight) 
+    - Thoughtful object management and organization (30% weight)
     
-    Scoring: 0 errors = 100%, 1 error = 90%, 2 errors = 70%, 3+ errors = 50%
+    This provides a baseline score that instructors can manually adjust
+    based on overall perceived effort and professionalism.
     
     Returns:
         tuple: (score_percentage, comments)
     """
-    # TODO: Implement effort/professionalism validation logic
-    return (85, "Manual evaluation required for Perceived Effort/Professionalism.")
+    if not MAYA_AVAILABLE:
+        return (85, "Manual evaluation required for Perceived Effort/Professionalism")
+    
+    try:
+        # Get all mesh objects in the scene
+        all_meshes = cmds.ls(type='mesh')
+        if not all_meshes:
+            return (40, "Limited effort evident - minimal scene content")
+        
+        # Get transform nodes for the meshes
+        mesh_transforms = []
+        for mesh in all_meshes:
+            transforms = cmds.listRelatives(mesh, parent=True, type='transform')
+            if transforms:
+                mesh_transforms.extend(transforms)
+        
+        mesh_transforms = list(set(mesh_transforms))
+        total_objects = len(mesh_transforms)
+        
+        score_components = []
+        
+        # COMPONENT 1: Scene Complexity and Detail (45% weight)
+        if total_objects >= 2000:
+            complexity_score = 45  # Exceptional effort
+            effort_level = "Exceptional effort with extensive detail work"
+        elif total_objects >= 1000:
+            complexity_score = 40  # High effort
+            effort_level = "Strong effort with good attention to detail"
+        elif total_objects >= 400:
+            complexity_percentage = 0.8 + (total_objects - 400) / (1000 - 400) * 0.09
+            complexity_score = complexity_percentage * 45
+            effort_level = "Good effort with adequate detail"
+        elif total_objects >= 100:
+            complexity_percentage = 0.6 + (total_objects - 100) / (400 - 100) * 0.2
+            complexity_score = complexity_percentage * 45
+            effort_level = "Basic effort - could benefit from more attention to detail"
+        else:
+            complexity_score = 27  # Minimal effort
+            effort_level = "Minimal effort evident - needs more development"
+        
+        score_components.append(complexity_score)
+        
+        # COMPONENT 2: Advanced Workflow Techniques (25% weight)
+        # Check for evidence of advanced techniques (duplications/instances)
+        duplicated_objects = 0
+        instanced_objects = 0
+        
+        # Check for duplicated objects
+        name_patterns = {}
+        for transform in mesh_transforms:
+            import re
+            base_name = re.sub(r'\d+$', '', transform)
+            if base_name:
+                if base_name not in name_patterns:
+                    name_patterns[base_name] = []
+                name_patterns[base_name].append(transform)
+        
+        for base_name, objects in name_patterns.items():
+            if len(objects) > 1:
+                duplicated_objects += len(objects) - 1
+        
+        # Check for instanced objects
+        for transform in mesh_transforms:
+            try:
+                shapes = cmds.listRelatives(transform, shapes=True, noIntermediate=True)
+                if shapes:
+                    shape = shapes[0]
+                    all_transforms = cmds.listRelatives(shape, allParents=True)
+                    if all_transforms and len(all_transforms) > 1:
+                        instanced_objects += 1
+            except Exception:
+                continue
+        
+        total_advanced_techniques = duplicated_objects + instanced_objects
+        technique_percentage = min(total_advanced_techniques / max(total_objects * 0.2, 1), 1.0)
+        technique_score = technique_percentage * 25
+        score_components.append(technique_score)
+        
+        if total_advanced_techniques > 0:
+            workflow_assessment = "Shows understanding of efficient workflow techniques"
+        else:
+            workflow_assessment = "Could demonstrate more advanced workflow understanding"
+        
+        # COMPONENT 3: Object Management and Organization (30% weight)
+        # Check for thoughtful pivot placement
+        moved_pivots = 0
+        for transform in mesh_transforms:
+            try:
+                pivot_pos = cmds.xform(transform, query=True, rotatePivot=True)
+                bounding_box = cmds.exactWorldBoundingBox(transform)
+                
+                bb_center = [
+                    (bounding_box[0] + bounding_box[3]) / 2,
+                    (bounding_box[1] + bounding_box[4]) / 2,
+                    (bounding_box[2] + bounding_box[5]) / 2
+                ]
+                
+                tolerance = 0.1
+                if (abs(pivot_pos[0] - bb_center[0]) > tolerance or
+                    abs(pivot_pos[1] - bb_center[1]) > tolerance or
+                    abs(pivot_pos[2] - bb_center[2]) > tolerance):
+                    moved_pivots += 1
+            except Exception:
+                continue
+        
+        organization_percentage = min(moved_pivots / max(total_objects * 0.3, 1), 1.0)
+        organization_score = organization_percentage * 30
+        score_components.append(organization_score)
+        
+        if moved_pivots > 0:
+            organization_assessment = "Demonstrates thoughtful object management"
+        else:
+            organization_assessment = "Could show more attention to object organization"
+        
+        # Calculate final score
+        total_score = sum(score_components)
+        final_score = max(40, min(100, int(total_score)))
+        
+        # Create generic professional comment
+        comments = [
+            f"Effort and Professionalism Assessment:",
+            f"• {effort_level}",
+            f"• {workflow_assessment}",
+            f"• {organization_assessment}",
+            "",
+            "This score reflects perceived effort and professional approach.",
+            "Instructor may adjust based on overall quality, presentation,",
+            "creativity, and demonstration of learning objectives."
+        ]
+        
+        return (final_score, "\n".join(comments))
+        
+    except Exception as e:
+        return (75, f"Unable to analyze scene for effort assessment. Manual evaluation recommended.")
 
 
 if __name__ == "__main__":
