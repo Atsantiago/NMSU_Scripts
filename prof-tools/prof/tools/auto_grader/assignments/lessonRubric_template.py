@@ -1372,7 +1372,7 @@ class LessonRubric(object):
         
         self._show_recalculate_results(recalculated_count, preserve_manual=False)
     
-    """ def _show_recalculate_results(self, updated_count, preserve_manual=True):
+    def _show_recalculate_results(self, updated_count, preserve_manual=True):
         """
         Show user feedback about recalculation results.
         
@@ -1389,18 +1389,18 @@ class LessonRubric(object):
             else:
                 message = f"Recalculated all {updated_count} criteria.\nAll manual adjustments were reset to validation results."
             
-            cmds.confirmDialog(
+            """cmds.confirmDialog(
                 title="Recalculation Complete",
                 message=message,
                 button=["OK"]
-            )
+            )"""
         else:
             if preserve_manual:
                 message = "All criteria have been manually adjusted or have no validation functions."
             else:
                 message = "No criteria were updated - no validation functions available."
             
-            cmds.confirmDialog(
+            """cmds.confirmDialog(
                 title="No Updates",
                 message=message,
                 button=["OK"]
