@@ -396,14 +396,29 @@ def validate_outliner_organization():
                                    'ambientLight', 'aiAreaLight', 'aiPhotometricLight', 'aiLightPortal',
                                    'rsPhysicalLight', 'rsIESLight', 'rsPortalLight', 'rsDomeLight']) or []
         
+        # Debug: Print all lights found for troubleshooting
+        print(f"DEBUG: Found {len(all_lights)} lights in scene: {all_lights}")
+        
         for light in all_lights:
+            # Get the transform node that contains this light shape
             light_transforms = cmds.listRelatives(light, parent=True, type='transform') or []
             if light_transforms:
                 light_transform = light_transforms[0]
+                print(f"DEBUG: Checking light transform '{light_transform}' for light shape '{light}'")
+                
                 # Check if light transform is at top level (no parent) - catches renamed lights too
                 light_parents = cmds.listRelatives(light_transform, parent=True, type='transform') or []
+                print(f"DEBUG: Light '{light_transform}' has parents: {light_parents}")
+                
                 if not light_parents:
-                    unparented_lights.append(light_transform)
+                    # Skip startup cameras that might contain light components
+                    if light_transform not in STARTUP_CAMERAS:
+                        print(f"DEBUG: Adding '{light_transform}' to unparented lights list")
+                        unparented_lights.append(light_transform)
+                    else:
+                        print(f"DEBUG: Skipping startup camera '{light_transform}'")
+        
+        print(f"DEBUG: Final unparented lights list: {unparented_lights}")
         
         # Report unparented issues with specific feedback
         if unparented_objects or unparented_lights:
