@@ -726,12 +726,13 @@ class LessonRubric(object):
         )
         
         # Warning message for empty files - helps instructors understand default scoring
-        if self.is_empty_file:
-            cmds.text(
-                label="⚠️ Empty detected - scores defaulted to Low Marks",
-                backgroundColor=(1.0, 0.8, 0.0),  # Yellow warning background (RGB values 0-1)
-                parent=main_layout
-            )
+        # Always create the warning element, but only show it when file is empty
+        self.ui_elements['empty_file_warning'] = cmds.text(
+            label="⚠️ Empty detected - scores defaulted to Low Marks",
+            backgroundColor=(1.0, 0.8, 0.0),  # Yellow warning background (RGB values 0-1)
+            visible=self.is_empty_file,  # Only visible when file is empty
+            parent=main_layout
+        )
         
         # Visual separator between header and content
         cmds.separator(height=10, parent=main_layout)
@@ -1360,45 +1361,23 @@ class LessonRubric(object):
         """
         Update the empty file warning display based on current file status.
         
-        This method updates or creates the warning message that appears when
-        an empty file is detected. It handles both showing and hiding the warning.
+        This method shows or hides the warning message that appears when
+        an empty file is detected.
         """
         if not MAYA_AVAILABLE:
             return
             
-        # Look for existing warning element
-        warning_element_key = 'empty_file_warning'
-        
         try:
-            # Check if warning element exists and is valid
-            if warning_element_key in self.ui_elements:
-                try:
-                    # Try to edit existing warning
-                    if self.is_empty_file:
-                        # Show warning for empty file
-                        cmds.text(
-                            self.ui_elements[warning_element_key],
-                            edit=True,
-                            label="⚠️ Empty detected - scores defaulted to Low Marks",
-                            visible=True
-                        )
-                    else:
-                        # Hide warning for non-empty file
-                        cmds.text(
-                            self.ui_elements[warning_element_key],
-                            edit=True,
-                            visible=False
-                        )
-                except:
-                    # If editing fails, element might not exist anymore
-                    del self.ui_elements[warning_element_key]
-                    
-            # If no existing warning element, we can't dynamically create one
-            # since the UI layout is already established. This is a limitation
-            # of Maya's UI system - we'd need to rebuild the entire layout.
-            # For now, just log the status change
-            if warning_element_key not in self.ui_elements:
-                logger.info(f"Empty file status changed to: {self.is_empty_file}")
+            # Update the warning element visibility based on current empty file status
+            if 'empty_file_warning' in self.ui_elements:
+                cmds.text(
+                    self.ui_elements['empty_file_warning'],
+                    edit=True,
+                    visible=self.is_empty_file
+                )
+                logger.info(f"Updated empty file warning visibility: {self.is_empty_file}")
+            else:
+                logger.warning("Empty file warning element not found in UI")
                 
         except Exception as e:
             logger.warning(f"Could not update empty file warning display: {e}")
