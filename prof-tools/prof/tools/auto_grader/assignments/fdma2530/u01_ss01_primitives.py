@@ -49,9 +49,9 @@ RUBRIC_CRITERIA = [
         "description": "Clean hierarchy, proper grouping, and logical object naming in the Outliner",
         "validation_function": "validate_outliner_organization",
         "general_performance_comments": {
-            100: "Excellent outliner organization! Clean hierarchy with logical grouping and naming.",
-            90: "Good organization with 1 minor issue. Objects well-grouped with mostly clear naming.",
-            70: "Basic organization present but 2 areas need improvement (grouping/naming/hierarchy).",
+            100: "Excellent outliner organization! Everything is named and grouped correctly.",
+            90: "Good organization with 1 minor issue. Some grouping or naming issues.",
+            70: "Some organization present but 2 areas need improvement (grouping/naming/hierarchy).",
             50: "Poor organization with 3+ issues. Review how to organize your scene on Canvas.",
             0: "No clear organization visible. No proper naming or grouping."
         }
@@ -329,18 +329,143 @@ def validate_outliner_organization():
     Validate Maya Outliner organization and hierarchy.
     
     Checks for:
-    - Clean hierarchy structure
-    - Proper grouping of objects
-    - Logical object naming conventions
-    - No unnecessary empty groups
+    1. No unparented objects (all objects should be in proper groups)
+    2. Lights grouped together with "light" or "lights" in group name
+    3. Turntable_ROT group containing polygon geometry or other groups
+    4. No default object names (excluding startup cameras)
     
     Scoring: 0 errors = 100%, 1 error = 90%, 2 errors = 70%, 3+ errors = 50%
     
     Returns:
         tuple: (score_percentage, comments)
     """
-    # TODO: Implement outliner validation logic
-    return (85, "Manual evaluation required for Outliner Organization.")
+    if not MAYA_AVAILABLE:
+        return (0, "Maya not available for validation.")
+    
+    # Default object names to check for (excluding cameras) - optimized set for faster lookup
+    DEFAULT_OBJECT_NAMES = {
+        "nurbsSphere", "nurbsCube", "nurbsCylinder", "nurbsCone",
+        "nurbsPlane", "nurbsTorus", "nurbsCircle", "nurbsSquare", 
+        "pSphere", "pCube", "pCylinder", "pCone", "pPlane", "pTorus",
+        "pPrism", "pPyramid", "pPipe", "pHelix", "pSolid", 
+        "rsPhysicalLight", "rsIESLight", "rsPortalLight", "aiAreaLight",
+        "rsDomeLight", "aiPhotometricLight", "aiLightPortal",
+        "ambientLight", "directionalLight", "pointLight", "spotLight",
+        "areaLight", "volumeLight"
+    }
+    
+    # Startup cameras to exclude - optimized set for faster lookup
+    STARTUP_CAMERAS = {"persp", "top", "front", "side"}
+    
+    errors = []
+    warnings = []
+    
+    try:
+        # Get all transforms once for efficiency
+        all_transforms = cmds.ls(type='transform', long=False) or []
+        
+        # Filter out startup cameras early
+        filtered_transforms = [obj for obj in all_transforms if obj not in STARTUP_CAMERAS]
+        
+        # Check 1: Unparented Objects (optimized approach)
+        unparented_objects = []
+        
+        # Get all top-level transforms (objects with no parent)
+        top_level_objects = cmds.ls(assemblies=True) or []
+        
+        # Filter out cameras and other non-geometry parents
+        for obj in top_level_objects:
+            if obj not in STARTUP_CAMERAS:
+                # Check if this object or its children contain geometry
+                descendants = cmds.listRelatives(obj, allDescendents=True, type='mesh') or []
+                if descendants:
+                    unparented_objects.append(obj)
+        
+        if unparented_objects:
+            errors.append(f"Found {len(unparented_objects)} unparented object(s): {', '.join(unparented_objects[:3])}{'...' if len(unparented_objects) > 3 else ''}")
+        
+        # Check 2: Light Organization (optimized light detection)
+        # Get all light types in one call
+        all_lights = cmds.ls(type=['directionalLight', 'pointLight', 'spotLight', 'areaLight', 'volumeLight', 
+                                   'ambientLight', 'aiAreaLight', 'aiPhotometricLight', 'aiLightPortal',
+                                   'rsPhysicalLight', 'rsIESLight', 'rsPortalLight', 'rsDomeLight']) or []
+        
+        if all_lights:
+            # Find light groups efficiently using pre-filtered transforms
+            light_groups = [group for group in filtered_transforms if 'light' in group.lower()]
+            
+            if not light_groups:
+                errors.append("No light organization group found (should contain 'light' or 'lights' in name)")
+            else:
+                # Check light grouping more efficiently
+                ungrouped_lights = []
+                
+                # Build a set of all objects under light groups for fast lookup
+                light_group_descendants = set()
+                for light_group in light_groups:
+                    descendants = cmds.listRelatives(light_group, allDescendents=True, type='transform') or []
+                    light_group_descendants.update(descendants)
+                
+                # Check each light's transform
+                for light in all_lights:
+                    light_transforms = cmds.listRelatives(light, parent=True, type='transform') or []
+                    if light_transforms:
+                        light_transform = light_transforms[0]
+                        # Check if this light transform is under any light group
+                        if light_transform not in light_group_descendants and light_transform not in light_groups:
+                            ungrouped_lights.append(light_transform)
+                
+                if ungrouped_lights:
+                    warnings.append(f"Some lights may not be properly grouped: {', '.join(ungrouped_lights[:2])}{'...' if len(ungrouped_lights) > 2 else ''}")
+        
+        # Check 3: Turntable_ROT group (optimized search)
+        turntable_groups = [transform for transform in filtered_transforms 
+                           if 'turntable_rot' in transform.lower() or 'turntable' in transform.lower()]
+        
+        if not turntable_groups:
+            errors.append("No 'Turntable_ROT' group found for geometry organization")
+        else:
+            # Check if turntable group has children efficiently
+            has_geometry = any(cmds.listRelatives(group, children=True, type='transform') 
+                             for group in turntable_groups)
+            
+            if not has_geometry:
+                warnings.append("Turntable group exists but appears to be empty")
+        
+        # Check 4: Default Object Names (optimized with set lookup)
+        offending_objects = []
+        
+        for obj in filtered_transforms:
+            # Use set membership for O(1) lookup instead of list iteration
+            for def_name in DEFAULT_OBJECT_NAMES:
+                if obj.startswith(def_name):
+                    offending_objects.append(obj)
+                    break  # No need to check other default names for this object
+        
+        if offending_objects:
+            errors.append(f"Found {len(offending_objects)} object(s) with default names: {', '.join(offending_objects[:3])}{'...' if len(offending_objects) > 3 else ''}")
+        
+        # Calculate score based on total issues
+        total_errors = len(errors)
+        total_warnings = len(warnings)
+        
+        if total_errors == 0 and total_warnings == 0:
+            score = 100
+            comments = "Excellent outliner organization! All objects properly grouped and named."
+        elif total_errors == 0 and total_warnings <= 1:
+            score = 90
+            comments = f"Good organization with minor issues: {'; '.join(warnings)}"
+        elif total_errors == 1 or (total_errors == 0 and total_warnings == 2):
+            score = 70
+            comments = f"Organization needs improvement: {'; '.join(errors + warnings)}"
+        else:
+            score = 50
+            comments = f"Poor organization with multiple issues: {'; '.join(errors + warnings)}"
+        
+        return (score, comments)
+        
+    except Exception as e:
+        return (50, f"Error validating outliner organization: {str(e)}")
 
 
 def validate_primitive_design_principles():
