@@ -333,6 +333,7 @@ def validate_outliner_organization():
     2. Lights grouped together with "light" or "lights" in group name
     3. Turntable_ROT group containing polygon geometry or other groups
     4. No default object names (excluding startup cameras)
+    5. No NURBS primitives (assignment requires polygon primitives only)
     
     Scoring: 0 errors = 100%, 1 error = 90%, 2 errors = 70%, 3+ errors = 50%
     
@@ -389,6 +390,7 @@ def validate_outliner_organization():
                     continue
         
         # Add specific check for unparented lights (these should always be grouped)
+        # This catches ALL lights regardless of naming - renamed lights like "key_light" still need grouping
         unparented_lights = []
         all_lights = cmds.ls(type=['directionalLight', 'pointLight', 'spotLight', 'areaLight', 'volumeLight', 
                                    'ambientLight', 'aiAreaLight', 'aiPhotometricLight', 'aiLightPortal',
@@ -398,7 +400,7 @@ def validate_outliner_organization():
             light_transforms = cmds.listRelatives(light, parent=True, type='transform') or []
             if light_transforms:
                 light_transform = light_transforms[0]
-                # Check if light transform is at top level (no parent)
+                # Check if light transform is at top level (no parent) - catches renamed lights too
                 light_parents = cmds.listRelatives(light_transform, parent=True, type='transform') or []
                 if not light_parents:
                     unparented_lights.append(light_transform)
@@ -479,22 +481,110 @@ def validate_outliner_organization():
         if offending_objects:
             errors.append(f"Found {len(offending_objects)} object(s) with default names: {', '.join(offending_objects[:3])}{'...' if len(offending_objects) > 3 else ''}")
         
-        # Calculate score based on total issues
-        total_errors = len(errors)
+        # ========================================================================
+        # Check 5: NURBS Primitives Usage (should use polygon primitives only)
+        # ========================================================================
+        # This assignment is about polygon modeling - NURBS primitives should be penalized
+        
+        nurbs_objects = []
+        # Check for NURBS surfaces and curves
+        nurbs_surfaces = cmds.ls(type='nurbsSurface') or []
+        nurbs_curves = cmds.ls(type='nurbsCurve') or []
+        
+        # Get transform parents of NURBS geometry
+        for nurbs_surface in nurbs_surfaces:
+            surface_transforms = cmds.listRelatives(nurbs_surface, parent=True, type='transform') or []
+            for transform in surface_transforms:
+                if transform not in nurbs_objects:
+                    nurbs_objects.append(transform)
+        
+        for nurbs_curve in nurbs_curves:
+            curve_transforms = cmds.listRelatives(nurbs_curve, parent=True, type='transform') or []
+            for transform in curve_transforms:
+                if transform not in nurbs_objects:
+                    nurbs_objects.append(transform)
+        
+        if nurbs_objects:
+            errors.append(f"Found {len(nurbs_objects)} NURBS object(s): {', '.join(nurbs_objects[:3])}{'...' if len(nurbs_objects) > 3 else ''} (assignment requires polygon primitives only)")
+        
+        # ========================================================================
+        # Calculate score with weighted penalties based on issue types and severity
+        # ========================================================================
+        
+        # Count specific error types for weighted scoring
+        error_weight = 0
         total_warnings = len(warnings)
         
-        if total_errors == 0 and total_warnings == 0:
+        # Count unparented objects (lights + geometry combined)
+        total_unparented = len(unparented_objects) + len(unparented_lights)
+        
+        # Penalty 1: Unparented objects (weighted by severity)
+        if total_unparented > 0:
+            if total_unparented < 3:
+                error_weight += 1  # Minor penalty for 1-2 unparented objects
+            else:
+                error_weight += 2  # Major penalty for 3+ unparented objects
+        
+        # Penalty 2: Light organization issues (strict but reasonable)
+        if unparented_lights:
+            # If lights are unparented, this is already counted above
+            # But if there are light organization issues (from Check 2), add penalty
+            pass
+        elif "No light organization group found" in "; ".join(errors):
+            error_weight += 1  # Missing light group structure
+        
+        # Penalty 3: Missing Turntable_ROT group
+        if "No 'Turntable_ROT' group found" in "; ".join(errors):
+            error_weight += 1
+        
+        # Penalty 4: Default object names (graduated penalties)
+        default_name_objects = [err for err in errors if "default names" in err]
+        if default_name_objects:
+            # Extract count from error message
+            import re
+            match = re.search(r'Found (\d+) object\(s\) with default names', default_name_objects[0])
+            if match:
+                default_count = int(match.group(1))
+                
+                # Check if all defaults are lights (stricter penalty)
+                light_defaults = [obj for obj in offending_objects if any(light_type in obj.lower() for light_type in ['light', 'directional', 'point', 'spot', 'area', 'volume', 'ambient'])]
+                
+                if len(light_defaults) == default_count and default_count > 0:
+                    # All default names are lights - 85% score (15% penalty)
+                    error_weight += 1.5
+                elif default_count == 1:
+                    # Single default name - 95% score (5% penalty)
+                    error_weight += 0.5
+                elif default_count <= 3:
+                    # Few default names - moderate penalty
+                    error_weight += 1
+                else:
+                    # Many default names - major penalty
+                    error_weight += 2
+        
+        # Penalty 5: NURBS usage (major violation for this assignment)
+        if nurbs_objects:
+            error_weight += 2  # Major penalty for using wrong primitive type
+        
+        # Convert error weight to score
+        if error_weight == 0 and total_warnings == 0:
             score = 100
             comments = "Excellent outliner organization! All objects properly grouped and named."
-        elif total_errors == 0 and total_warnings <= 1:
+        elif error_weight <= 0.5:
+            score = 95
+            comments = f"Very good organization with minimal issues: {'; '.join(errors + warnings)}"
+        elif error_weight <= 1.0:
             score = 90
-            comments = f"Good organization with minor issues: {'; '.join(warnings)}"
-        elif total_errors == 1 or (total_errors == 0 and total_warnings == 2):
+            comments = f"Good organization with minor issues: {'; '.join(errors + warnings)}"
+        elif error_weight <= 1.5:
+            score = 85
+            comments = f"Acceptable organization but needs improvement: {'; '.join(errors + warnings)}"
+        elif error_weight <= 2.0:
             score = 70
-            comments = f"Organization needs improvement: {'; '.join(errors + warnings)}"
+            comments = f"Organization needs significant improvement: {'; '.join(errors + warnings)}"
         else:
             score = 50
-            comments = f"Poor organization with multiple issues: {'; '.join(errors + warnings)}"
+            comments = f"Poor organization with multiple major issues: {'; '.join(errors + warnings)}"
         
         return (score, comments)
         
