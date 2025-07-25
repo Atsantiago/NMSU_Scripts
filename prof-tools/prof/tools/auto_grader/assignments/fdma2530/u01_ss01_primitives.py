@@ -599,7 +599,7 @@ def validate_outliner_organization():
             elif organizational_issues and not naming_issues:
                 comments = f"Good naming but organization needs attention: {'; '.join(organizational_issues + warnings)}"
             else:
-                comments = f"Good organization with minor issues: {'; '.join(errors + warnings)}"
+                comments = f"Good outliner organization with minor issues: {'; '.join(errors + warnings)}"
         elif error_weight <= 1.5:
             score = 85
             if naming_issues and not organizational_issues:
@@ -611,11 +611,11 @@ def validate_outliner_organization():
         elif error_weight <= 2.0:
             score = 70
             if naming_issues and not organizational_issues:
-                comments = f"Organization structure present but naming needs significant work: {'; '.join(naming_issues + warnings)}"
+                comments = f"Naming needs some work: {'; '.join(naming_issues + warnings)}"
             elif organizational_issues and not naming_issues:
-                comments = f"Naming is acceptable but organization needs significant work: {'; '.join(organizational_issues + warnings)}"
+                comments = f"Organization needs some work: {'; '.join(organizational_issues + warnings)}"
             else:
-                comments = f"Both organization and naming need significant improvement: {'; '.join(errors + warnings)}"
+                comments = f"Both organization and naming need improvement: {'; '.join(errors + warnings)}"
         else:
             score = 50
             if naming_issues and not organizational_issues:
@@ -623,7 +623,7 @@ def validate_outliner_organization():
             elif organizational_issues and not naming_issues:
                 comments = f"Poor organization with multiple issues (naming is acceptable): {'; '.join(organizational_issues + warnings)}"
             else:
-                comments = f"Poor organization with multiple major issues in both structure and naming: {'; '.join(errors + warnings)}"
+                comments = f"Poor organization with multiple issues in both structure and naming: {'; '.join(errors + warnings)}"
         
         return (score, comments)
         
