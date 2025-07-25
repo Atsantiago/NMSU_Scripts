@@ -683,18 +683,254 @@ def validate_primitive_design_principles():
     Validate design principles in primitive modeling.
     
     Checks for:
-    - Effective use of primitive shapes
-    - Attention to proportion and balance
-    - Good composition principles
-    - Creative use of basic forms
+    - Only Maya default polygon primitives are used (no edge/face/vertex modifications)
+    - Students can scale, move, rotate, and alter initial primitive attributes
+    - At least 10% of polygon objects should have modified utility helper node attributes
+    - No extrusions, edge loops, or topology changes allowed
     
-    Scoring: 0 errors = 100%, 1 error = 90%, 2 errors = 70%, 3+ errors = 50%
+    Scoring: 0 violations = 100%, minor violations = 90%, moderate = 70%, major = 50%
     
     Returns:
         tuple: (score_percentage, comments)
     """
-    # TODO: Implement design principles validation logic
-    return (85, "Manual evaluation required for Primitive Design Principles.")
+    if not MAYA_AVAILABLE:
+        return (0, "Maya not available for validation.")
+    
+    try:
+        # Get all polygon meshes in the scene
+        all_meshes = cmds.ls(type='mesh') or []
+        
+        if not all_meshes:
+            return (100, "No polygon objects found in scene to evaluate.")
+        
+        # Get transform parents for all meshes
+        mesh_transforms = []
+        for mesh in all_meshes:
+            transforms = cmds.listRelatives(mesh, parent=True, type='transform') or []
+            if transforms:
+                mesh_transforms.append(transforms[0])
+        
+        print(f"DEBUG: Found {len(mesh_transforms)} polygon objects to check for primitive compliance")
+        
+        violations = []
+        modified_attributes_count = 0
+        total_primitives = 0
+        
+        # Define expected primitive topologies (vertices, faces, edges)
+        primitive_topologies = {
+            'pCube': {'vertices': 8, 'faces': 6, 'edges': 12},
+            'pSphere': {'vertices': 382, 'faces': 760, 'edges': 1140},  # Default sphere (subdivisionsU=20, subdivisionsV=10)
+            'pCylinder': {'vertices': 42, 'faces': 60, 'edges': 100},   # Default cylinder (subdivisionsAxis=20, subdivisionsHeight=1)
+            'pCone': {'vertices': 22, 'faces': 40, 'edges': 60},        # Default cone (subdivisionsAxis=20, subdivisionsHeight=1)
+            'pPlane': {'vertices': 4, 'faces': 1, 'edges': 4},          # Default plane (subdivisionsU=1, subdivisionsV=1)
+            'pTorus': {'vertices': 400, 'faces': 400, 'edges': 800},    # Default torus (subdivisionsU=20, subdivisionsV=20)
+        }
+        
+        for transform in mesh_transforms:
+            try:
+                # Skip if this is a light transform
+                children = cmds.listRelatives(transform, children=True, shapes=True) or []
+                is_light = any(cmds.nodeType(child) in ['directionalLight', 'pointLight', 'spotLight', 'areaLight', 'volumeLight', 'ambientLight', 'aiAreaLight', 'aiSkyDomeLight', 'aiPhotometricLight', 'aiMeshLight', 'aiLightPortal', 'rsPhysicalLight', 'rsIESLight', 'rsPortalLight', 'rsDomeLight'] for child in children)
+                
+                if is_light:
+                    continue
+                
+                # Get the mesh shape
+                mesh_shapes = cmds.listRelatives(transform, children=True, type='mesh') or []
+                if not mesh_shapes:
+                    continue
+                
+                mesh = mesh_shapes[0]
+                
+                # Check if this looks like a primitive based on name
+                primitive_type = None
+                for prim_name in primitive_topologies.keys():
+                    if transform.startswith(prim_name):
+                        primitive_type = prim_name
+                        break
+                
+                if not primitive_type:
+                    # If name doesn't indicate primitive, check if it has construction history
+                    history = cmds.listHistory(mesh, pruneDagObjects=True) or []
+                    primitive_nodes = [node for node in history if cmds.nodeType(node).startswith('poly') and 'prim' in cmds.nodeType(node).lower()]
+                    
+                    if not primitive_nodes:
+                        violations.append(f"'{transform}' does not appear to be a Maya primitive (no primitive construction history)")
+                        continue
+                    
+                    # Try to determine primitive type from construction history
+                    for node in primitive_nodes:
+                        node_type = cmds.nodeType(node)
+                        if 'Cube' in node_type:
+                            primitive_type = 'pCube'
+                        elif 'Sphere' in node_type:
+                            primitive_type = 'pSphere'
+                        elif 'Cylinder' in node_type:
+                            primitive_type = 'pCylinder'
+                        elif 'Cone' in node_type:
+                            primitive_type = 'pCone'
+                        elif 'Plane' in node_type:
+                            primitive_type = 'pPlane'
+                        elif 'Torus' in node_type:
+                            primitive_type = 'pTorus'
+                        break
+                
+                if not primitive_type:
+                    violations.append(f"'{transform}' could not be identified as a Maya primitive")
+                    continue
+                
+                total_primitives += 1
+                
+                # Check if topology has been modified
+                vertex_count = cmds.polyEvaluate(mesh, vertex=True)
+                face_count = cmds.polyEvaluate(mesh, face=True)
+                edge_count = cmds.polyEvaluate(mesh, edge=True)
+                
+                print(f"DEBUG: {transform} ({primitive_type}) - V:{vertex_count}, F:{face_count}, E:{edge_count}")
+                
+                # For sphere, cylinder, cone, torus - check if attributes were modified
+                expected_topology = primitive_topologies.get(primitive_type, {})
+                
+                # Check construction history for attribute modifications
+                history = cmds.listHistory(mesh, pruneDagObjects=True) or []
+                primitive_node = None
+                
+                for node in history:
+                    node_type = cmds.nodeType(node)
+                    if (primitive_type == 'pCube' and 'Cube' in node_type) or \
+                       (primitive_type == 'pSphere' and 'Sphere' in node_type) or \
+                       (primitive_type == 'pCylinder' and 'Cylinder' in node_type) or \
+                       (primitive_type == 'pCone' and 'Cone' in node_type) or \
+                       (primitive_type == 'pPlane' and 'Plane' in node_type) or \
+                       (primitive_type == 'pTorus' and 'Torus' in node_type):
+                        primitive_node = node
+                        break
+                
+                if primitive_node:
+                    # Check if attributes were modified from defaults
+                    has_modified_attributes = False
+                    
+                    try:
+                        if primitive_type == 'pSphere':
+                            subdU = cmds.getAttr(f"{primitive_node}.subdivisionsU")
+                            subdV = cmds.getAttr(f"{primitive_node}.subdivisionsV")
+                            if subdU != 20 or subdV != 10:
+                                has_modified_attributes = True
+                        elif primitive_type == 'pCylinder':
+                            subdAxis = cmds.getAttr(f"{primitive_node}.subdivisionsAxis")
+                            subdHeight = cmds.getAttr(f"{primitive_node}.subdivisionsHeight")
+                            if subdAxis != 20 or subdHeight != 1:
+                                has_modified_attributes = True
+                        elif primitive_type == 'pCone':
+                            subdAxis = cmds.getAttr(f"{primitive_node}.subdivisionsAxis")
+                            subdHeight = cmds.getAttr(f"{primitive_node}.subdivisionsHeight")
+                            if subdAxis != 20 or subdHeight != 1:
+                                has_modified_attributes = True
+                        elif primitive_type == 'pCube':
+                            subdW = cmds.getAttr(f"{primitive_node}.subdivisionsWidth")
+                            subdH = cmds.getAttr(f"{primitive_node}.subdivisionsHeight")
+                            subdD = cmds.getAttr(f"{primitive_node}.subdivisionsDepth")
+                            if subdW != 1 or subdH != 1 or subdD != 1:
+                                has_modified_attributes = True
+                        elif primitive_type == 'pPlane':
+                            subdU = cmds.getAttr(f"{primitive_node}.subdivisionsU")
+                            subdV = cmds.getAttr(f"{primitive_node}.subdivisionsV")
+                            if subdU != 1 or subdV != 1:
+                                has_modified_attributes = True
+                        elif primitive_type == 'pTorus':
+                            subdU = cmds.getAttr(f"{primitive_node}.subdivisionsU")
+                            subdV = cmds.getAttr(f"{primitive_node}.subdivisionsV")
+                            if subdU != 20 or subdV != 20:
+                                has_modified_attributes = True
+                    except:
+                        pass  # Attribute might not exist or be accessible
+                    
+                    if has_modified_attributes:
+                        modified_attributes_count += 1
+                        print(f"DEBUG: {transform} has modified primitive attributes")
+                
+                # Check for topology modifications by comparing to expected counts
+                # Allow for attribute modifications that change topology legitimately
+                topology_modified = False
+                
+                # For cubes and planes, topology should match exactly if unmodified
+                if primitive_type in ['pCube', 'pPlane']:
+                    expected = expected_topology
+                    if (vertex_count != expected['vertices'] or 
+                        face_count != expected['faces'] or 
+                        edge_count != expected['edges']):
+                        topology_modified = True
+                
+                # For other primitives, check if topology changes are from attribute modifications
+                elif primitive_node:
+                    # If we have the primitive node, we can check if topology matches current attributes
+                    # This is more complex and requires calculating expected topology based on current attributes
+                    pass  # For now, we'll be lenient with parametric primitives
+                
+                # Check for obvious topology modifications (like extrusions, edge loops)
+                # Look for non-manifold edges, ngons, or unusual topology patterns
+                try:
+                    # Check for ngons (faces with more than 4 sides)
+                    ngons = []
+                    for i in range(face_count):
+                        face_verts = cmds.polyInfo(f"{mesh}.f[{i}]", faceToVertex=True)[0]
+                        vert_count = len([x for x in face_verts.split() if x.isdigit()])
+                        if vert_count > 4:
+                            ngons.append(i)
+                    
+                    if ngons:
+                        violations.append(f"'{transform}' contains {len(ngons)} ngon(s) - faces have been modified")
+                    
+                    # Check for triangles in objects that shouldn't have them
+                    triangles = []
+                    for i in range(face_count):
+                        face_verts = cmds.polyInfo(f"{mesh}.f[{i}]", faceToVertex=True)[0]
+                        vert_count = len([x for x in face_verts.split() if x.isdigit()])
+                        if vert_count == 3:
+                            triangles.append(i)
+                    
+                    # Cubes and planes shouldn't have triangles
+                    if primitive_type in ['pCube', 'pPlane'] and triangles:
+                        violations.append(f"'{transform}' contains triangulated faces - topology has been modified")
+                        
+                except Exception:
+                    pass  # Skip topology checks if they fail
+                
+                if topology_modified:
+                    violations.append(f"'{transform}' topology has been modified from original {primitive_type}")
+                    
+            except Exception as e:
+                print(f"DEBUG: Error checking {transform}: {e}")
+                continue
+        
+        # Calculate scores
+        major_violations = len(violations)
+        attribute_modification_percentage = (modified_attributes_count / total_primitives * 100) if total_primitives > 0 else 0
+        
+        # Scoring logic
+        if major_violations == 0:
+            if attribute_modification_percentage >= 10:
+                score = 100
+                comments = f"Excellent primitive design! All {total_primitives} objects are unmodified Maya primitives. {modified_attributes_count} objects ({attribute_modification_percentage:.1f}%) have modified attributes - great creativity!"
+            else:
+                score = 90
+                comments = f"Good primitive usage! All {total_primitives} objects are unmodified Maya primitives. Consider modifying attributes on more primitives for variety ({modified_attributes_count}/{total_primitives} currently have modified attributes)."
+        elif major_violations <= 2:
+            score = 70
+            comments = f"Some primitive violations found: {'; '.join(violations[:2])}. Remember: only use unmodified Maya primitives (scaling, moving, rotating, and changing initial attributes is allowed)."
+        elif major_violations <= 5:
+            score = 50
+            comments = f"Multiple primitive violations detected: {'; '.join(violations[:3])}{'...' if len(violations) > 3 else ''}. Review assignment requirements - no edge/face/vertex modifications allowed."
+        else:
+            score = 0
+            comments = f"Extensive primitive violations found ({major_violations} issues). This assignment requires using only unmodified Maya polygon primitives."
+        
+        print(f"DEBUG: Final primitive check - {total_primitives} primitives, {modified_attributes_count} with modified attributes ({attribute_modification_percentage:.1f}%), {major_violations} violations")
+        
+        return (score, comments)
+        
+    except Exception as e:
+        return (50, f"Error validating primitive design principles: {str(e)}")
 
 
 def validate_technical_execution():
