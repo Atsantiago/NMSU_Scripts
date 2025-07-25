@@ -112,7 +112,7 @@ def create_u01_ss01_rubric():
     - Introduction to design principles and professionalism standards
     """
     # Get current file name for assignment context
-    file_name = "Primitives"
+    file_name = "Unknown File"
     if MAYA_AVAILABLE:
         try:
             scene_name = cmds.file(query=True, sceneName=True, shortName=True)

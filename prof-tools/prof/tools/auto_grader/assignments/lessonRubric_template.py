@@ -702,7 +702,7 @@ class LessonRubric(object):
         )
         
         # Header section with assignment information
-        cmds.text(
+        self.ui_elements['assignment_display'] = cmds.text(
             label=f"Assignment: {self.assignment_display_name}",
             font="boldLabelFont",  # Use Maya's bold font for emphasis
             align="left",
@@ -1237,19 +1237,25 @@ class LessonRubric(object):
         """
         Refresh the rubric for the current Maya file.
         
-        This method:
-        1. Gets the current Maya file name
-        2. Updates the assignment name display
-        3. Re-runs all validation functions with the new file
-        4. Updates all scores and comments
-        5. Resets all manual override flags
+        This method completely reinitializes the rubric for the new file as if 
+        the rubric was just opened fresh, including:
+        1. Re-detecting if the current file is empty/minimal
+        2. Getting the current Maya file name
+        3. Updating the assignment name display
+        4. Re-running all validation functions with fresh defaults
+        5. Updating the empty file warning display
+        6. Resetting all manual override flags
         
-        This is perfect for when you open a new student file and want to
-        re-evaluate everything without closing and reopening the rubric window.
+        This ensures the rubric behaves exactly like opening it fresh on the new file.
         """
         try:
-            # Get current file name
-            current_file = "Unknown"
+            # STEP 1: Re-detect empty file status for the current scene
+            # This is crucial for proper default scoring and warning display
+            old_empty_status = self.is_empty_file
+            self._check_empty_file()
+            
+            # STEP 2: Get current file name
+            current_file = "Unknown File"
             try:
                 scene_name = cmds.file(query=True, sceneName=True, shortName=True)
                 if scene_name:
@@ -1257,31 +1263,40 @@ class LessonRubric(object):
             except:
                 pass
             
-            # Update assignment name with new file
+            # STEP 3: Update assignment name and display
             base_assignment = self.assignment_name.split(':')[0] if ':' in self.assignment_name else self.assignment_name
             self.assignment_name = f"{base_assignment}: {current_file}"
             self.assignment_display_name = current_file
             
             # Update window title if it exists
             if 'window' in self.ui_elements and cmds.window(self.ui_elements['window'], exists=True):
-                cmds.window(self.ui_elements['window'], edit=True, title=f"Rubric: {self.assignment_name}")
+                cmds.window(self.ui_elements['window'], edit=True, title=f"Grading Rubric - {self.assignment_name}")
             
             # Update assignment name display in UI
-            if 'assignment_name_field' in self.ui_elements:
+            if 'assignment_display' in self.ui_elements:
                 try:
-                    cmds.textField(
-                        self.ui_elements['assignment_name_field'],
+                    cmds.text(
+                        self.ui_elements['assignment_display'],
                         edit=True,
-                        text=current_file
+                        label=f"Assignment: {current_file}"
                     )
                 except:
                     pass  # Field might not exist or be accessible
             
-            # Reset all manual overrides and recalculate everything for new file
+            # STEP 4: Update empty file warning display
+            # We need to refresh the warning display when empty status changes
+            self._update_empty_file_warning_display()
+            
+            # STEP 5: Reset all criteria with fresh defaults and validation
             total_updated = 0
             for criterion_name, criterion_data in self.criteria.items():
-                # Reset manual override flag
+                # Reset manual override flag - treat as fresh rubric
                 criterion_data['manual_override'] = False
+                
+                # Apply fresh default score based on current empty file status
+                # This ensures proper default scoring for the new file context
+                default_score = 10 if self.is_empty_file else 85
+                criterion_data['percentage'] = default_score
                 
                 # Re-run validation function with new file context
                 validation_func = criterion_data.get('validation_function')
@@ -1293,11 +1308,21 @@ class LessonRubric(object):
                             validation_args[0] = current_file
                         
                         if validation_args:
-                            score, comments = validation_func(*validation_args)
+                            result = validation_func(*validation_args)
                         else:
-                            score, comments = validation_func()
+                            result = validation_func()
                         
-                        # Update criterion data
+                        # Handle different validation function return types
+                        if isinstance(result, tuple) and len(result) >= 2:
+                            score, comments = result[0], result[1]
+                        elif isinstance(result, (int, float)):
+                            score = result
+                            comments = f"Auto-validation: {score}%"
+                        else:
+                            # Keep defaults if validation returns unexpected format
+                            continue
+                        
+                        # Update criterion data with validation results
                         criterion_data['percentage'] = score
                         criterion_data['validation_comments'] = comments
                         
@@ -1309,26 +1334,74 @@ class LessonRubric(object):
                         
                     except Exception as e:
                         print(f"Warning: Failed to update {criterion_name}: {e}")
-                        # Keep existing values if validation fails
+                        # If validation fails, keep the fresh default score but generate default comments
+                        criterion_data['comments'] = self._generate_comments(criterion_name)
+                else:
+                    # No validation function - just generate fresh default comments
+                    criterion_data['comments'] = self._generate_comments(criterion_name)
             
-            # Update all UI displays
+            # STEP 6: Update all UI displays to reflect the refreshed state
             for criterion_name in self.criteria.keys():
                 self._update_criterion_display(criterion_name)
             self._update_total_score_display()
             
-            """# Show success message
-            cmds.confirmDialog(
-                title="Refresh Complete",
-                message=f"Successfully refreshed rubric for: {current_file}\n\nUpdated {total_updated} criteria with new validation results.",
-                button=["OK"]
-            )"""
+            logger.info(f"Refreshed rubric for file: {current_file} (Empty: {self.is_empty_file}, Updated: {total_updated} criteria)")
             
         except Exception as e:
-            cmds.confirmDialog(
-                title="Refresh Error",
-                message=f"Failed to refresh rubric: {str(e)}",
-                button=["OK"]
-            )
+            logger.error(f"Failed to refresh rubric: {e}")
+            if MAYA_AVAILABLE:
+                cmds.confirmDialog(
+                    title="Refresh Error",
+                    message=f"Failed to refresh rubric: {str(e)}",
+                    button=["OK"]
+                )
+    
+    def _update_empty_file_warning_display(self):
+        """
+        Update the empty file warning display based on current file status.
+        
+        This method updates or creates the warning message that appears when
+        an empty file is detected. It handles both showing and hiding the warning.
+        """
+        if not MAYA_AVAILABLE:
+            return
+            
+        # Look for existing warning element
+        warning_element_key = 'empty_file_warning'
+        
+        try:
+            # Check if warning element exists and is valid
+            if warning_element_key in self.ui_elements:
+                try:
+                    # Try to edit existing warning
+                    if self.is_empty_file:
+                        # Show warning for empty file
+                        cmds.text(
+                            self.ui_elements[warning_element_key],
+                            edit=True,
+                            label="⚠️ Empty detected - scores defaulted to Low Marks",
+                            visible=True
+                        )
+                    else:
+                        # Hide warning for non-empty file
+                        cmds.text(
+                            self.ui_elements[warning_element_key],
+                            edit=True,
+                            visible=False
+                        )
+                except:
+                    # If editing fails, element might not exist anymore
+                    del self.ui_elements[warning_element_key]
+                    
+            # If no existing warning element, we can't dynamically create one
+            # since the UI layout is already established. This is a limitation
+            # of Maya's UI system - we'd need to rebuild the entire layout.
+            # For now, just log the status change
+            if warning_element_key not in self.ui_elements:
+                logger.info(f"Empty file status changed to: {self.is_empty_file}")
+                
+        except Exception as e:
+            logger.warning(f"Could not update empty file warning display: {e}")
     
     def _recalculate_all_criteria(self):
         """
