@@ -62,7 +62,7 @@ def grade_current_assignment():
         label="FDMA 1510 - Introduction to 3D Animation",
         font="boldLabelFont",
         align="left",
-        backgroundColor=(0.3, 0.3, 0.4),
+        backgroundColor=(0.5, 0.7, 0.8),
         height=25,
         parent=main_layout
     )

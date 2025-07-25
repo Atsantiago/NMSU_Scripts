@@ -771,9 +771,17 @@ class LessonRubric(object):
         button_layout = cmds.rowLayout(
             numberOfColumns=5,  # Five buttons in a horizontal row
             columnAlign=[(1, 'center'), (2, 'center'), (3, 'center'), (4, 'center'), (5, 'center')],  # Center-align all buttons
-            columnWidth=[(1, 120), (2, 120), (3, 120), (4, 120), (5, 120)],  # Fixed width for each button column
-            columnAttach=[(1, 'left', 20), (2, 'both', 5), (3, 'both', 5), (4, 'both', 5), (5, 'right', 20)],  # Match main layout margins
+            adjustableColumn=True,  # Allow columns to expand to fill width
+            columnAttach=[(1, 'both', 2), (2, 'both', 2), (3, 'both', 2), (4, 'both', 2), (5, 'both', 2)],  # Small gaps between buttons
             parent=main_layout
+        )
+        
+        # Select Assignment button - opens the assignment rubric selector window (moved to first position)
+        cmds.button(
+            label="Select Assignment",
+            command=lambda *args: self._open_assignment_selector(),
+            height=35,  # Larger button height for better usability
+            parent=button_layout
         )
         
         # Refresh button - re-runs validation for current file and updates all scores
@@ -781,16 +789,6 @@ class LessonRubric(object):
             label="Refresh",
             command=lambda *args: self._refresh_for_current_file(),
             height=35,  # Larger button height for better usability
-            width=110,  # Slightly smaller width to fit 5 buttons
-            parent=button_layout
-        )
-        
-        # Select Assignment button - opens the assignment rubric selector window
-        cmds.button(
-            label="Select Assignment",
-            command=lambda *args: self._open_assignment_selector(),
-            height=35,  # Larger button height for better usability
-            width=110,  # Slightly smaller width to fit 5 buttons
             parent=button_layout
         )
         
@@ -799,7 +797,6 @@ class LessonRubric(object):
             label="Recalculate",
             command=lambda *args: self._update_all_scores(),  # Lambda to handle Maya's callback format
             height=35,  # Larger button height for better usability
-            width=110,  # Slightly smaller width to fit 5 buttons
             parent=button_layout
         )
         
@@ -808,7 +805,6 @@ class LessonRubric(object):
             label="Export Results",
             command=lambda *args: self._export_results(),
             height=35,
-            width=110,
             parent=button_layout
         )
         
@@ -817,7 +813,6 @@ class LessonRubric(object):
             label="Close",
             command=lambda *args: cmds.deleteUI(self.window_name, window=True),
             height=35,
-            width=110,
             parent=button_layout
         )
         
