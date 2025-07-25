@@ -5,7 +5,7 @@ A comprehensive grading rubric system for Maya assignments that provides standar
 ## 📁 Directory Structure
 
 - `lessonRubric_template.py` - Core rubric framework and template
-- `example_assignment_rubrics.py` - Example rubric implementations  
+- `assignment_rubrics_window.py` - Assignment rubric selector interface  
 - `fdma1510/` - FDMA 1510 course assignment rubrics
 - `fdma2530/` - FDMA 2530 course assignment rubrics
 
@@ -112,7 +112,7 @@ prof/tools/auto_grader/assignments/
 ├── __init__.py                      # Package initialization
 ├── README.md                       # This documentation
 ├── lessonRubric_template.py        # 🎯 Core rubric framework
-├── example_assignment_rubrics.py   # Dialog system and example rubrics
+├── assignment_rubrics_window.py    # Dialog system and rubric selector
 ├── fdma1510/                       # FDMA 1510 course assignments
 │   ├── __init__.py
 │   └── (assignments coming soon)
@@ -181,7 +181,7 @@ def _open_u01_animation_rubric(self):
 ```
 
 #### 4. Update Assignment Dialog
-Add to the dialog in `example_assignment_rubrics.py`:
+Add to the dialog in `assignment_rubrics_window.py`:
 ```python
 # Add button to FDMA 1510 section
 cmds.button(

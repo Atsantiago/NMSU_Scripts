@@ -1,9 +1,8 @@
 """
-Assignment Grading Dialog System
+Assignment Grading Rubric Selector Window
 
 Provides a dialog for selecting which assignment rubric to open.
-This replaces the original example rubrics file and provides the
-grade_current_assignment() function needed by the UI builder.
+This is the main assignment rubric selector interface used by the UI builder.
 
 Author: Alexander T. Santiago
 """
@@ -91,7 +90,7 @@ def grade_current_assignment():
         label="FDMA 2530 - Introduction to Modeling",
         font="boldLabelFont", 
         align="left",
-        backgroundColor=(0.3, 0.4, 0.3),
+        backgroundColor=(0.8, 0.5, 0.0),
         height=25,
         parent=main_layout
     )

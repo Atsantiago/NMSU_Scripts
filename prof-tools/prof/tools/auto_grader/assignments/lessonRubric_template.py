@@ -769,10 +769,10 @@ class LessonRubric(object):
         cmds.separator(height=15, parent=main_layout)  # Reduced separator for cleaner look
         
         button_layout = cmds.rowLayout(
-            numberOfColumns=4,  # Four buttons in a horizontal row
-            columnAlign=[(1, 'center'), (2, 'center'), (3, 'center'), (4, 'center')],  # Center-align all buttons
-            columnWidth=[(1, 150), (2, 150), (3, 150), (4, 150)],  # Fixed width for each button column
-            columnAttach=[(1, 'left', 20), (2, 'both', 5), (3, 'both', 5), (4, 'right', 20)],  # Match main layout margins
+            numberOfColumns=5,  # Five buttons in a horizontal row
+            columnAlign=[(1, 'center'), (2, 'center'), (3, 'center'), (4, 'center'), (5, 'center')],  # Center-align all buttons
+            columnWidth=[(1, 120), (2, 120), (3, 120), (4, 120), (5, 120)],  # Fixed width for each button column
+            columnAttach=[(1, 'left', 20), (2, 'both', 5), (3, 'both', 5), (4, 'both', 5), (5, 'right', 20)],  # Match main layout margins
             parent=main_layout
         )
         
@@ -781,7 +781,16 @@ class LessonRubric(object):
             label="Refresh",
             command=lambda *args: self._refresh_for_current_file(),
             height=35,  # Larger button height for better usability
-            width=140,  # Fixed width for consistency
+            width=110,  # Slightly smaller width to fit 5 buttons
+            parent=button_layout
+        )
+        
+        # Select Assignment button - opens the assignment rubric selector window
+        cmds.button(
+            label="Select Assignment",
+            command=lambda *args: self._open_assignment_selector(),
+            height=35,  # Larger button height for better usability
+            width=110,  # Slightly smaller width to fit 5 buttons
             parent=button_layout
         )
         
@@ -790,7 +799,7 @@ class LessonRubric(object):
             label="Recalculate",
             command=lambda *args: self._update_all_scores(),  # Lambda to handle Maya's callback format
             height=35,  # Larger button height for better usability
-            width=140,  # Fixed width for consistency
+            width=110,  # Slightly smaller width to fit 5 buttons
             parent=button_layout
         )
         
@@ -799,7 +808,7 @@ class LessonRubric(object):
             label="Export Results",
             command=lambda *args: self._export_results(),
             height=35,
-            width=140,
+            width=110,
             parent=button_layout
         )
         
@@ -808,7 +817,7 @@ class LessonRubric(object):
             label="Close",
             command=lambda *args: cmds.deleteUI(self.window_name, window=True),
             height=35,
-            width=140,
+            width=110,
             parent=button_layout
         )
         
@@ -1638,6 +1647,26 @@ class LessonRubric(object):
                 text=True
             )
             self._copy_to_clipboard(f"{criterion_name}: {comment_text}")
+    
+    def _open_assignment_selector(self):
+        """
+        Open the assignment grading rubric selector window.
+        
+        This allows instructors to easily switch between different assignments
+        without having to go back through the Maya menu system.
+        """
+        try:
+            from prof.tools.auto_grader.assignments.assignment_rubrics_window import grade_current_assignment
+            grade_current_assignment()
+            logger.info("Opened assignment rubric selector")
+        except Exception as e:
+            logger.error("Failed to open assignment selector: %s", e)
+            if MAYA_AVAILABLE:
+                cmds.confirmDialog(
+                    title="Error",
+                    message="Failed to open assignment selector. Please check the console for details.",
+                    button=["OK"]
+                )
 
 
 # ==============================================================================

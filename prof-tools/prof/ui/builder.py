@@ -346,7 +346,7 @@ def _open_github():
 def _open_grading_rubric():
     """Open the assignment grading rubric system."""
     try:
-        from prof.tools.auto_grader.assignments.example_assignment_rubrics import grade_current_assignment
+        from prof.tools.auto_grader.assignments.assignment_rubrics_window import grade_current_assignment
         grade_current_assignment()
         logger.info("Opened grading rubric system")
     except Exception as e:

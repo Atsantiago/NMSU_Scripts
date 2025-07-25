@@ -22,7 +22,7 @@ The main Python package containing all prof-tools functionality for Maya instruc
     - **`fdma1510/`**: Introduction to 3D Animation assignments
     - **`fdma2530/`**: Introduction to 3D Modeling assignments
     - **`lessonRubric_template.py`**: Base rubric framework
-    - **`example_assignment_rubrics.py`**: Dialog system and routing
+    - **`assignment_rubrics_window.py`**: Rubric selector dialog system
 - **`core-tools/`**: Essential Maya workflow utilities *(future)*
 - **`dev-tools/`**: Development and maintenance utilities *(future)*
 - **`configs/`**: Configuration files and settings
