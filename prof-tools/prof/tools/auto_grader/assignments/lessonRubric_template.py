@@ -775,6 +775,15 @@ class LessonRubric(object):
             parent=main_layout
         )
         
+        # Refresh button - re-runs validation for current file and updates all scores
+        cmds.button(
+            label="Refresh",
+            command=lambda *args: self._refresh_for_current_file(),
+            height=35,  # Larger button height for better usability
+            width=180,  # Fixed width for consistency
+            parent=button_layout
+        )
+        
         # Recalculate button - re-runs all validation functions and updates scores
         cmds.button(
             label="Recalculate",
@@ -1224,6 +1233,103 @@ class LessonRubric(object):
             self._update_criterion_display(criterion_name)
         self._update_total_score_display()
     
+    def _refresh_for_current_file(self):
+        """
+        Refresh the rubric for the current Maya file.
+        
+        This method:
+        1. Gets the current Maya file name
+        2. Updates the assignment name display
+        3. Re-runs all validation functions with the new file
+        4. Updates all scores and comments
+        5. Resets all manual override flags
+        
+        This is perfect for when you open a new student file and want to
+        re-evaluate everything without closing and reopening the rubric window.
+        """
+        try:
+            # Get current file name
+            current_file = "Unknown"
+            try:
+                scene_name = cmds.file(query=True, sceneName=True, shortName=True)
+                if scene_name:
+                    current_file = scene_name.rsplit('.', 1)[0]  # Remove extension
+            except:
+                pass
+            
+            # Update assignment name with new file
+            base_assignment = self.assignment_name.split(':')[0] if ':' in self.assignment_name else self.assignment_name
+            self.assignment_name = f"{base_assignment}: {current_file}"
+            self.assignment_display_name = current_file
+            
+            # Update window title if it exists
+            if 'window' in self.ui_elements and cmds.window(self.ui_elements['window'], exists=True):
+                cmds.window(self.ui_elements['window'], edit=True, title=f"Rubric: {self.assignment_name}")
+            
+            # Update assignment name display in UI
+            if 'assignment_name_field' in self.ui_elements:
+                try:
+                    cmds.textField(
+                        self.ui_elements['assignment_name_field'],
+                        edit=True,
+                        text=current_file
+                    )
+                except:
+                    pass  # Field might not exist or be accessible
+            
+            # Reset all manual overrides and recalculate everything for new file
+            total_updated = 0
+            for criterion_name, criterion_data in self.criteria.items():
+                # Reset manual override flag
+                criterion_data['manual_override'] = False
+                
+                # Re-run validation function with new file context
+                validation_func = criterion_data.get('validation_function')
+                if validation_func:
+                    try:
+                        validation_args = criterion_data.get('validation_args', [])
+                        # Update file name in args if this is a file validation
+                        if validation_args and len(validation_args) > 0:
+                            validation_args[0] = current_file
+                        
+                        if validation_args:
+                            score, comments = validation_func(*validation_args)
+                        else:
+                            score, comments = validation_func()
+                        
+                        # Update criterion data
+                        criterion_data['percentage'] = score
+                        criterion_data['validation_comments'] = comments
+                        
+                        # Create enhanced comments (will default to validation only since no manual override)
+                        enhanced_comments = self._create_enhanced_comments(criterion_name, score, comments)
+                        criterion_data['comments'] = enhanced_comments
+                        
+                        total_updated += 1
+                        
+                    except Exception as e:
+                        print(f"Warning: Failed to update {criterion_name}: {e}")
+                        # Keep existing values if validation fails
+            
+            # Update all UI displays
+            for criterion_name in self.criteria.keys():
+                self._update_criterion_display(criterion_name)
+            self._update_total_score_display()
+            
+            """# Show success message
+            cmds.confirmDialog(
+                title="Refresh Complete",
+                message=f"Successfully refreshed rubric for: {current_file}\n\nUpdated {total_updated} criteria with new validation results.",
+                button=["OK"]
+            )"""
+            
+        except Exception as e:
+            cmds.confirmDialog(
+                title="Refresh Error",
+                message=f"Failed to refresh rubric: {str(e)}",
+                button=["OK"]
+            )
+    
     def _recalculate_all_criteria(self):
         """
         Reset all manual overrides and recalculate all criteria from scratch.
@@ -1266,7 +1372,7 @@ class LessonRubric(object):
         
         self._show_recalculate_results(recalculated_count, preserve_manual=False)
     
-    def _show_recalculate_results(self, updated_count, preserve_manual=True):
+    """ def _show_recalculate_results(self, updated_count, preserve_manual=True):
         """
         Show user feedback about recalculation results.
         
@@ -1298,7 +1404,7 @@ class LessonRubric(object):
                 title="No Updates",
                 message=message,
                 button=["OK"]
-            )
+            )"""
     
 
 # ==============================================================================
