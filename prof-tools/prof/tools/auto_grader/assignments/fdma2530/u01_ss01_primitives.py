@@ -367,28 +367,56 @@ def validate_outliner_organization():
         # Filter out startup cameras early
         filtered_transforms = [obj for obj in all_transforms if obj not in STARTUP_CAMERAS]
         
-        # Check 1: Unparented Objects (optimized approach)
+        # ========================================================================
+        # Check 1: Unparented Objects 
+        # ========================================================================
+        
         unparented_objects = []
+        geo_dag_nodes = cmds.ls(geometry=True)
         
-        # Get all top-level transforms (objects with no parent)
-        top_level_objects = cmds.ls(assemblies=True) or []
+        if geo_dag_nodes:
+            for obj in geo_dag_nodes:
+                try:
+                    first_parent = cmds.listRelatives(obj, p=True, f=True)
+                    if first_parent:
+                        children_members = cmds.listRelatives(first_parent[0], c=True, type="transform") or []
+                        parents_members = cmds.listRelatives(first_parent[0], ap=True, type="transform") or []
+                        
+                        if (len(children_members) + len(parents_members) == 0 and
+                            cmds.nodeType(obj) != "mentalrayIblShape"):
+                            unparented_objects.append(obj)
+                except Exception:
+                    continue
         
-        # Filter out cameras and other non-geometry parents
-        for obj in top_level_objects:
-            if obj not in STARTUP_CAMERAS:
-                # Check if this object or its children contain geometry
-                descendants = cmds.listRelatives(obj, allDescendents=True, type='mesh') or []
-                if descendants:
-                    unparented_objects.append(obj)
-        
-        if unparented_objects:
-            errors.append(f"Found {len(unparented_objects)} unparented object(s): {', '.join(unparented_objects[:3])}{'...' if len(unparented_objects) > 3 else ''}")
-        
-        # Check 2: Light Organization (optimized light detection)
-        # Get all light types in one call
+        # Add specific check for unparented lights (these should always be grouped)
+        unparented_lights = []
         all_lights = cmds.ls(type=['directionalLight', 'pointLight', 'spotLight', 'areaLight', 'volumeLight', 
                                    'ambientLight', 'aiAreaLight', 'aiPhotometricLight', 'aiLightPortal',
                                    'rsPhysicalLight', 'rsIESLight', 'rsPortalLight', 'rsDomeLight']) or []
+        
+        for light in all_lights:
+            light_transforms = cmds.listRelatives(light, parent=True, type='transform') or []
+            if light_transforms:
+                light_transform = light_transforms[0]
+                # Check if light transform is at top level (no parent)
+                light_parents = cmds.listRelatives(light_transform, parent=True, type='transform') or []
+                if not light_parents:
+                    unparented_lights.append(light_transform)
+        
+        # Report unparented issues with specific feedback
+        if unparented_objects or unparented_lights:
+            error_parts = []
+            if unparented_objects:
+                error_parts.append(f"{len(unparented_objects)} unparented geometry object(s): {', '.join(unparented_objects[:2])}{'...' if len(unparented_objects) > 2 else ''}")
+            if unparented_lights:
+                error_parts.append(f"{len(unparented_lights)} unparented light(s): {', '.join(unparented_lights[:2])}{'...' if len(unparented_lights) > 2 else ''} (lights must be grouped)")
+            
+            errors.append("Found " + "; ".join(error_parts))
+        
+        # ========================================================================
+        # Check 2: Light Organization (verify lights are in proper light groups)
+        # ========================================================================
+        # This checks that lights are not just grouped, but grouped with appropriate naming
         
         if all_lights:
             # Find light groups efficiently using pre-filtered transforms
@@ -416,9 +444,11 @@ def validate_outliner_organization():
                             ungrouped_lights.append(light_transform)
                 
                 if ungrouped_lights:
-                    warnings.append(f"Some lights may not be properly grouped: {', '.join(ungrouped_lights[:2])}{'...' if len(ungrouped_lights) > 2 else ''}")
+                    warnings.append(f"Some lights may not be in proper light groups: {', '.join(ungrouped_lights[:2])}{'...' if len(ungrouped_lights) > 2 else ''}")
         
-        # Check 3: Turntable_ROT group (optimized search)
+        # ========================================================================
+        # Check 3: Turntable_ROT group (geometry organization)
+        # ========================================================================
         turntable_groups = [transform for transform in filtered_transforms 
                            if 'turntable_rot' in transform.lower() or 'turntable' in transform.lower()]
         
@@ -432,7 +462,11 @@ def validate_outliner_organization():
             if not has_geometry:
                 warnings.append("Turntable group exists but appears to be empty")
         
-        # Check 4: Default Object Names (optimized with set lookup)
+        # ========================================================================
+        # Check 4: Default Object Names (excluding startup cameras)
+        # ========================================================================
+        # Check for objects with default Maya names - these should be renamed descriptively
+        
         offending_objects = []
         
         for obj in filtered_transforms:
