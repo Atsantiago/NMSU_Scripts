@@ -566,25 +566,64 @@ def validate_outliner_organization():
         if nurbs_objects:
             error_weight += 2  # Major penalty for using wrong primitive type
         
-        # Convert error weight to score
+        # Generate specific feedback based on issue types
+        organizational_issues = []
+        naming_issues = []
+        other_issues = []
+        
+        # Categorize errors for more specific feedback
+        for error in errors:
+            if "unparented" in error.lower() or "turntable" in error.lower() or "light organization" in error.lower():
+                organizational_issues.append(error)
+            elif "default names" in error.lower():
+                naming_issues.append(error)
+            else:
+                other_issues.append(error)
+        
+        # Convert error weight to score and generate targeted comments
         if error_weight == 0 and total_warnings == 0:
             score = 100
             comments = "Excellent outliner organization! All objects properly grouped and named."
         elif error_weight <= 0.5:
             score = 95
-            comments = f"Very good organization with minimal issues: {'; '.join(errors + warnings)}"
+            if naming_issues and not organizational_issues:
+                comments = f"Very good organization with minor naming issue: {'; '.join(naming_issues + warnings)}"
+            elif organizational_issues and not naming_issues:
+                comments = f"Very good naming with minor organizational issue: {'; '.join(organizational_issues + warnings)}"
+            else:
+                comments = f"Very good organization with minimal issues: {'; '.join(errors + warnings)}"
         elif error_weight <= 1.0:
             score = 90
-            comments = f"Good organization with minor issues: {'; '.join(errors + warnings)}"
+            if naming_issues and not organizational_issues:
+                comments = f"Good organization but naming needs attention: {'; '.join(naming_issues + warnings)}"
+            elif organizational_issues and not naming_issues:
+                comments = f"Good naming but organization needs attention: {'; '.join(organizational_issues + warnings)}"
+            else:
+                comments = f"Good organization with minor issues: {'; '.join(errors + warnings)}"
         elif error_weight <= 1.5:
             score = 85
-            comments = f"Acceptable organization but needs improvement: {'; '.join(errors + warnings)}"
+            if naming_issues and not organizational_issues:
+                comments = f"Organization structure is good but naming needs improvement: {'; '.join(naming_issues + warnings)}"
+            elif organizational_issues and not naming_issues:
+                comments = f"Naming is good but organization needs improvement: {'; '.join(organizational_issues + warnings)}"
+            else:
+                comments = f"Both organization and naming need improvement: {'; '.join(errors + warnings)}"
         elif error_weight <= 2.0:
             score = 70
-            comments = f"Organization needs significant improvement: {'; '.join(errors + warnings)}"
+            if naming_issues and not organizational_issues:
+                comments = f"Organization structure present but naming needs significant work: {'; '.join(naming_issues + warnings)}"
+            elif organizational_issues and not naming_issues:
+                comments = f"Naming is acceptable but organization needs significant work: {'; '.join(organizational_issues + warnings)}"
+            else:
+                comments = f"Both organization and naming need significant improvement: {'; '.join(errors + warnings)}"
         else:
             score = 50
-            comments = f"Poor organization with multiple major issues: {'; '.join(errors + warnings)}"
+            if naming_issues and not organizational_issues:
+                comments = f"Poor naming with multiple issues (organization structure is present): {'; '.join(naming_issues + warnings)}"
+            elif organizational_issues and not naming_issues:
+                comments = f"Poor organization with multiple issues (naming is acceptable): {'; '.join(organizational_issues + warnings)}"
+            else:
+                comments = f"Poor organization with multiple major issues in both structure and naming: {'; '.join(errors + warnings)}"
         
         return (score, comments)
         
