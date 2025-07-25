@@ -36,9 +36,9 @@ RUBRIC_CRITERIA = [
         "description": "Proper naming conventions for Maya scene file and project structure",
         "validation_function": "validate_file_name",
         "general_performance_comments": {
-            100: "Perfect file naming! Follows XX_U01_SS01_V##[_##|.####] format exactly.",
+            100: "Perfect file naming! Follows XX_U01_SS01_V## format exactly.",
             90: "Good file naming with 1 minor error. Review naming convention on Canvas.",
-            70: "File naming has 2 errors. Check the required format: XX_U01_SS01_V##[_##|.####]",
+            70: "File naming has 2 errors. Check the required format: XX_U01_SS01_V##",
             50: "File naming has 3+ errors. Please review the naming instructions on Canvas carefully.",
             0: "No valid file name found or completely incorrect format."
         }
@@ -167,7 +167,11 @@ def create_u01_ss01_rubric():
     # Apply validation results to rubric
     for criterion_name, (score, comments) in validation_results.items():
         rubric.criteria[criterion_name]["percentage"] = score
-        rubric.criteria[criterion_name]["comments"] = comments
+        rubric.criteria[criterion_name]["validation_comments"] = comments  # Store original validation comments
+        
+        # Use enhanced comments logic for initial display (will default to validation comments only)
+        enhanced_comments = rubric._create_enhanced_comments(criterion_name, score, comments)
+        rubric.criteria[criterion_name]["comments"] = enhanced_comments
         rubric.criteria[criterion_name]["manual_override"] = False
     
     # Show the rubric UI

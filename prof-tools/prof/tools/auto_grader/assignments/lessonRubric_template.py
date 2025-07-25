@@ -458,10 +458,13 @@ class LessonRubric(object):
     
     def _create_enhanced_comments(self, criterion_name, score_percentage, validation_comments):
         """
-        Create enhanced comments by concatenating general performance comments with specific validation errors.
+        Create enhanced comments with smart concatenation logic.
         
-        This method combines the educational performance level feedback with the specific
-        technical details from validation functions, providing comprehensive feedback.
+        Rules:
+        1. By default, use specific validation comments only
+        2. Only concatenate with performance comments when manually overridden
+        3. For 100% scores, always use specific performance comment only
+        4. Replace generic validation comments with performance comments
         
         Args:
             criterion_name (str): Name of the criterion
@@ -469,26 +472,33 @@ class LessonRubric(object):
             validation_comments (str): Specific comments from validation function
             
         Returns:
-            str: Enhanced comments combining performance level and validation details
+            str: Appropriately formatted comments based on context
         """
-        # Get the general performance comment for this score level
-        performance_comment = self._generate_performance_level_comments(criterion_name, score_percentage)
+        # Check if this criterion has been manually overridden
+        is_manual_override = False
+        if criterion_name in self.criteria:
+            is_manual_override = self.criteria[criterion_name].get('manual_override', False)
         
         # Clean up validation comments
         validation_comments = validation_comments.strip() if validation_comments else ""
         
-        # If validation comments contain specific error details, concatenate them
-        if validation_comments and not self._is_generic_validation_comment(validation_comments):
-            # Combine performance level feedback with specific validation details
-            if performance_comment:
-                enhanced_comment = f"{performance_comment} | Details: {validation_comments}"
-            else:
-                enhanced_comment = validation_comments
-        else:
-            # Use performance comment if validation is generic or empty
-            enhanced_comment = performance_comment if performance_comment else validation_comments
+        # Get the general performance comment for this score level
+        performance_comment = self._generate_performance_level_comments(criterion_name, score_percentage)
         
-        return enhanced_comment
+        # Rule 1: For 100% scores, always use specific performance comment only
+        if score_percentage == 100:
+            return performance_comment if performance_comment else validation_comments
+        
+        # Rule 2: Replace generic validation comments with performance comments
+        if self._is_generic_validation_comment(validation_comments):
+            return performance_comment if performance_comment else validation_comments
+        
+        # Rule 3: For manual overrides, concatenate performance + validation details
+        if is_manual_override and validation_comments and performance_comment:
+            return f"{performance_comment} | Details: {validation_comments}"
+        
+        # Rule 4: By default, use specific validation comments only
+        return validation_comments if validation_comments else performance_comment
     
     def _is_generic_validation_comment(self, comment):
         """
@@ -622,7 +632,10 @@ class LessonRubric(object):
                 # Update the criterion with fresh validation results
                 criterion['percentage'] = float(score)
                 
-                # Enhanced comment generation: concatenate general performance comments with specific errors
+                # Store the original validation comments for potential later use
+                criterion['validation_comments'] = comments
+                
+                # For automatic validation (not manual override), use enhanced comments logic
                 enhanced_comments = self._create_enhanced_comments(criterion_name, float(score), comments)
                 criterion['comments'] = enhanced_comments
                 
@@ -1044,11 +1057,16 @@ class LessonRubric(object):
         calculated_score = self._calculate_criterion_score(criterion_name)
         self.criteria[criterion_name]['score'] = calculated_score
         
-        # When user manually changes the percentage (via dropdown, field, or performance button),
-        # generate criterion-specific comments that match the new performance level.
-        # This provides detailed, relevant feedback that matches the selected score.
-        self.criteria[criterion_name]['comments'] = self._generate_performance_level_comments(criterion_name, new_percentage)
-        self.criteria[criterion_name]['manual_override'] = True  # Mark as manually adjusted
+        # Mark as manually adjusted first
+        self.criteria[criterion_name]['manual_override'] = True
+        
+        # When user manually changes the percentage, we need to update comments appropriately
+        # Get the existing validation comments to potentially concatenate with performance feedback
+        existing_validation_comments = self.criteria[criterion_name].get('validation_comments', '')
+        
+        # Use enhanced comments logic which will concatenate for manual overrides
+        enhanced_comments = self._create_enhanced_comments(criterion_name, new_percentage, existing_validation_comments)
+        self.criteria[criterion_name]['comments'] = enhanced_comments
         
         # Update displays - this will refresh both the criterion display and total score
         self._update_criterion_display(criterion_name)
@@ -1233,7 +1251,10 @@ class LessonRubric(object):
                     # Update with fresh validation results
                     criterion['percentage'] = max(0, min(100, score))
                     
-                    # Enhanced comment generation: concatenate general performance comments with specific errors
+                    # Store the original validation comments
+                    criterion['validation_comments'] = comments
+                    
+                    # For recalculation (resetting manual overrides), use enhanced comments logic
                     enhanced_comments = self._create_enhanced_comments(criterion_name, max(0, min(100, score)), comments)
                     criterion['comments'] = enhanced_comments
                     
