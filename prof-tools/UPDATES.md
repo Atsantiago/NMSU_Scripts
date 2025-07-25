@@ -4,7 +4,7 @@ This document tracks version updates, bug fixes, and improvements made to the Pr
 
 ## Version History
 
-*Format: MAJOR.MINOR.PATCH*
+*Format: MAJOR.MINOR.PATCH.TEST*
 
 ### Version 0.2.4 - 2025-07-21 (Current)
 

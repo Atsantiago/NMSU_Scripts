@@ -36,7 +36,7 @@ RUBRIC_CRITERIA = [
         "description": "Proper naming conventions for Maya scene file and project structure",
         "validation_function": "validate_file_name",
         "general_performance_comments": {
-            100: "Perfect file naming! Follows XX_U01_SS01_V## format exactly.",
+            100: "Perfect file naming! Follows the correct naming convention.",
             90: "Good file naming with 1 minor error. Review naming convention on Canvas.",
             70: "File naming has 2 errors. Check the required format: XX_U01_SS01_V##",
             50: "File naming has 3+ errors. Please review the naming instructions on Canvas carefully.",
