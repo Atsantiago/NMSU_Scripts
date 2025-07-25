@@ -16,7 +16,7 @@ This repository contains specialized tools for FDMA (Film, Digital Media & Arts)
 - **⚡ Workflow Enhancement**: Batch processing, automated feedback, and export capabilities
 - **🔧 Core Utilities**: Scene validation, file organization, and technical requirement checking
 
-**Current Version**: 0.3.5 (Stable) | **Target Courses**: FDMA 1510, FDMA 2530
+**Current Version**: 0.3.6(Stable) | **Target Courses**: FDMA 1510, FDMA 2530
 
 ### **CMI-Tools** - Student Workflow Enhancement
 *Specialized tools and shelves for student assignments and projects*
