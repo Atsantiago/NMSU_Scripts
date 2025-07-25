@@ -1229,7 +1229,7 @@ def validate_primitive_design_principles():
         
         # Add warning if significant number of primitives have no history
         if primitives_without_history > 0:
-            history_warnings.append(f"{primitives_without_history} primitive(s) missing construction history - compliance verification limited")
+            history_warnings.append(f"*** WARNING: {primitives_without_history} PRIMITIVE(S) MISSING CONSTRUCTION HISTORY - COMPLIANCE VERIFICATION LIMITED ***")
         
         # Calculate scores with enhanced logic
         major_violations = len(violations)
@@ -1247,7 +1247,7 @@ def validate_primitive_design_principles():
             # Add history warning if applicable
             if history_warnings:
                 score = max(90, score - 5)  # Small penalty for missing history
-                base_comment += f" Note: {'; '.join(history_warnings)}."
+                base_comment += f" {'; '.join(history_warnings)}"
                 
             comments = base_comment
             
@@ -1272,7 +1272,7 @@ def validate_primitive_design_principles():
         
         # Add history warnings to comments if present (non-penalty)
         if history_warnings and major_violations > 0:
-            comments += f" Additional note: {'; '.join(history_warnings)}."
+            comments += f" {'; '.join(history_warnings)}"
         
         print(f"DEBUG: Final primitive check - {total_primitives} primitives, {modified_attributes_count} with modified attributes ({attribute_modification_percentage:.1f}%), {major_violations} violations")
         
