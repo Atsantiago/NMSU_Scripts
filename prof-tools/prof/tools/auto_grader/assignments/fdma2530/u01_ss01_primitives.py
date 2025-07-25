@@ -369,30 +369,8 @@ def validate_outliner_organization():
         filtered_transforms = [obj for obj in all_transforms if obj not in STARTUP_CAMERAS]
         
         # ========================================================================
-        # Check 1: Unparented Objects 
+        # First, identify all light transforms so we can exclude them from geometry checks
         # ========================================================================
-        
-        unparented_objects = []
-        geo_dag_nodes = cmds.ls(geometry=True)
-        
-        if geo_dag_nodes:
-            for obj in geo_dag_nodes:
-                try:
-                    first_parent = cmds.listRelatives(obj, p=True, f=True)
-                    if first_parent:
-                        children_members = cmds.listRelatives(first_parent[0], c=True, type="transform") or []
-                        parents_members = cmds.listRelatives(first_parent[0], ap=True, type="transform") or []
-                        
-                        if (len(children_members) + len(parents_members) == 0 and
-                            cmds.nodeType(obj) != "mentalrayIblShape"):
-                            unparented_objects.append(obj)
-                except Exception:
-                    continue
-        
-        # Add specific check for unparented lights (these should always be grouped)
-        # This catches ALL lights regardless of naming - renamed lights like "key_light" still need grouping
-        # Using proven logic from CMI-tools checklist.py
-        unparented_lights = []
         
         # Light types to check - using same approach as CMI-tools checklist.py
         maya_light_types = ['pointLight', 'directionalLight', 'spotLight', 'areaLight', 'volumeLight', 'ambientLight']
@@ -423,6 +401,39 @@ def validate_outliner_organization():
         
         print(f"DEBUG: Found {len(light_transforms)} unique light transforms: {light_transforms}")
         
+        # ========================================================================
+        # Check 1: Unparented Objects (excluding light transforms)
+        # ========================================================================
+        
+        unparented_objects = []
+        geo_dag_nodes = cmds.ls(geometry=True)
+        
+        if geo_dag_nodes:
+            for obj in geo_dag_nodes:
+                try:
+                    first_parent = cmds.listRelatives(obj, p=True, f=True)
+                    if first_parent:
+                        parent_transform = first_parent[0]
+                        
+                        # Skip if this is a light transform - lights should be handled separately
+                        if parent_transform in light_transforms:
+                            continue
+                            
+                        children_members = cmds.listRelatives(parent_transform, c=True, type="transform") or []
+                        parents_members = cmds.listRelatives(parent_transform, ap=True, type="transform") or []
+                        
+                        if (len(children_members) + len(parents_members) == 0 and
+                            cmds.nodeType(obj) != "mentalrayIblShape"):
+                            unparented_objects.append(parent_transform)
+                except Exception:
+                    continue
+        
+        # ========================================================================
+        # Check 2: Unparented Lights (these should always be grouped)
+        # ========================================================================
+        
+        unparented_lights = []
+        
         # Check which light transforms are unparented (at world level)
         for light_transform in light_transforms:
             # Check if light transform is at top level (no parent)
@@ -439,18 +450,18 @@ def validate_outliner_organization():
         
         print(f"DEBUG: Final unparented lights list: {unparented_lights}")
         
-        # Report unparented issues with specific feedback
+        # Report unparented issues with specific feedback (no truncation)
         if unparented_objects or unparented_lights:
             error_parts = []
             if unparented_objects:
-                error_parts.append(f"{len(unparented_objects)} unparented geometry object(s): {', '.join(unparented_objects[:2])}{'...' if len(unparented_objects) > 2 else ''}")
+                error_parts.append(f"{len(unparented_objects)} unparented geometry object(s): {', '.join(unparented_objects)}")
             if unparented_lights:
-                error_parts.append(f"{len(unparented_lights)} unparented light(s): {', '.join(unparented_lights[:2])}{'...' if len(unparented_lights) > 2 else ''} (lights must be grouped)")
+                error_parts.append(f"{len(unparented_lights)} unparented light(s): {', '.join(unparented_lights)} (lights must be grouped)")
             
             errors.append("Found " + "; ".join(error_parts))
         
         # ========================================================================
-        # Check 2: Light Organization (verify lights are in proper light groups)
+        # Check 3: Light Organization (verify lights are in proper light groups)
         # ========================================================================
         # This checks that lights are not just grouped, but grouped with appropriate naming
         
@@ -475,14 +486,12 @@ def validate_outliner_organization():
                     # Check if this light transform is under any light group
                     if light_transform not in light_group_descendants and light_transform not in light_groups:
                         ungrouped_lights.append(light_transform)
-                        if light_transform not in light_group_descendants and light_transform not in light_groups:
-                            ungrouped_lights.append(light_transform)
                 
                 if ungrouped_lights:
-                    warnings.append(f"Some lights may not be in proper light groups: {', '.join(ungrouped_lights[:2])}{'...' if len(ungrouped_lights) > 2 else ''}")
+                    warnings.append(f"Some lights may not be in proper light groups: {', '.join(ungrouped_lights)}")
         
         # ========================================================================
-        # Check 3: Turntable_ROT group (geometry organization)
+        # Check 4: Turntable_ROT group (geometry organization)
         # ========================================================================
         turntable_groups = [transform for transform in filtered_transforms 
                            if 'turntable_rot' in transform.lower() or 'turntable' in transform.lower()]
@@ -498,7 +507,7 @@ def validate_outliner_organization():
                 warnings.append("Turntable group exists but appears to be empty")
         
         # ========================================================================
-        # Check 4: Default Object Names (excluding startup cameras)
+        # Check 5: Default Object Names (excluding startup cameras)
         # ========================================================================
         # Check for objects with default Maya names - these should be renamed descriptively
         
@@ -512,10 +521,10 @@ def validate_outliner_organization():
                     break  # No need to check other default names for this object
         
         if offending_objects:
-            errors.append(f"Found {len(offending_objects)} object(s) with default names: {', '.join(offending_objects[:3])}{'...' if len(offending_objects) > 3 else ''}")
+            errors.append(f"Found {len(offending_objects)} object(s) with default names: {', '.join(offending_objects)}")
         
         # ========================================================================
-        # Check 5: NURBS Primitives Usage (should use polygon primitives only)
+        # Check 6: NURBS Primitives Usage (should use polygon primitives only)
         # ========================================================================
         # This assignment is about polygon modeling - NURBS primitives should be penalized
         
@@ -538,7 +547,7 @@ def validate_outliner_organization():
                     nurbs_objects.append(transform)
         
         if nurbs_objects:
-            errors.append(f"Found {len(nurbs_objects)} NURBS object(s): {', '.join(nurbs_objects[:3])}{'...' if len(nurbs_objects) > 3 else ''} (assignment requires polygon primitives only)")
+            errors.append(f"Found {len(nurbs_objects)} NURBS object(s): {', '.join(nurbs_objects)} (assignment requires polygon primitives only)")
         
         # ========================================================================
         # Calculate score with weighted penalties based on issue types and severity
