@@ -408,23 +408,28 @@ def validate_outliner_organization():
         unparented_objects = []
         geo_dag_nodes = cmds.ls(geometry=True)
         
+        print(f"DEBUG: Found {len(geo_dag_nodes)} geometry nodes: {geo_dag_nodes}")
+        
         if geo_dag_nodes:
             for obj in geo_dag_nodes:
                 try:
-                    first_parent = cmds.listRelatives(obj, p=True, f=True)
-                    if first_parent:
-                        parent_transform = first_parent[0]
+                    # Get the transform parent of this geometry node
+                    geo_parents = cmds.listRelatives(obj, parent=True, type='transform') or []
+                    if geo_parents:
+                        geo_transform = geo_parents[0]
                         
-                        # Skip if this is a light transform - lights should be handled separately
-                        if parent_transform in light_transforms:
+                        # Skip if this geometry belongs to a light transform - lights should be handled separately
+                        if geo_transform in light_transforms:
+                            print(f"DEBUG: Skipping geometry '{obj}' because it belongs to light transform '{geo_transform}'")
                             continue
-                            
-                        children_members = cmds.listRelatives(parent_transform, c=True, type="transform") or []
-                        parents_members = cmds.listRelatives(parent_transform, ap=True, type="transform") or []
                         
-                        if (len(children_members) + len(parents_members) == 0 and
-                            cmds.nodeType(obj) != "mentalrayIblShape"):
-                            unparented_objects.append(parent_transform)
+                        # Check if the geometry's transform is unparented
+                        transform_parents = cmds.listRelatives(geo_transform, parent=True, type='transform') or []
+                        
+                        if not transform_parents:
+                            print(f"DEBUG: Found unparented geometry transform '{geo_transform}' for geometry '{obj}'")
+                            if geo_transform not in unparented_objects:
+                                unparented_objects.append(geo_transform)
                 except Exception:
                     continue
         
