@@ -1542,7 +1542,7 @@ class LessonRubric(object):
         elif total_score >= 8:
             return "Good work :)"
         elif total_score >= 7:
-            return "Good effort! Just pay closer attention to the following issues in the next assignments"
+            return "Good effort! Just pay closer attention to these issues in the next assignments"
         else:
             return "Not bad, but you might need to give more time to your assignments. If you have any questions, please don't hesitate to reach out to me after class or during office hours or by email :)"
     
