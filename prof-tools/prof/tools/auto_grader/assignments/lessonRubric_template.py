@@ -1475,9 +1475,15 @@ class LessonRubric(object):
     def _export_results(self):
         """Export grading results to a text format."""
         results = []
-        results.append(f"Grading Results for: {self.assignment_name}")
-        results.append("=" * 50)
-        results.append("")
+        
+        # Calculate total score first to show motivational message at the top
+        total_score = self.calculate_total_score()
+        
+        # Add motivational message at the top
+        motivational_message = self._get_motivational_message(total_score)
+        if motivational_message:
+            results.append(motivational_message)
+            results.append("")
         
         for criterion_name, criterion_data in self.criteria.items():
             score = self._calculate_criterion_score(criterion_name)
@@ -1512,15 +1518,8 @@ class LessonRubric(object):
             results.append(f"  Comments: {current_comments}")
             results.append("")
         
-        total_score = self.calculate_total_score()
         results.append(f"TOTAL GRADE: {total_score:.1f}/{self.total_points}")
         results.append("")
-        
-        # Add motivational message based on total score
-        motivational_message = self._get_motivational_message(total_score)
-        if motivational_message:
-            results.append(motivational_message)
-            results.append("")
         
         if self.is_empty_file:
             results.append("Note: Empty or minimal file detected")
@@ -1691,6 +1690,166 @@ class LessonRubric(object):
                     message="Failed to open assignment selector. Please check the console for details.",
                     button=["OK"]
                 )
+
+
+# ==============================================================================
+# VALIDATION FUNCTIONS - Assignment-specific validation logic
+# ==============================================================================
+
+def validate_technical_execution():
+    """
+    Validate technical execution criteria based on:
+    1. Pivot points moved from default positions
+    2. Evidence of duplications and/or instances
+    3. Model complexity based on polygon object count
+    
+    Returns:
+        tuple: (score_percentage, detailed_comments)
+    """
+    if not MAYA_AVAILABLE:
+        return 85, "Maya not available - manual evaluation required"
+    
+    try:
+        # Get all mesh objects in the scene
+        all_meshes = cmds.ls(type='mesh')
+        if not all_meshes:
+            return 10, "No mesh objects found in scene"
+        
+        # Get transform nodes for the meshes
+        mesh_transforms = []
+        for mesh in all_meshes:
+            # Get the transform node for this mesh
+            transforms = cmds.listRelatives(mesh, parent=True, type='transform')
+            if transforms:
+                mesh_transforms.extend(transforms)
+        
+        # Remove duplicates
+        mesh_transforms = list(set(mesh_transforms))
+        total_objects = len(mesh_transforms)
+        
+        score_components = []
+        comments = []
+        
+        # COMPONENT 1: Pivot Points Analysis (30% weight)
+        moved_pivots = 0
+        for transform in mesh_transforms:
+            try:
+                # Get the pivot position
+                pivot_pos = cmds.xform(transform, query=True, rotatePivot=True)
+                bounding_box = cmds.exactWorldBoundingBox(transform)
+                
+                # Calculate center of bounding box
+                bb_center = [
+                    (bounding_box[0] + bounding_box[3]) / 2,
+                    (bounding_box[1] + bounding_box[4]) / 2,
+                    (bounding_box[2] + bounding_box[5]) / 2
+                ]
+                
+                # Check if pivot is significantly moved from center (tolerance of 0.1 units)
+                tolerance = 0.1
+                if (abs(pivot_pos[0] - bb_center[0]) > tolerance or
+                    abs(pivot_pos[1] - bb_center[1]) > tolerance or
+                    abs(pivot_pos[2] - bb_center[2]) > tolerance):
+                    moved_pivots += 1
+                    
+            except Exception:
+                continue  # Skip objects that can't be analyzed
+        
+        pivot_percentage = min(moved_pivots / max(total_objects * 0.3, 1), 1.0)  # Expect 30% to have moved pivots
+        pivot_score = pivot_percentage * 30  # 30% weight
+        score_components.append(pivot_score)
+        
+        if moved_pivots > 0:
+            comments.append(f"Good: {moved_pivots} objects have pivots moved from default positions")
+        else:
+            comments.append("Issue: No evidence of pivot manipulation - all pivots at default positions")
+        
+        # COMPONENT 2: Duplications/Instances Analysis (25% weight)
+        duplicated_objects = 0
+        instanced_objects = 0
+        
+        # Check for duplicated objects (objects with similar names indicating duplication)
+        name_patterns = {}
+        for transform in mesh_transforms:
+            # Extract base name (remove trailing numbers)
+            import re
+            base_name = re.sub(r'\d+$', '', transform)
+            if base_name:
+                if base_name not in name_patterns:
+                    name_patterns[base_name] = []
+                name_patterns[base_name].append(transform)
+        
+        for base_name, objects in name_patterns.items():
+            if len(objects) > 1:
+                duplicated_objects += len(objects) - 1  # Count additional copies
+        
+        # Check for instanced objects
+        for transform in mesh_transforms:
+            try:
+                # Get the shape node
+                shapes = cmds.listRelatives(transform, shapes=True, noIntermediate=True)
+                if shapes:
+                    shape = shapes[0]
+                    # Check if this shape is instanced
+                    all_transforms = cmds.listRelatives(shape, allParents=True)
+                    if all_transforms and len(all_transforms) > 1:
+                        instanced_objects += 1
+            except Exception:
+                continue
+        
+        total_duplications = duplicated_objects + instanced_objects
+        duplication_percentage = min(total_duplications / max(total_objects * 0.2, 1), 1.0)  # Expect 20% to be duplications
+        duplication_score = duplication_percentage * 25  # 25% weight
+        score_components.append(duplication_score)
+        
+        if total_duplications > 0:
+            comments.append(f"Good: Found {duplicated_objects} duplicated objects and {instanced_objects} instanced objects")
+        else:
+            comments.append("Issue: No evidence of duplication or instancing techniques")
+        
+        # COMPONENT 3: Model Complexity Analysis (45% weight)
+        # Score based on polygon object count
+        # 400 objects = ~80%, several thousand = 100%
+        if total_objects >= 2000:
+            complexity_score = 45  # Full marks for 2000+ objects
+            comments.append(f"Excellent: High complexity model with {total_objects} polygon objects")
+        elif total_objects >= 1000:
+            complexity_score = 40  # 89% for 1000+ objects
+            comments.append(f"Great: Complex model with {total_objects} polygon objects")
+        elif total_objects >= 400:
+            # Scale from 80% to 89% between 400 and 1000 objects
+            complexity_percentage = 0.8 + (total_objects - 400) / (1000 - 400) * 0.09
+            complexity_score = complexity_percentage * 45
+            comments.append(f"Good: Moderate complexity with {total_objects} polygon objects")
+        elif total_objects >= 100:
+            # Scale from 60% to 80% between 100 and 400 objects
+            complexity_percentage = 0.6 + (total_objects - 100) / (400 - 100) * 0.2
+            complexity_score = complexity_percentage * 45
+            comments.append(f"Basic: Simple model with {total_objects} polygon objects - consider adding more detail")
+        else:
+            complexity_score = 27  # 60% for very simple models
+            comments.append(f"Minimal: Very simple model with only {total_objects} polygon objects - needs much more complexity")
+        
+        score_components.append(complexity_score)
+        
+        # Calculate final score
+        total_score = sum(score_components)
+        
+        # Ensure score is between 0 and 100
+        final_score = max(10, min(100, int(total_score)))
+        
+        # Create detailed comment
+        detailed_comment = f"Technical Execution Analysis:\n"
+        detailed_comment += f"• Total Objects: {total_objects}\n"
+        detailed_comment += f"• Pivot Manipulation: {moved_pivots}/{total_objects} objects ({pivot_score:.1f}/30 pts)\n"
+        detailed_comment += f"• Duplications/Instances: {total_duplications} found ({duplication_score:.1f}/25 pts)\n"
+        detailed_comment += f"• Model Complexity: {complexity_score:.1f}/45 pts\n\n"
+        detailed_comment += "\n".join(comments)
+        
+        return final_score, detailed_comment
+        
+    except Exception as e:
+        return 50, f"Error analyzing technical execution: {str(e)}"
 
 
 # ==============================================================================
