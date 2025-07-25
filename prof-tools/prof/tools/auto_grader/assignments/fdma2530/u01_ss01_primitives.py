@@ -40,7 +40,7 @@ RUBRIC_CRITERIA = [
             90: "Good file naming with 1 minor error. Review naming convention on Canvas.",
             70: "File naming has 2 errors. Check the required format: XX_U01_SS01_V##",
             50: "File naming has 3+ errors. Please review the naming instructions on Canvas carefully.",
-            0: "No valid file name found or completely incorrect format."
+            0: "No valid file name found or completely incorrect naming format."
         }
     },
     {
@@ -52,8 +52,8 @@ RUBRIC_CRITERIA = [
             100: "Excellent outliner organization! Clean hierarchy with logical grouping and naming.",
             90: "Good organization with 1 minor issue. Objects well-grouped with mostly clear naming.",
             70: "Basic organization present but 2 areas need improvement (grouping/naming/hierarchy).",
-            50: "Poor organization with 3+ issues. Review outliner best practices on Canvas.",
-            0: "No clear organization visible. Objects scattered without logical structure."
+            50: "Poor organization with 3+ issues. Review how to organize your scene on Canvas.",
+            0: "No clear organization visible. No proper naming or grouping."
         }
     },
     {
