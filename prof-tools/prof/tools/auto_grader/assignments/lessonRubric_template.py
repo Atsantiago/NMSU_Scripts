@@ -1321,11 +1321,28 @@ class LessonRubric(object):
             results.append(f"  Score: {score:.1f}/{criterion_data['point_value']:.1f} ({percentage}%)")
             results.append(f"  Level: {level}")
             
-            # Use existing comments from validation functions if available
-            existing_comments = criterion_data.get('comments', '').strip()
-            if not existing_comments:
-                existing_comments = self._generate_comments(criterion_name)
-            results.append(f"  Comments: {existing_comments}")
+            # Get current comments from UI field instead of stored data
+            current_comments = ""
+            if f"{criterion_name}_comment_field" in self.ui_elements:
+                try:
+                    current_comments = cmds.scrollField(
+                        self.ui_elements[f"{criterion_name}_comment_field"],
+                        query=True,
+                        text=True
+                    ).strip()
+                except:
+                    # Fallback to stored comments if UI read fails
+                    current_comments = criterion_data.get('comments', '').strip()
+            
+            # If no current comments in UI, fallback to stored or generated comments
+            if not current_comments:
+                existing_comments = criterion_data.get('comments', '').strip()
+                if not existing_comments:
+                    current_comments = self._generate_comments(criterion_name)
+                else:
+                    current_comments = existing_comments
+            
+            results.append(f"  Comments: {current_comments}")
             results.append("")
         
         total_score = self.calculate_total_score()
