@@ -24,6 +24,34 @@
   },
   "releases": [
     {
+      "version": "2.0.15",
+      "date": "2025-09-19",
+      "commit_hash": "master",
+      "description": "Stable release with updated checklist and resolved merge conflicts",
+      "features": [
+        "Updated checklist with latest validation rules",
+        "Disabled Camera Aspect Ratio validation (Item 18)",
+        "Fixed all merge conflicts in setup and builder files", 
+        "Enhanced release management system",
+        "Improved installer stability and error handling",
+        "Clean codebase with proper version management"
+      ],
+      "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/master.zip",
+      "directory_path": "cmi-tools/FDMA2530-Modeling",
+      "breaking_changes": false,
+      "requirements": {
+        "maya_version": "2020+",
+        "python_version": "3.x",
+        "platforms": ["Windows", "macOS", "Linux"]
+      },
+      "installation": {
+        "method": "drag_and_drop",
+        "installer_file": "setup_drag_drop_fdma2530.py",
+        "target_location": "Maya shelf",
+        "shelf_name": "FDMA_2530"
+      }
+    },
+    {
       "version": "2.0.15.1",
       "date": "2025-09-19",
       "commit_hash": "dev-2530shelf",
@@ -59,7 +87,7 @@
       },
       "installation": {
         "method": "drag_and_drop",
-        "installer_file": "setup_drag_drop_maya_fdma2530.py",
+        "installer_file": "setup_drag_drop_fdma2530.py",
         "target_location": "Maya shelf",
         "shelf_name": "FDMA_2530"
       }
