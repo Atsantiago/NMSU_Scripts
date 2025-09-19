@@ -26,7 +26,7 @@ from fdma_shelf.utils.version_utils import get_fdma2530_version
 # ==============================================================================
 
 # Tool version (independent of package)
-__tool_version__ = "2.0.2"
+__tool_version__ = "2.0.3"
 
 # Package version
 __package_version__ = get_fdma2530_version()
@@ -92,7 +92,7 @@ CHECKLIST_ITEMS = {
     15: ["Non Deformer History", 0],
     16: ["Textures Color Space", 0],
     17: ["AI Shadow Casting Lights", [1, 1, 4]],
-    18: ["Camera Aspect Ratio", [1.77, 1.78]]
+    #18: ["Camera Aspect Ratio", [1.77, 1.78]]
 }
 
 # Legacy variable name for compatibility
@@ -361,7 +361,7 @@ def checklist_refresh():
         check_non_deformer_history()
         check_textures_color_space()
         check_ai_shadow_casting_lights()
-        check_camera_aspect_ratio()
+        # check_camera_aspect_ratio()  # Item 18 - Commented out
         
         print("Checklist validation completed successfully!")
         
@@ -402,7 +402,7 @@ def checklist_generate_report():
         report_strings.append(check_non_deformer_history())
         report_strings.append(check_textures_color_space())
         report_strings.append(check_ai_shadow_casting_lights())
-        report_strings.append(check_camera_aspect_ratio())
+        # report_strings.append(check_camera_aspect_ratio())  # Item 18 - Commented out
         
         # Show Report
         export_report_to_txt(report_strings)
