@@ -139,30 +139,11 @@ def _create_shelf(config, startup=False):
                 width=int(item.get("width", cell_w)),
                 height=int(item.get("height", cell_h)),
             )
-<<<<<<< HEAD
-    
-    # Activate the new shelf
-    try:
-        if cmds.control(g_top, query=True, exists=True) and cmds.control(shelf, query=True, exists=True):
-            cmds.tabLayout(g_top, edit=True, selectTab=shelf)
-        else:
-            # Fallback: try index-based selection
-            cmds.refresh()
-            shelf_tabs = cmds.tabLayout(g_top, query=True, childArray=True)
-            if shelf_tabs and _SHELF_NAME in shelf_tabs:
-                idx = shelf_tabs.index(_SHELF_NAME)
-                cmds.tabLayout(g_top, edit=True, selectTabIndex=idx+1)
-    except Exception:
-        pass
-    
-    # Show success message for manual installations
-=======
 
     # Activate the new shelf tab
     if cmds.control(g_top, ex=True) and cmds.control(shelf, ex=True):
         cmds.tabLayout(g_top, edit=True, tabLabel=(shelf, _SHELF_NAME))
 
->>>>>>> bd60b003fa2b3ac6c11a49f980642cfa6d6f37af
     if not startup:
         cmds.inViewMessage(
             amg="FDMA 2530 shelf rebuilt",
