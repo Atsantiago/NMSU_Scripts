@@ -26,7 +26,7 @@ from fdma_shelf.utils.version_utils import get_fdma2530_version
 # ==============================================================================
 
 # Tool version (independent of package)
-__tool_version__ = "2.0.3"
+__tool_version__ = "2.0.4"
 
 # Package version
 __package_version__ = get_fdma2530_version()
