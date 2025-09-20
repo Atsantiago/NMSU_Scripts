@@ -81,7 +81,7 @@ CHECKLIST_ITEMS = {
     4: ["File Paths", ["sourceimages"]],
     5: ["Unparented Objects", 0],
     6: ["Total Triangle Count", [1800000, 2000000]],
-    7: ["Total Polygon Count", [900000, 1000000]],
+    7: ["Total Polygon Count", [90000, 100000]],
     8: ["Total Poly Object Count", [90, 100]],
     9: ["Default Object Names", 0],
     10: ["Objects Assigned to Default Material", 0],
