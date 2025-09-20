@@ -109,6 +109,13 @@ def _run_installer_update():
         repo_url = "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/master.zip"
         
         if _download_and_install(repo_url, cmi_root):
+            # Clear version cache to force re-read of new version
+            try:
+                from fdma_shelf.utils.version_utils import _VERSION_CACHE
+                _VERSION_CACHE.clear()
+            except Exception:
+                pass  # Cache clearing is not critical
+                
             cmds.confirmDialog(
                 title="Update Complete",
                 message="FDMA 2530 shelf updated successfully!",
@@ -179,7 +186,7 @@ def _download_and_install(url, target_dir):
         
         target_shelf = os.path.join(scripts_dir, "fdma_shelf")
         target_config = os.path.join(scripts_dir, "shelf_config.json")
-        target_manifest = os.path.join(target_shelf, "releases.json")
+        target_manifest = os.path.join(scripts_dir, "releases.json")  # Fixed: Copy to scripts dir, not inside fdma_shelf
         
         # Copy files
         if os.path.exists(target_shelf):
@@ -190,7 +197,7 @@ def _download_and_install(url, target_dir):
             shutil.copy2(source_config, target_config)
         
         if os.path.exists(source_manifest):
-            shutil.copy2(source_manifest, target_manifest)
+            shutil.copy2(source_manifest, target_manifest)  # This now copies to scripts/releases.json
         
         # Cleanup
         os.unlink(temp_zip.name)
