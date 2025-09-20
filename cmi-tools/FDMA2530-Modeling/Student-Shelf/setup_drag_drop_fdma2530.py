@@ -284,6 +284,7 @@ def install_temporary():
     """Load the shelf for this session only (no permanent installation)."""
     # Add to Python path temporarily
     temp_dir = tempfile.mkdtemp(prefix="cmi_temp_")
+    LOG.info("Created temporary directory: %s", temp_dir)
     
     if not download_and_extract_package(temp_dir):
         LOG.error("Temporary package download failed")
@@ -292,6 +293,17 @@ def install_temporary():
     scripts_dir = os.path.join(temp_dir, "scripts")
     if scripts_dir not in sys.path:
         sys.path.insert(0, scripts_dir)
+        LOG.info("Added to Python path: %s", scripts_dir)
+
+    # Verify files exist before creating shelf
+    shelf_config_path = os.path.join(scripts_dir, "shelf_config.json")
+    manifest_path = os.path.join(scripts_dir, "releases.json")
+    fdma_shelf_path = os.path.join(scripts_dir, "fdma_shelf")
+    
+    LOG.info("Checking file locations:")
+    LOG.info("  shelf_config.json: %s (exists: %s)", shelf_config_path, os.path.exists(shelf_config_path))
+    LOG.info("  releases.json: %s (exists: %s)", manifest_path, os.path.exists(manifest_path))
+    LOG.info("  fdma_shelf/: %s (exists: %s)", fdma_shelf_path, os.path.exists(fdma_shelf_path))
 
     # Create shelf for this session
     return create_shelf()
@@ -302,17 +314,29 @@ def create_shelf():
         # Try to import the shelf builder
         try:
             import fdma_shelf.shelf.builder as shelf_builder
+            LOG.info("Successfully imported shelf builder")
         except ImportError as exc:
             LOG.error("Cannot import shelf builder: %s", exc)
             return False
 
         # Build the shelf
+        LOG.info("Attempting to build shelf...")
         shelf_builder.build_shelf()
         LOG.info("Shelf created successfully")
-        return True
+        
+        # Verify shelf was actually created
+        import maya.cmds as cmds
+        if cmds.shelfLayout("FDMA_2530", query=True, exists=True):
+            LOG.info("Shelf 'FDMA_2530' verified to exist in Maya")
+            return True
+        else:
+            LOG.warning("Shelf build completed but 'FDMA_2530' shelf not found")
+            return False
 
     except Exception as exc:
         LOG.error("Shelf creation failed: %s", exc)
+        import traceback
+        LOG.error("Full traceback: %s", traceback.format_exc())
         return False
 
 # ---------------------------------------------------------------------------
