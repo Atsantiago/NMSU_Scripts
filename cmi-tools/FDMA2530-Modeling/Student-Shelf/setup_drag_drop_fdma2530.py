@@ -190,7 +190,7 @@ def download_and_extract_package(target_dir):
         
         fdma_shelf_dst = os.path.join(scripts_dir, "fdma_shelf")
         config_dst = os.path.join(scripts_dir, "shelf_config.json")
-        manifest_dst = os.path.join(fdma_shelf_dst, "releases.json")
+        manifest_dst = os.path.join(scripts_dir, "releases.json")  # Fixed: Copy to scripts dir, not inside fdma_shelf
 
         # Copy fdma_shelf package
         if os.path.exists(fdma_shelf_src):
@@ -207,11 +207,11 @@ def download_and_extract_package(target_dir):
             shutil.copy2(config_src, config_dst)
             LOG.info("Copied shelf_config.json")
 
-        # Copy releases.json into fdma_shelf
+        # Copy releases.json to scripts directory (so version_utils can find it)
         if os.path.exists(manifest_src):
             shutil.copy2(manifest_src, manifest_dst)
             CURRENT_VERSION = _read_manifest_version(manifest_src)
-            LOG.info("Copied releases.json (version: %s)", CURRENT_VERSION)
+            LOG.info("Copied releases.json to scripts/ (version: %s)", CURRENT_VERSION)
 
         return True
 
