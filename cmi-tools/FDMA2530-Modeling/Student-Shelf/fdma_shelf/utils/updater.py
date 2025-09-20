@@ -115,10 +115,28 @@ def _run_installer_update():
                 _VERSION_CACHE.clear()
             except Exception:
                 pass  # Cache clearing is not critical
+            
+            # Force reload of checklist module to get updated tool version
+            try:
+                import sys
+                modules_to_reload = [
+                    'fdma_shelf.tools.checklist',
+                    'fdma_shelf.utils.version_utils'
+                ]
+                for module_name in modules_to_reload:
+                    if module_name in sys.modules:
+                        if sys.version_info.major >= 3:
+                            import importlib
+                            importlib.reload(sys.modules[module_name])
+                        else:
+                            # Python 2 reload
+                            exec("reload(sys.modules['{}'])".format(module_name))
+            except Exception as e:
+                print("Module reload warning: {}".format(e))
                 
             cmds.confirmDialog(
                 title="Update Complete",
-                message="FDMA 2530 shelf updated successfully!",
+                message="FDMA 2530 shelf updated successfully!\n\nNote: You may need to close and reopen the checklist window to see the updated version.",
                 button=["OK"]
             )
             
@@ -126,6 +144,7 @@ def _run_installer_update():
             try:
                 import fdma_shelf.shelf.builder as builder
                 builder.build_shelf()
+                print("Shelf rebuilt with updated version")
             except Exception as e:
                 cmds.warning("Shelf rebuild failed: {}".format(e))
         else:
