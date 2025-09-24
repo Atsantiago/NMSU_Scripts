@@ -1,5 +1,5 @@
 """
-CMI Tools – FDMA 2530 Shelf Installer
+CMI Tools - FDMA 2530 Shelf Installer
 =====================================================
 
 Drag-and-drop script that installs or loads the FDMA 2530 student
@@ -8,7 +8,7 @@ shelf.  Key features:
 • Downloads the repository as a ZIP (fast, no git required).  
 • Copies `fdma_shelf`, `shelf_config.json`, **and `releases.json`**  
   so version_utils can find the manifest.  
-• Reads `current_version` from the manifest – no hard-coded numbers.  
+• Reads `current_version` from the manifest - no hard-coded numbers.  
 • Creates a Maya `.mod` file so the shelf auto-loads.  
 • Works on Windows / macOS / Linux, Maya 2016-2025, Py 2/3.  
 
@@ -45,6 +45,19 @@ MODULE_NAME = "cmi-tools"
 SHELF_NAME = "FDMA_2530"
 FALLBACK_VERSION = "2.0.1"
 
+# CMI Tools directory structure (similar to prof-tools but separate)
+CMI_TOOLS_DIR = "cmi-tools"  # Main directory name in Maya root
+
+# Directory Structure:
+# ~/maya/                    # Maya root directory (version-independent)
+#   ├── modules/              # Maya modules directory  
+#   │   └── cmi-tools.mod     # Module file that tells Maya about cmi-tools
+#   └── cmi-tools/            # Main cmi-tools installation
+#       └── scripts/          # Python scripts directory
+#           ├── fdma_shelf/   # FDMA 2530 shelf package
+#           ├── shelf_config.json
+#           └── releases.json # Version manifest
+
 # Will be filled after the manifest is read
 CURRENT_VERSION = FALLBACK_VERSION
 
@@ -62,12 +75,20 @@ def get_maya_app_dir():
     return cmds.internalVar(userAppDir=True)
 
 def get_cmi_root():
-    """cmi-tools installation root inside the Maya user directory."""
-    return os.path.join(get_maya_app_dir(), MODULE_NAME).replace("\\", "/")
+    """cmi-tools installation root in Maya's main directory."""
+    # Get Maya's main application directory (not version-specific)
+    maya_app_dir = get_maya_app_dir()
+    # Go up one level from version-specific to main Maya directory
+    maya_root = os.path.dirname(maya_app_dir.rstrip("/\\"))
+    return os.path.join(maya_root, CMI_TOOLS_DIR).replace("\\", "/")
 
 def get_modules_dir():
-    """Maya modules folder; create it if missing."""
-    path = os.path.join(get_maya_app_dir(), "modules")
+    """Maya modules folder in root directory (version-independent); create it if missing."""
+    # Get Maya's main application directory (not version-specific)
+    maya_app_dir = get_maya_app_dir()
+    # Go up one level from version-specific to main Maya directory
+    maya_root = os.path.dirname(maya_app_dir.rstrip("/\\"))
+    path = os.path.join(maya_root, "modules")
     if not os.path.exists(path):
         os.makedirs(path)
     return path
@@ -378,7 +399,7 @@ def get_installed_version():
     try:
         cmi_root = get_cmi_root()
         manifest_path = os.path.join(
-            cmi_root, "scripts", "fdma_shelf", "releases.json"
+            cmi_root, "scripts", "releases.json"
         )
         
         if os.path.exists(manifest_path):
@@ -414,7 +435,7 @@ def show_install_dialog():
 
     # Show dialog
     choice = cmds.confirmDialog(
-        title="CMI Tools – FDMA 2530 Installer v{}".format(current_version),
+        title="CMI Tools - FDMA 2530 Installer v{}".format(current_version),
         message=(
             "Maya shelf system for FDMA 2530 students.\n\n"
             "{}\n"
@@ -442,7 +463,7 @@ def show_install_dialog():
         else:
             cmds.confirmDialog(
                 title="Error",
-                message="Installation failed – check Script Editor for details.",
+                message="Installation failed - check Script Editor for details.",
                 button=["OK"],
             )
 
@@ -460,7 +481,7 @@ def show_install_dialog():
         else:
             cmds.confirmDialog(
                 title="Error",
-                message="Temporary load failed – check Script Editor.",
+                message="Temporary load failed - check Script Editor.",
                 button=["OK"],
             )
 
