@@ -293,6 +293,29 @@ def install_permanent():
         LOG.error("Module file creation failed")
         return False
 
+    # Add scripts directory to Python path for immediate access
+    scripts_dir = os.path.join(cmi_root, "scripts")
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+        LOG.info("Added to Python path: %s", scripts_dir)
+    else:
+        LOG.info("Scripts directory already in Python path: %s", scripts_dir)
+    
+    # Verify fdma_shelf directory exists before trying to import
+    fdma_shelf_dir = os.path.join(scripts_dir, "fdma_shelf")
+    LOG.info("Checking fdma_shelf directory: %s (exists: %s)", fdma_shelf_dir, os.path.exists(fdma_shelf_dir))
+    if os.path.exists(fdma_shelf_dir):
+        init_file = os.path.join(fdma_shelf_dir, "__init__.py")
+        LOG.info("Checking __init__.py: %s (exists: %s)", init_file, os.path.exists(init_file))
+        
+        # Test import immediately to verify Python path works
+        try:
+            import fdma_shelf
+            LOG.info("SUCCESS: fdma_shelf package can be imported")
+        except ImportError as e:
+            LOG.error("FAILED: Cannot import fdma_shelf package: %s", e)
+            LOG.error("This indicates a Python path issue")
+
     # Create/update shelf
     if not create_shelf():
         LOG.error("Shelf creation failed")
@@ -332,12 +355,28 @@ def install_temporary():
 def create_shelf():
     """Create the FDMA 2530 shelf using shelf_config.json."""
     try:
+        # Debug Python path
+        LOG.info("Current Python path:")
+        for i, path in enumerate(sys.path[:5]):  # Show first 5 paths
+            LOG.info("  [%d] %s", i, path)
+        
         # Try to import the shelf builder
         try:
+            # Clear any cached imports first
+            if 'fdma_shelf.shelf.builder' in sys.modules:
+                if sys.version_info.major >= 3:
+                    import importlib
+                    importlib.reload(sys.modules['fdma_shelf.shelf.builder'])
+                else:
+                    # Python 2 reload
+                    exec("reload(sys.modules['fdma_shelf.shelf.builder'])")
+                LOG.info("Reloaded existing fdma_shelf.shelf.builder module")
+            
             import fdma_shelf.shelf.builder as shelf_builder
             LOG.info("Successfully imported shelf builder")
         except ImportError as exc:
             LOG.error("Cannot import shelf builder: %s", exc)
+            LOG.error("Make sure fdma_shelf package is in Python path")
             return False
 
         # Build the shelf
