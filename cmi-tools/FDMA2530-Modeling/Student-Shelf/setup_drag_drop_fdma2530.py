@@ -803,7 +803,7 @@ def _remove_shelf_from_preferences():
                 cmds.optionVar(remove=opt_var)
                 LOG.info("Removed optionVar: %s", opt_var)
         
-        # 3. Remove shelf from shelfTabLayout preferences
+        # 3. Remove shelf from shelfTabLayout preferences and force tab removal
         try:
             # Get the main shelf tab layout
             shelf_top_level = mel.eval('$tempVar = $gShelfTopLevel')
@@ -812,6 +812,15 @@ def _remove_shelf_from_preferences():
                 all_shelves = cmds.shelfTabLayout(shelf_top_level, query=True, childArray=True) or []
                 if SHELF_NAME in all_shelves:
                     LOG.info("Found shelf in tab layout, removing...")
+                    
+                    # Switch to a safe tab first
+                    safe_tabs = [tab for tab in all_shelves if tab != SHELF_NAME]
+                    if safe_tabs:
+                        cmds.shelfTabLayout(shelf_top_level, edit=True, selectTab=safe_tabs[0])
+                    
+                    # Force remove the tab using MEL
+                    mel.eval('deleteUI "{}";'.format(SHELF_NAME))
+                    LOG.info("Forcibly removed shelf tab using MEL")
         except Exception as e:
             LOG.warning("Could not access shelf tab layout: %s", e)
         
@@ -849,9 +858,73 @@ def _remove_shelf_from_preferences():
                     except Exception as e:
                         LOG.warning("Could not process shelf file %s: %s", filename, e)
         
-        # 5. Save Maya preferences to persist the changes
+        # 5. Remove shelf from Maya's windowPrefs.mel (critical for tab persistence)
+        try:
+            windowprefs_path = os.path.normpath(os.path.join(maya_app_dir, "prefs", "windowPrefs.mel"))
+            if os.path.exists(windowprefs_path):
+                with open(windowprefs_path, 'r') as f:
+                    content = f.read()
+                
+                if SHELF_NAME in content:
+                    LOG.info("Found shelf references in windowPrefs.mel, cleaning...")
+                    lines = content.split('\n')
+                    cleaned_lines = []
+                    
+                    for line in lines:
+                        # Remove lines that reference our shelf
+                        if SHELF_NAME not in line:
+                            cleaned_lines.append(line)
+                        else:
+                            LOG.info("Removing line: %s", line.strip())
+                    
+                    with open(windowprefs_path, 'w') as f:
+                        f.write('\n'.join(cleaned_lines))
+                    
+                    LOG.info("Cleaned shelf references from windowPrefs.mel")
+        except Exception as e:
+            LOG.warning("Could not clean windowPrefs.mel: %s", e)
+        
+        # 6. Remove shelf from userPrefs.mel 
+        try:
+            userprefs_path = os.path.normpath(os.path.join(maya_app_dir, "prefs", "userPrefs.mel"))
+            if os.path.exists(userprefs_path):
+                with open(userprefs_path, 'r') as f:
+                    content = f.read()
+                
+                if SHELF_NAME in content:
+                    LOG.info("Found shelf references in userPrefs.mel, cleaning...")
+                    lines = content.split('\n')
+                    cleaned_lines = [line for line in lines if SHELF_NAME not in line]
+                    
+                    with open(userprefs_path, 'w') as f:
+                        f.write('\n'.join(cleaned_lines))
+                    
+                    LOG.info("Cleaned shelf references from userPrefs.mel")
+        except Exception as e:
+            LOG.warning("Could not clean userPrefs.mel: %s", e)
+        
+        # 7. Force remove shelf tab from Maya's internal layout
+        try:
+            # Use MEL to force remove the shelf tab from persistent layout
+            mel_command = 'if (`shelfLayout -exists "{}"`){{\n'.format(SHELF_NAME)
+            mel_command += '    string $shelves[] = `shelfTabLayout -q -childArray $gShelfTopLevel`;\n'
+            mel_command += '    for ($shelf in $shelves) {\n'
+            mel_command += '        if ($shelf == "{}") {{\n'.format(SHELF_NAME)
+            mel_command += '            deleteUI "{}";\n'.format(SHELF_NAME)
+            mel_command += '            break;\n'
+            mel_command += '        }\n'
+            mel_command += '    }\n'
+            mel_command += '}'
+            
+            mel.eval(mel_command)
+            LOG.info("Executed MEL command to remove shelf tab")
+        except Exception as e:
+            LOG.warning("Could not execute MEL shelf removal: %s", e)
+        
+        # 8. Save Maya preferences to persist the changes
         try:
             cmds.savePrefs(shelves=True)
+            cmds.savePrefs(general=True)  # Save general prefs too
             LOG.info("Saved Maya preferences")
         except Exception as e:
             LOG.warning("Could not save preferences: %s", e)
@@ -918,7 +991,142 @@ def uninstall():
         LOG.warning("Some files may not have been completely removed")
         return False
 
-# ---------------------------------------------------------------------------\n# Cross-platform testing\n# ---------------------------------------------------------------------------\n\ndef test_cross_platform_paths():\n    \"\"\"Test and display cross-platform path generation for verification.\"\"\"\n    import os\n    import platform as platform_module\n    \n    print(\"\\n=== Cross-Platform Path Testing ===\")\n    print(\"Current system: {}\".format(platform_module.system()))\n    print(\"Detected platform: {}\".format(get_platform().upper()))\n    \n    # Show platform-specific Maya roots\n    home = os.path.expanduser(\"~\")\n    print(\"\\nPlatform-specific Maya root directories:\")\n    print(\"  Windows: {}\".format(os.path.normpath(os.path.join(home, \"Documents\", \"maya\"))))\n    print(\"  macOS:   {}\".format(os.path.normpath(os.path.join(home, \"Library\", \"Preferences\", \"Autodesk\", \"maya\"))))\n    print(\"  Linux:   {}\".format(os.path.normpath(os.path.join(home, \"maya\"))))\n    \n    # Show selected paths\n    print(\"\\nSelected paths for current platform:\")\n    try:\n        platform_maya_root = get_platform_maya_root()\n        print(\"  Platform Maya root: {}\".format(platform_maya_root))\n        \n        if 'maya' in globals() and hasattr(maya, 'cmds'):\n            maya_app_dir = get_maya_app_dir()\n            maya_root = get_maya_root()\n            cmi_root = get_cmi_root()\n            modules_dir = get_modules_dir()\n            \n            print(\"  Maya userAppDir: {}\".format(maya_app_dir))\n            print(\"  Resolved Maya root: {}\".format(maya_root))\n            print(\"  CMI Tools target: {}\".format(cmi_root))\n            print(\"  Modules directory: {}\".format(modules_dir))\n        else:\n            print(\"  (Maya not available - showing platform defaults only)\")\n            cmi_root = os.path.normpath(os.path.join(platform_maya_root, CMI_TOOLS_DIR))\n            modules_dir = os.path.normpath(os.path.join(platform_maya_root, \"modules\"))\n            print(\"  CMI Tools target: {}\".format(cmi_root))\n            print(\"  Modules directory: {}\".format(modules_dir))\n            \n    except Exception as e:\n        print(\"  Error during path resolution: {}\".format(e))\n    \n    print(\"==============================\\n\")\n\n# ---------------------------------------------------------------------------\n# Status checking\n# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Cross-platform testing and diagnostics
+# ---------------------------------------------------------------------------
+
+def diagnose_shelf_persistence():
+    """Diagnostic function to find where Maya is storing shelf information."""
+    print("\\n=== FDMA 2530 Shelf Persistence Diagnostic ===")
+    
+    try:
+        maya_app_dir = get_maya_app_dir()
+        print("Maya App Directory: {}".format(maya_app_dir))
+        
+        # Check if shelf exists in current session
+        shelf_exists = cmds.shelfLayout(SHELF_NAME, query=True, exists=True)
+        print("Shelf exists in current session: {}".format(shelf_exists))
+        
+        # Check various Maya preference files
+        pref_files_to_check = [
+            "windowPrefs.mel",
+            "userPrefs.mel", 
+            "shelves/shelf_{}.mel".format(SHELF_NAME),
+            "shelves/shelfDefault.mel"
+        ]
+        
+        print("\\nChecking Maya preference files for shelf references:")
+        for pref_file in pref_files_to_check:
+            pref_path = os.path.normpath(os.path.join(maya_app_dir, "prefs", pref_file))
+            if os.path.exists(pref_path):
+                try:
+                    with open(pref_path, 'r') as f:
+                        content = f.read()
+                    
+                    if SHELF_NAME in content:
+                        print("  Found '{}' references in: {}".format(SHELF_NAME, pref_file))
+                        # Show the lines containing references
+                        lines = content.split('\\n')
+                        for i, line in enumerate(lines, 1):
+                            if SHELF_NAME in line:
+                                print("    Line {}: {}".format(i, line.strip()[:100]))
+                    else:
+                        print("  No references in: {}".format(pref_file))
+                except Exception as e:
+                    print("  Could not read {}: {}".format(pref_file, e))
+            else:
+                print("  File does not exist: {}".format(pref_file))
+        
+        # Check Maya option variables
+        print("\\nChecking Maya optionVars:")
+        shelf_option_vars = [
+            "shelfName{}".format(SHELF_NAME),
+            "shelfFile{}".format(SHELF_NAME),
+            "shelf{}".format(SHELF_NAME),
+            "shelfLoad{}".format(SHELF_NAME)
+        ]
+        
+        for opt_var in shelf_option_vars:
+            if cmds.optionVar(exists=opt_var):
+                value = cmds.optionVar(query=opt_var)
+                print("  Found optionVar '{}' = '{}'".format(opt_var, value))
+            else:
+                print("  optionVar '{}' does not exist".format(opt_var))
+        
+        # Check shelf tab layout
+        print("\\nChecking shelf tab layout:")
+        try:
+            shelf_top_level = mel.eval('$tempVar = $gShelfTopLevel')
+            if cmds.shelfTabLayout(shelf_top_level, query=True, exists=True):
+                all_shelves = cmds.shelfTabLayout(shelf_top_level, query=True, childArray=True) or []
+                print("  All shelf tabs: {}".format(all_shelves))
+                if SHELF_NAME in all_shelves:
+                    print("  '{}' found in shelf tab layout".format(SHELF_NAME))
+                else:
+                    print("  '{}' not found in shelf tab layout".format(SHELF_NAME))
+            else:
+                print("  Could not access shelf tab layout")
+        except Exception as e:
+            print("  Error checking shelf tab layout: {}".format(e))
+        
+        # Check installation files
+        print("\\nChecking installation files:")
+        cmi_root = get_cmi_root()
+        print("  CMI Tools directory: {}".format(cmi_root))
+        print("  Directory exists: {}".format(os.path.exists(cmi_root)))
+        
+        mod_file = os.path.normpath(os.path.join(get_modules_dir(), MODULE_NAME + ".mod"))
+        print("  Module file: {}".format(mod_file))
+        print("  Module file exists: {}".format(os.path.exists(mod_file)))
+        
+    except Exception as e:
+        print("Error during diagnostic: {}".format(e))
+    
+    print("=== End Diagnostic ===\\n")
+
+def test_cross_platform_paths():
+    """Test and display cross-platform path generation for verification."""
+    import os
+    import platform as platform_module
+    
+    print("\\n=== Cross-Platform Path Testing ===")
+    print("Current system: {}".format(platform_module.system()))
+    print("Detected platform: {}".format(get_platform().upper()))
+    
+    # Show platform-specific Maya roots
+    home = os.path.expanduser("~")
+    print("\\nPlatform-specific Maya root directories:")
+    print("  Windows: {}".format(os.path.normpath(os.path.join(home, "Documents", "maya"))))
+    print("  macOS:   {}".format(os.path.normpath(os.path.join(home, "Library", "Preferences", "Autodesk", "maya"))))
+    print("  Linux:   {}".format(os.path.normpath(os.path.join(home, "maya"))))
+    
+    # Show selected paths
+    print("\\nSelected paths for current platform:")
+    try:
+        platform_maya_root = get_platform_maya_root()
+        print("  Platform Maya root: {}".format(platform_maya_root))
+        
+        if 'maya' in globals() and hasattr(maya, 'cmds'):
+            maya_app_dir = get_maya_app_dir()
+            maya_root = get_maya_root()
+            cmi_root = get_cmi_root()
+            modules_dir = get_modules_dir()
+            
+            print("  Maya userAppDir: {}".format(maya_app_dir))
+            print("  Resolved Maya root: {}".format(maya_root))
+            print("  CMI Tools target: {}".format(cmi_root))
+            print("  Modules directory: {}".format(modules_dir))
+        else:
+            print("  (Maya not available - showing platform defaults only)")
+            cmi_root = os.path.normpath(os.path.join(platform_maya_root, CMI_TOOLS_DIR))
+            modules_dir = os.path.normpath(os.path.join(platform_maya_root, "modules"))
+            print("  CMI Tools target: {}".format(cmi_root))
+            print("  Modules directory: {}".format(modules_dir))
+            
+    except Exception as e:
+        print("  Error during path resolution: {}".format(e))
+    
+    print("==============================\\n")\n\n# ---------------------------------------------------------------------------\n# Status checking\n# ---------------------------------------------------------------------------
 
 def get_installed_version():
     """Return the installed version, or 'Not Installed'."""
