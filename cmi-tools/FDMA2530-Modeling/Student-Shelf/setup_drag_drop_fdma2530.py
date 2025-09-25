@@ -774,216 +774,77 @@ def create_shelf():
 def _remove_shelf_from_preferences():
     """Remove shelf from Maya's persistent preferences so it doesn't reappear."""
     try:
-        LOG.info("Removing shelf from Maya preferences...")
+        # Remove shelf from shelf layout preferences
+        if cmds.optionVar(exists="shelfName{}".format(SHELF_NAME)):
+            cmds.optionVar(remove="shelfName{}".format(SHELF_NAME))
+            LOG.info("Removed shelf name preference")
         
-        # 1. Remove shelf from current UI and get shelf position
-        shelf_exists = cmds.shelfLayout(SHELF_NAME, query=True, exists=True)
-        if shelf_exists:
-            # Get the shelf's parent (shelfTabLayout) to remove the tab
-            try:
-                shelf_parent = cmds.shelfLayout(SHELF_NAME, query=True, parent=True)
-                if shelf_parent:
-                    # Remove the shelf tab completely
-                    cmds.shelfTabLayout(shelf_parent, edit=True, selectTab=SHELF_NAME)
-                    cmds.deleteUI(SHELF_NAME, layout=True)
-                    LOG.info("Removed shelf tab from UI")
-            except Exception as e:
-                LOG.warning("Could not remove shelf tab: %s", e)
-        
-        # 2. Remove Maya's optionVar preferences for the shelf
-        shelf_option_vars = [
-            "shelfName{}".format(SHELF_NAME),
-            "shelfFile{}".format(SHELF_NAME),
-            "shelf{}".format(SHELF_NAME),
-            "shelfLoad{}".format(SHELF_NAME)
-        ]
-        
-        for opt_var in shelf_option_vars:
-            if cmds.optionVar(exists=opt_var):
-                cmds.optionVar(remove=opt_var)
-                LOG.info("Removed optionVar: %s", opt_var)
-        
-        # 3. Remove shelf from shelfTabLayout preferences and force tab removal
-        try:
-            # Get the main shelf tab layout
-            shelf_top_level = mel.eval('$tempVar = $gShelfTopLevel')
-            if cmds.shelfTabLayout(shelf_top_level, query=True, exists=True):
-                # Get all shelf names
-                all_shelves = cmds.shelfTabLayout(shelf_top_level, query=True, childArray=True) or []
-                if SHELF_NAME in all_shelves:
-                    LOG.info("Found shelf in tab layout, removing...")
-                    
-                    # Switch to a safe tab first
-                    safe_tabs = [tab for tab in all_shelves if tab != SHELF_NAME]
-                    if safe_tabs:
-                        cmds.shelfTabLayout(shelf_top_level, edit=True, selectTab=safe_tabs[0])
-                    
-                    # Force remove the tab using MEL
-                    mel.eval('deleteUI "{}";'.format(SHELF_NAME))
-                    LOG.info("Forcibly removed shelf tab using MEL")
-        except Exception as e:
-            LOG.warning("Could not access shelf tab layout: %s", e)
-        
-        # 4. Remove physical shelf files from Maya prefs directory
+        # Remove shelf configuration files from Maya prefs
         maya_app_dir = get_maya_app_dir()
-        prefs_shelves_dir = os.path.normpath(os.path.join(maya_app_dir, "prefs", "shelves"))
+        prefs_dir = os.path.normpath(os.path.join(maya_app_dir, "prefs", "shelves"))
         
-        if os.path.exists(prefs_shelves_dir):
-            # Look for our specific shelf file
-            shelf_file_name = "shelf_{}.mel".format(SHELF_NAME)
-            shelf_file_path = os.path.join(prefs_shelves_dir, shelf_file_name)
+        if os.path.exists(prefs_dir):
+            # Look for shelf files that might contain our shelf
+            shelf_files = [f for f in os.listdir(prefs_dir) if f.startswith("shelf_") and f.endswith(".mel")]
             
-            if os.path.exists(shelf_file_path):
-                os.remove(shelf_file_path)
-                LOG.info("Removed shelf file: %s", shelf_file_name)
-            
-            # Also check for any other shelf files that might reference our shelf
-            for filename in os.listdir(prefs_shelves_dir):
-                if filename.endswith('.mel') and filename.startswith('shelf_'):
-                    file_path = os.path.join(prefs_shelves_dir, filename)
-                    try:
-                        with open(file_path, 'r') as f:
-                            content = f.read()
+            for shelf_file in shelf_files:
+                shelf_path = os.path.join(prefs_dir, shelf_file)
+                try:
+                    # Read the shelf file and check if it contains our shelf
+                    with open(shelf_path, 'r') as f:
+                        content = f.read()
+                    
+                    if SHELF_NAME in content:
+                        # Remove references to our shelf from the file
+                        lines = content.split('\n')
+                        cleaned_lines = []
+                        skip_block = False
                         
-                        if SHELF_NAME in content:
-                            LOG.info("Found references to %s in %s, cleaning...", SHELF_NAME, filename)
-                            # Remove lines containing our shelf name
-                            lines = content.split('\n')
-                            cleaned_lines = [line for line in lines if SHELF_NAME not in line]
-                            
-                            with open(file_path, 'w') as f:
-                                f.write('\n'.join(cleaned_lines))
-                            
-                            LOG.info("Cleaned references from: %s", filename)
-                    except Exception as e:
-                        LOG.warning("Could not process shelf file %s: %s", filename, e)
-        
-        # 5. Remove shelf from Maya's windowPrefs.mel (critical for tab persistence)
-        try:
-            windowprefs_path = os.path.normpath(os.path.join(maya_app_dir, "prefs", "windowPrefs.mel"))
-            if os.path.exists(windowprefs_path):
-                with open(windowprefs_path, 'r') as f:
-                    content = f.read()
-                
-                if SHELF_NAME in content:
-                    LOG.info("Found shelf references in windowPrefs.mel, cleaning...")
-                    lines = content.split('\n')
-                    cleaned_lines = []
-                    
-                    for line in lines:
-                        # Remove lines that reference our shelf
-                        if SHELF_NAME not in line:
-                            cleaned_lines.append(line)
-                        else:
-                            LOG.info("Removing line: %s", line.strip())
-                    
-                    with open(windowprefs_path, 'w') as f:
-                        f.write('\n'.join(cleaned_lines))
-                    
-                    LOG.info("Cleaned shelf references from windowPrefs.mel")
-        except Exception as e:
-            LOG.warning("Could not clean windowPrefs.mel: %s", e)
-        
-        # 6. Remove shelf from userPrefs.mel 
-        try:
-            userprefs_path = os.path.normpath(os.path.join(maya_app_dir, "prefs", "userPrefs.mel"))
-            if os.path.exists(userprefs_path):
-                with open(userprefs_path, 'r') as f:
-                    content = f.read()
-                
-                if SHELF_NAME in content:
-                    LOG.info("Found shelf references in userPrefs.mel, cleaning...")
-                    lines = content.split('\n')
-                    cleaned_lines = [line for line in lines if SHELF_NAME not in line]
-                    
-                    with open(userprefs_path, 'w') as f:
-                        f.write('\n'.join(cleaned_lines))
-                    
-                    LOG.info("Cleaned shelf references from userPrefs.mel")
-        except Exception as e:
-            LOG.warning("Could not clean userPrefs.mel: %s", e)
-        
-        # 7. Force remove shelf tab from Maya's internal layout
-        try:
-            # Use MEL to force remove the shelf tab from persistent layout
-            mel_command = 'if (`shelfLayout -exists "{}"`){{\n'.format(SHELF_NAME)
-            mel_command += '    string $shelves[] = `shelfTabLayout -q -childArray $gShelfTopLevel`;\n'
-            mel_command += '    for ($shelf in $shelves) {\n'
-            mel_command += '        if ($shelf == "{}") {{\n'.format(SHELF_NAME)
-            mel_command += '            deleteUI "{}";\n'.format(SHELF_NAME)
-            mel_command += '            break;\n'
-            mel_command += '        }\n'
-            mel_command += '    }\n'
-            mel_command += '}'
-            
-            mel.eval(mel_command)
-            LOG.info("Executed MEL command to remove shelf tab")
-        except Exception as e:
-            LOG.warning("Could not execute MEL shelf removal: %s", e)
-        
-        # 8. Save Maya preferences to persist the changes
-        try:
-            cmds.savePrefs(shelves=True)
-            cmds.savePrefs(general=True)  # Save general prefs too
-            LOG.info("Saved Maya preferences")
-        except Exception as e:
-            LOG.warning("Could not save preferences: %s", e)
-        
-        LOG.info("Shelf removal from preferences completed")
-        
+                        for line in lines:
+                            if SHELF_NAME in line:
+                                skip_block = True
+                                continue
+                            if skip_block and line.strip() == '':
+                                skip_block = False
+                                continue
+                            if not skip_block:
+                                cleaned_lines.append(line)
+                        
+                        # Write back the cleaned content
+                        with open(shelf_path, 'w') as f:
+                            f.write('\n'.join(cleaned_lines))
+                        
+                        LOG.info("Cleaned shelf references from: %s", shelf_file)
+                        
+                except Exception as e:
+                    LOG.warning("Could not clean shelf file %s: %s", shelf_file, e)
+    
     except Exception as exc:
-        LOG.error("Error removing shelf from preferences: %s", exc)
+        LOG.warning("Could not fully clean shelf preferences: %s", exc)
 
 def uninstall():
     """Remove CMI Tools completely."""
     try:
-        LOG.info("Starting complete uninstallation of CMI Tools...")
-        
-        # Step 1: Remove shelf from current session
+        # Remove shelf if it exists in current session
         if cmds.shelfLayout(SHELF_NAME, exists=True):
-            try:
-                # First switch to a different shelf to avoid issues
-                shelf_parent = cmds.shelfLayout(SHELF_NAME, query=True, parent=True)
-                if shelf_parent and cmds.shelfTabLayout(shelf_parent, query=True, exists=True):
-                    all_tabs = cmds.shelfTabLayout(shelf_parent, query=True, childArray=True) or []
-                    safe_tabs = [tab for tab in all_tabs if tab != SHELF_NAME]
-                    if safe_tabs:
-                        cmds.shelfTabLayout(shelf_parent, edit=True, selectTab=safe_tabs[0])
-                
-                # Now delete our shelf
-                cmds.deleteUI(SHELF_NAME, layout=True)
-                LOG.info("Removed shelf from current session: %s", SHELF_NAME)
-            except Exception as e:
-                LOG.warning("Could not fully remove shelf from current session: %s", e)
+            cmds.deleteUI(SHELF_NAME, layout=True)
+            LOG.info("Removed shelf from current session: %s", SHELF_NAME)
 
-        # Step 2: Clean up any loaded modules
-        removed_count = cleanup_loaded_modules()
-        if removed_count > 0:
-            LOG.info("Cleaned up %d loaded modules", removed_count)
-
-        # Step 3: Remove shelf from Maya's persistent shelf preferences
+        # Remove shelf from Maya's persistent shelf preferences
         _remove_shelf_from_preferences()
 
-        # Step 4: Remove installation directory
+        # Remove installation directory
         cmi_root = get_cmi_root()
         if os.path.exists(cmi_root):
             shutil.rmtree(cmi_root)
             LOG.info("Removed directory: %s", cmi_root)
 
-        # Step 5: Remove module file
+        # Remove module file
         mod_file = os.path.normpath(os.path.join(get_modules_dir(), MODULE_NAME + ".mod"))
         if os.path.exists(mod_file):
             os.unlink(mod_file)
             LOG.info("Removed module file: %s", mod_file)
 
-        # Step 6: Final cleanup - force save preferences
-        try:
-            cmds.savePrefs(shelves=True)
-            LOG.info("Saved Maya preferences after uninstall")
-        except Exception as e:
-            LOG.warning("Could not save preferences: %s", e)
-
-        LOG.info("Uninstallation completed successfully")
         return True
 
     except Exception as exc:
@@ -992,97 +853,8 @@ def uninstall():
         return False
 
 # ---------------------------------------------------------------------------
-# Cross-platform testing and diagnostics
+# Cross-platform testing
 # ---------------------------------------------------------------------------
-
-def diagnose_shelf_persistence():
-    """Diagnostic function to find where Maya is storing shelf information."""
-    print("\\n=== FDMA 2530 Shelf Persistence Diagnostic ===")
-    
-    try:
-        maya_app_dir = get_maya_app_dir()
-        print("Maya App Directory: {}".format(maya_app_dir))
-        
-        # Check if shelf exists in current session
-        shelf_exists = cmds.shelfLayout(SHELF_NAME, query=True, exists=True)
-        print("Shelf exists in current session: {}".format(shelf_exists))
-        
-        # Check various Maya preference files
-        pref_files_to_check = [
-            "windowPrefs.mel",
-            "userPrefs.mel", 
-            "shelves/shelf_{}.mel".format(SHELF_NAME),
-            "shelves/shelfDefault.mel"
-        ]
-        
-        print("\\nChecking Maya preference files for shelf references:")
-        for pref_file in pref_files_to_check:
-            pref_path = os.path.normpath(os.path.join(maya_app_dir, "prefs", pref_file))
-            if os.path.exists(pref_path):
-                try:
-                    with open(pref_path, 'r') as f:
-                        content = f.read()
-                    
-                    if SHELF_NAME in content:
-                        print("  Found '{}' references in: {}".format(SHELF_NAME, pref_file))
-                        # Show the lines containing references
-                        lines = content.split('\\n')
-                        for i, line in enumerate(lines, 1):
-                            if SHELF_NAME in line:
-                                print("    Line {}: {}".format(i, line.strip()[:100]))
-                    else:
-                        print("  No references in: {}".format(pref_file))
-                except Exception as e:
-                    print("  Could not read {}: {}".format(pref_file, e))
-            else:
-                print("  File does not exist: {}".format(pref_file))
-        
-        # Check Maya option variables
-        print("\\nChecking Maya optionVars:")
-        shelf_option_vars = [
-            "shelfName{}".format(SHELF_NAME),
-            "shelfFile{}".format(SHELF_NAME),
-            "shelf{}".format(SHELF_NAME),
-            "shelfLoad{}".format(SHELF_NAME)
-        ]
-        
-        for opt_var in shelf_option_vars:
-            if cmds.optionVar(exists=opt_var):
-                value = cmds.optionVar(query=opt_var)
-                print("  Found optionVar '{}' = '{}'".format(opt_var, value))
-            else:
-                print("  optionVar '{}' does not exist".format(opt_var))
-        
-        # Check shelf tab layout
-        print("\\nChecking shelf tab layout:")
-        try:
-            shelf_top_level = mel.eval('$tempVar = $gShelfTopLevel')
-            if cmds.shelfTabLayout(shelf_top_level, query=True, exists=True):
-                all_shelves = cmds.shelfTabLayout(shelf_top_level, query=True, childArray=True) or []
-                print("  All shelf tabs: {}".format(all_shelves))
-                if SHELF_NAME in all_shelves:
-                    print("  '{}' found in shelf tab layout".format(SHELF_NAME))
-                else:
-                    print("  '{}' not found in shelf tab layout".format(SHELF_NAME))
-            else:
-                print("  Could not access shelf tab layout")
-        except Exception as e:
-            print("  Error checking shelf tab layout: {}".format(e))
-        
-        # Check installation files
-        print("\\nChecking installation files:")
-        cmi_root = get_cmi_root()
-        print("  CMI Tools directory: {}".format(cmi_root))
-        print("  Directory exists: {}".format(os.path.exists(cmi_root)))
-        
-        mod_file = os.path.normpath(os.path.join(get_modules_dir(), MODULE_NAME + ".mod"))
-        print("  Module file: {}".format(mod_file))
-        print("  Module file exists: {}".format(os.path.exists(mod_file)))
-        
-    except Exception as e:
-        print("Error during diagnostic: {}".format(e))
-    
-    print("=== End Diagnostic ===\\n")
 
 def test_cross_platform_paths():
     """Test and display cross-platform path generation for verification."""
@@ -1106,7 +878,8 @@ def test_cross_platform_paths():
         platform_maya_root = get_platform_maya_root()
         print("  Platform Maya root: {}".format(platform_maya_root))
         
-        if 'maya' in globals() and hasattr(maya, 'cmds'):
+        try:
+            import maya.cmds
             maya_app_dir = get_maya_app_dir()
             maya_root = get_maya_root()
             cmi_root = get_cmi_root()
@@ -1116,7 +889,7 @@ def test_cross_platform_paths():
             print("  Resolved Maya root: {}".format(maya_root))
             print("  CMI Tools target: {}".format(cmi_root))
             print("  Modules directory: {}".format(modules_dir))
-        else:
+        except ImportError:
             print("  (Maya not available - showing platform defaults only)")
             cmi_root = os.path.normpath(os.path.join(platform_maya_root, CMI_TOOLS_DIR))
             modules_dir = os.path.normpath(os.path.join(platform_maya_root, "modules"))
@@ -1126,7 +899,11 @@ def test_cross_platform_paths():
     except Exception as e:
         print("  Error during path resolution: {}".format(e))
     
-    print("==============================\\n")\n\n# ---------------------------------------------------------------------------\n# Status checking\n# ---------------------------------------------------------------------------
+    print("==============================\\n")
+
+# ---------------------------------------------------------------------------
+# Status checking
+# ---------------------------------------------------------------------------
 
 def get_installed_version():
     """Return the installed version, or 'Not Installed'."""
@@ -1229,11 +1006,7 @@ def show_install_dialog():
             if uninstall():
                 cmds.confirmDialog(
                     title="Uninstall Complete",
-                    message=(
-                        "FDMA 2530 shelf has been completely removed from Maya.\n\n"
-                        "Please restart Maya to ensure the shelf is completely gone.\n"
-                
-                    ),
+                    message="FDMA 2530 shelf has been completely removed from Maya.",
                     button=["OK"],
                 )
             else:
