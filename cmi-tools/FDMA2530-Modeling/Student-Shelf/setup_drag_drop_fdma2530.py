@@ -624,6 +624,21 @@ def _setup_temporary_cleanup(temp_dir):
                     LOG.info("Cleaned temporary shelf preference")
             except Exception:
                 pass  # Not critical if this fails
+            
+            # CRITICAL: Remove the shelf file from prefs/shelves so it doesn't persist
+            try:
+                maya_app_dir = cmds.internalVar(userAppDir=True)
+                prefs_dir = os.path.normpath(os.path.join(maya_app_dir, "prefs", "shelves"))
+                shelf_file_path = os.path.join(prefs_dir, "shelf_{}.mel".format(SHELF_NAME))
+                
+                if os.path.exists(shelf_file_path):
+                    deleted_shelf_path = shelf_file_path + ".deleted"
+                    os.rename(shelf_file_path, deleted_shelf_path)
+                    LOG.info("Renamed shelf file to .deleted for temporary cleanup: shelf_{}.mel.deleted".format(SHELF_NAME))
+                else:
+                    LOG.info("No shelf file found to clean up in: %s", prefs_dir)
+            except Exception as e:
+                LOG.warning("Could not clean up shelf file: %s", e)
                 
             # Clean up temporary directory
             if os.path.exists(temp_dir):
@@ -644,10 +659,12 @@ def _setup_temporary_cleanup(temp_dir):
     
     # Also register Maya-specific cleanup using scriptJob
     try:
-        # Clean up when Maya file is closed or new file created
+        # Clean up when Maya file is closed, new file created, or Maya exits
         cmds.scriptJob(event=["NewSceneOpened", cleanup_temp_install], protected=False)
         cmds.scriptJob(event=["SceneOpened", cleanup_temp_install], protected=False)
-        LOG.info("Registered temporary cleanup callbacks")
+        # This is the critical one - clean up when Maya exits
+        cmds.scriptJob(event=["quitApplication", cleanup_temp_install], protected=False)
+        LOG.info("Registered temporary cleanup callbacks (including Maya exit)")
     except Exception as exc:
         LOG.warning("Could not register Maya cleanup callbacks: %s", exc)
 
