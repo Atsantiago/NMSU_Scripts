@@ -781,13 +781,61 @@ def _remove_shelf_from_preferences():
         
         # Remove shelf configuration files from Maya prefs
         maya_app_dir = get_maya_app_dir()
+        # Maya stores shelves in prefs/shelves/ within the version-specific directory
         prefs_dir = os.path.normpath(os.path.join(maya_app_dir, "prefs", "shelves"))
+        LOG.info("Maya app directory: %s", maya_app_dir)
+        LOG.info("Looking for shelf files in: %s", prefs_dir)
+        
+        # Ensure shelves directory exists for debug purposes
+        if not os.path.exists(prefs_dir):
+            LOG.warning("Shelves directory does not exist: %s", prefs_dir)
+            # Try alternative location - sometimes Maya uses different paths
+            alt_prefs_dir = os.path.normpath(os.path.join(maya_app_dir, "prefs"))
+            LOG.info("Checking alternative prefs location: %s", alt_prefs_dir)
+            if os.path.exists(alt_prefs_dir):
+                all_prefs_files = os.listdir(alt_prefs_dir)
+                shelf_files_in_prefs = [f for f in all_prefs_files if f.startswith("shelf_") and f.endswith(".mel")]
+                LOG.info("Shelf files found in prefs root: %s", shelf_files_in_prefs)
+        else:
+            LOG.info("Shelves directory exists, proceeding with shelf file removal")
         
         # 1. Remove our specific shelf file (most important)
         shelf_file_path = os.path.join(prefs_dir, "shelf_{}.mel".format(SHELF_NAME))
+        LOG.info("Checking for shelf file at: %s", shelf_file_path)
         if os.path.exists(shelf_file_path):
             os.remove(shelf_file_path)
-            LOG.info("Removed specific shelf file: shelf_{}.mel".format(SHELF_NAME))
+            LOG.info("Successfully removed shelf file: shelf_{}.mel".format(SHELF_NAME))
+        else:
+            LOG.warning("Shelf file not found at expected location: shelf_{}.mel".format(SHELF_NAME))
+            # Try to find shelf files in alternate locations
+            search_locations = [
+                prefs_dir,  # Standard shelves directory
+                os.path.normpath(os.path.join(maya_app_dir, "prefs")),  # Prefs root
+                maya_app_dir,  # Maya app directory root
+            ]
+            
+            for search_dir in search_locations:
+                if os.path.exists(search_dir):
+                    try:
+                        all_files = os.listdir(search_dir)
+                        shelf_files = [f for f in all_files if f.startswith("shelf_") and f.endswith(".mel")]
+                        if shelf_files:
+                            LOG.info("Found shelf files in %s: %s", search_dir, shelf_files)
+                            # Look for our specific shelf file in this location
+                            our_shelf_file = "shelf_{}.mel".format(SHELF_NAME)
+                            if our_shelf_file in shelf_files:
+                                alt_shelf_path = os.path.join(search_dir, our_shelf_file)
+                                LOG.info("Found our shelf file at alternate location: %s", alt_shelf_path)
+                                try:
+                                    os.remove(alt_shelf_path)
+                                    LOG.info("Successfully removed shelf file from: %s", alt_shelf_path)
+                                    break  # Found and removed, stop searching
+                                except Exception as e:
+                                    LOG.error("Failed to remove shelf file from %s: %s", alt_shelf_path, e)
+                        else:
+                            LOG.info("No shelf files found in: %s", search_dir)
+                    except Exception as e:
+                        LOG.warning("Could not search directory %s: %s", search_dir, e)
         
         # 2. Surgically remove our shelf from windowPrefs.mel (fixes tab persistence)
         windowprefs_path = os.path.normpath(os.path.join(maya_app_dir, "prefs", "windowPrefs.mel"))
