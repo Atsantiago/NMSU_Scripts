@@ -799,12 +799,17 @@ def _remove_shelf_from_preferences():
         else:
             LOG.info("Shelves directory exists, proceeding with shelf file removal")
         
-        # 1. Remove our specific shelf file (most important)
+        # 1. Rename our specific shelf file to .deleted (Maya's standard behavior)
         shelf_file_path = os.path.join(prefs_dir, "shelf_{}.mel".format(SHELF_NAME))
+        deleted_shelf_path = shelf_file_path + ".deleted"
         LOG.info("Checking for shelf file at: %s", shelf_file_path)
+        
         if os.path.exists(shelf_file_path):
-            os.remove(shelf_file_path)
-            LOG.info("Successfully removed shelf file: shelf_{}.mel".format(SHELF_NAME))
+            try:
+                os.rename(shelf_file_path, deleted_shelf_path)
+                LOG.info("Successfully renamed shelf file to .deleted: shelf_{}.mel.deleted".format(SHELF_NAME))
+            except Exception as e:
+                LOG.error("Failed to rename shelf file: %s", e)
         else:
             LOG.warning("Shelf file not found at expected location: shelf_{}.mel".format(SHELF_NAME))
             # Try to find shelf files in alternate locations
@@ -825,13 +830,14 @@ def _remove_shelf_from_preferences():
                             our_shelf_file = "shelf_{}.mel".format(SHELF_NAME)
                             if our_shelf_file in shelf_files:
                                 alt_shelf_path = os.path.join(search_dir, our_shelf_file)
+                                alt_deleted_path = alt_shelf_path + ".deleted"
                                 LOG.info("Found our shelf file at alternate location: %s", alt_shelf_path)
                                 try:
-                                    os.remove(alt_shelf_path)
-                                    LOG.info("Successfully removed shelf file from: %s", alt_shelf_path)
-                                    break  # Found and removed, stop searching
+                                    os.rename(alt_shelf_path, alt_deleted_path)
+                                    LOG.info("Successfully renamed shelf file to .deleted at: %s", alt_deleted_path)
+                                    break  # Found and renamed, stop searching
                                 except Exception as e:
-                                    LOG.error("Failed to remove shelf file from %s: %s", alt_shelf_path, e)
+                                    LOG.error("Failed to rename shelf file from %s: %s", alt_shelf_path, e)
                         else:
                             LOG.info("No shelf files found in: %s", search_dir)
                     except Exception as e:
