@@ -783,38 +783,56 @@ def _remove_shelf_from_preferences():
         maya_app_dir = get_maya_app_dir()
         prefs_dir = os.path.normpath(os.path.join(maya_app_dir, "prefs", "shelves"))
         
+        # 1. Remove our specific shelf file (most important)
+        shelf_file_path = os.path.join(prefs_dir, "shelf_{}.mel".format(SHELF_NAME))
+        if os.path.exists(shelf_file_path):
+            os.remove(shelf_file_path)
+            LOG.info("Removed specific shelf file: shelf_{}.mel".format(SHELF_NAME))
+        
+        # 2. Surgically remove our shelf from windowPrefs.mel (fixes tab persistence)
+        windowprefs_path = os.path.normpath(os.path.join(maya_app_dir, "prefs", "windowPrefs.mel"))
+        if os.path.exists(windowprefs_path):
+            try:
+                with open(windowprefs_path, 'r') as f:
+                    lines = f.readlines()
+                
+                # Only remove lines that reference our specific shelf name
+                cleaned_lines = []
+                for line in lines:
+                    # Look for exact shelf name matches, not partial matches
+                    if '"{}"'.format(SHELF_NAME) in line or "'{}'".format(SHELF_NAME) in line:
+                        LOG.info("Removing windowPrefs line: %s", line.strip())
+                    else:
+                        cleaned_lines.append(line)
+                
+                # Only write back if we actually removed something
+                if len(cleaned_lines) != len(lines):
+                    with open(windowprefs_path, 'w') as f:
+                        f.writelines(cleaned_lines)
+                    LOG.info("Cleaned shelf references from windowPrefs.mel")
+                    
+            except Exception as e:
+                LOG.warning("Could not clean windowPrefs.mel: %s", e)
+        
+        # 3. Clean any other shelf files that might reference our shelf (existing logic)
         if os.path.exists(prefs_dir):
-            # Look for shelf files that might contain our shelf
-            shelf_files = [f for f in os.listdir(prefs_dir) if f.startswith("shelf_") and f.endswith(".mel")]
+            shelf_files = [f for f in os.listdir(prefs_dir) if f.startswith("shelf_") and f.endswith(".mel") and f != "shelf_{}.mel".format(SHELF_NAME)]
             
             for shelf_file in shelf_files:
                 shelf_path = os.path.join(prefs_dir, shelf_file)
                 try:
-                    # Read the shelf file and check if it contains our shelf
                     with open(shelf_path, 'r') as f:
                         content = f.read()
                     
                     if SHELF_NAME in content:
-                        # Remove references to our shelf from the file
+                        # Remove references to our shelf from other shelf files
                         lines = content.split('\n')
-                        cleaned_lines = []
-                        skip_block = False
+                        cleaned_lines = [line for line in lines if SHELF_NAME not in line]
                         
-                        for line in lines:
-                            if SHELF_NAME in line:
-                                skip_block = True
-                                continue
-                            if skip_block and line.strip() == '':
-                                skip_block = False
-                                continue
-                            if not skip_block:
-                                cleaned_lines.append(line)
-                        
-                        # Write back the cleaned content
-                        with open(shelf_path, 'w') as f:
-                            f.write('\n'.join(cleaned_lines))
-                        
-                        LOG.info("Cleaned shelf references from: %s", shelf_file)
+                        if len(cleaned_lines) != len(lines):
+                            with open(shelf_path, 'w') as f:
+                                f.write('\n'.join(cleaned_lines))
+                            LOG.info("Cleaned shelf references from: %s", shelf_file)
                         
                 except Exception as e:
                     LOG.warning("Could not clean shelf file %s: %s", shelf_file, e)
