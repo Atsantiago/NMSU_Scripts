@@ -1023,8 +1023,8 @@ def show_install_dialog():
                     title="Uninstall Complete",
                     message=(
                         "FDMA 2530 shelf has been completely removed from Maya.\n\n"
-                        "IMPORTANT: Please restart Maya to ensure the shelf is completely gone.\n"
-                        "Maya may still show the shelf tab until you restart."
+                        "Please restart Maya to ensure the shelf is completely gone.\n"
+                
                     ),
                     button=["OK"],
                 )
