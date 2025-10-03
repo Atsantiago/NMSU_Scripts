@@ -71,6 +71,13 @@ def _build_grading_section(parent_menu):
         command=lambda *args: _open_grading_rubric()
     )
     
+    # Rendering Checklist (General Tool)
+    cmds.menuItem(
+        label="Rendering Checklist",
+        parent=grading,
+        command=lambda *args: _open_rendering_checklist()
+    )
+    
     cmds.menuItem(divider=True, parent=grading)
 
     # FDMA 1510 placeholder
@@ -354,6 +361,21 @@ def _open_grading_rubric():
         cmds.confirmDialog(
             title="Error",
             message="Failed to open grading rubric. Please check the console for details.",
+            button=["OK"]
+        )
+
+
+def _open_rendering_checklist():
+    """Open the CMI Rendering Checklist tool."""
+    try:
+        from prof.tools.renderChecklist.checklist import main
+        main()
+        logger.info("Opened rendering checklist tool")
+    except Exception as e:
+        logger.error("Failed to open rendering checklist: %s", e)
+        cmds.confirmDialog(
+            title="Error",
+            message="Failed to open rendering checklist. Please check the console for details.",
             button=["OK"]
         )
 

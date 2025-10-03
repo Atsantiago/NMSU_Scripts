@@ -4,7 +4,11 @@ Prof-Tools Tools Module
 Grading logic and rubric systems for prof-tools package.
 
 This module contains the core grading engine, rubric configurations,
-and assignment-specific grading tools for Maya instructor workflows.
+assignment-specific grading tools, and quality assessment tools for Maya instructor workflows.
+
+Available Tools:
+    - auto_grader: Assignment grading and rubric systems
+    - renderChecklist: CMI Rendering Checklist for model/render validation
 """
 
 from __future__ import absolute_import
