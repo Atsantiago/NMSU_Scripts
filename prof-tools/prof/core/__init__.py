@@ -28,7 +28,7 @@ __author__ = "Alexander T. Santiago - https://github.com/Atsantiago"
 # Module constants following industry best practices
 PACKAGE_NAME = "prof-tools"
 PACKAGE_MAIN_MODULE = "prof"
-PACKAGE_ENTRY_LINE = 'python("import prof.ui.builder as _p; _p.build_menu()");'
+PACKAGE_ENTRY_LINE = 'python("import sys, os; pt = os.path.join(os.path.expanduser(\'~\'), \'Documents\', \'maya\', \'prof-tools\'); pt not in sys.path and sys.path.insert(0, pt); exec(\'import prof.ui.builder as _p; _p.build_menu()\')");'
 
 # Cross-platform path constants
 DOCUMENTS_FOLDER_NAME = "Documents"

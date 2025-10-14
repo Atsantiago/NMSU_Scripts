@@ -285,23 +285,27 @@ class ProfToolsSetup(object):
                     with open(usersetup_path, 'r') as f:
                         existing = f.read()
                 
-                # Check if prof-tools entry already exists (avoid duplicates)
-                prof_tools_comment = "// Prof-Tools Auto-Generated Entry"
-                if self.entry_line not in existing and prof_tools_comment not in existing:
-                    with open(usersetup_path, 'a') as f:
-                        # Ensure proper line ending before adding our content
-                        if existing and not existing.endswith('\n'):
-                            f.write('\n')
-                        # Add a blank line for better separation if file has content
-                        if existing.strip():
-                            f.write('\n')
-                        f.write('// Prof-Tools Auto-Generated Entry\n')
-                        f.write(self.entry_line + '\n')
-                    log_info("Added prof-tools entry to Maya {} userSetup.mel".format(version))
-                    success_count += 1
-                else:
-                    log_info("Prof-tools entry already exists in Maya {} userSetup.mel".format(version))
-                    success_count += 1
+                # Clean any old prof-tools entries first
+                self._clean_usersetup_file(usersetup_path)
+                
+                # Re-read the file after cleaning
+                existing = ""
+                if os.path.exists(usersetup_path):
+                    with open(usersetup_path, 'r') as f:
+                        existing = f.read()
+                
+                # Add new entry (we cleaned old ones, so this should always add)
+                with open(usersetup_path, 'a') as f:
+                    # Ensure proper line ending before adding our content
+                    if existing and not existing.endswith('\n'):
+                        f.write('\n')
+                    # Add a blank line for better separation if file has content
+                    if existing.strip():
+                        f.write('\n')
+                    f.write('// Prof-Tools Auto-Generated Entry\n')
+                    f.write(self.entry_line + '\n')
+                log_info("Added updated prof-tools entry to Maya {} userSetup.mel".format(version))
+                success_count += 1
                     
             except Exception as e:
                 log_warning("Failed to update userSetup.mel for Maya {}: {}".format(version, e))
@@ -373,8 +377,12 @@ class ProfToolsSetup(object):
                 prof_tools_removed = True
                 continue
             
-            # Check for direct prof-tools entry line (in case comment is missing)
-            if self.entry_line.strip() in line.strip():
+            # Check for any prof-tools entry line (current or old format)
+            if (self.entry_line.strip() in line.strip() or 
+                'import prof.ui.builder' in line or
+                'prof.ui.builder as _p' in line or
+                '_p.build_menu()' in line or
+                'prof-tools' in line):
                 prof_tools_removed = True
                 continue
                 
