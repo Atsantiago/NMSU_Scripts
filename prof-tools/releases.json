@@ -1,6 +1,6 @@
 {
   "tool_name": "prof-tools",
-  "current_version": "0.3.7",
+  "current_version": "0.3.8",
   "latest_test_version": "0.3.6.1",
   "description": "Maya instructor tools for grading and managing student assignments across NMSU's FDMA courses for the Creative Media Institute (CMI)",
   "author": "Alexander T. Santiago",
@@ -36,6 +36,12 @@
       "description": "TEST: updating rubrics for 2530 U01_SS01",
       "test_version": true,
       "testing_notes": "WARNING: This is a test version for development purposes."
+    },
+    {
+      "version": "0.3.8",
+      "date": "2025-10-13",
+      "commit_hash": "master",
+      "description": "CRITICAL FIX: Resolved installation persistence issue where prof-tools didn't remain installed after Maya restart. Updated userSetup.mel entry to properly add prof-tools path to Python sys.path on Maya startup. Enhanced installation cleanup to handle old entry formats. Added comprehensive diagnostic tools for troubleshooting installation issues."
     },
     {
       "version": "0.3.7",
