@@ -116,37 +116,17 @@ def _run_installer_update():
             except Exception:
                 pass  # Cache clearing is not critical
             
-            # Force reload of checklist module to get updated tool version
-            try:
-                import sys
-                modules_to_reload = [
-                    'fdma_shelf.tools.checklist',
-                    'fdma_shelf.utils.version_utils'
-                ]
-                for module_name in modules_to_reload:
-                    if module_name in sys.modules:
-                        if sys.version_info.major >= 3:
-                            import importlib
-                            importlib.reload(sys.modules[module_name])
-                        else:
-                            # Python 2 reload
-                            exec("reload(sys.modules['{}'])".format(module_name))
-            except Exception as e:
-                print("Module reload warning: {}".format(e))
+            # Skip module reloading to prevent crashes - users can restart Maya for new features
+            print("Update complete. Restart Maya to see all new features.")
                 
             cmds.confirmDialog(
                 title="Update Complete",
-                message="FDMA 2530 shelf updated successfully!\n\nNote: You may need to close and reopen the checklist window to see the updated version.",
+                message="FDMA 2530 shelf updated successfully!\n\nPlease restart Maya to complete the update and see all new features.",
                 button=["OK"]
             )
             
-            # Rebuild shelf
-            try:
-                import fdma_shelf.shelf.builder as builder
-                builder.build_shelf()
-                print("Shelf rebuilt with updated version")
-            except Exception as e:
-                cmds.warning("Shelf rebuild failed: {}".format(e))
+            # Skip shelf rebuilding to prevent crashes - let Maya restart handle it
+            print("Shelf updated. Please restart Maya to see new features.")
         else:
             cmds.confirmDialog(
                 title="Update Failed",
@@ -230,6 +210,102 @@ def _download_and_install(url, target_dir):
 
 
 def startup_check():
-    """Check for updates on Maya startup."""
-    # Simple startup check - just log that we're available
-    print("FDMA 2530 Updater: Ready for updates")
+    """Check for updates on Maya startup - safe version."""
+    try:
+        print("FDMA 2530 Updater: Ready for updates")
+        
+        # Defer the actual update check to avoid startup crashes
+        def _deferred_update_check():
+            try:
+                # Get current version
+                current_version = get_fdma2530_version()
+                if not current_version:
+                    return
+                
+                # Check for updates from GitHub (silent check)
+                manifest_url = "https://raw.githubusercontent.com/Atsantiago/NMSU_Scripts/master/cmi-tools/FDMA2530-Modeling/releases.json"
+                
+                # Disable SSL verification for GitHub
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+                
+                response = urlopen(manifest_url, context=ssl_context, timeout=5)
+                manifest_data = json.loads(response.read().decode('utf-8'))
+                
+                latest_version = manifest_data.get("current_version", "Unknown")
+                
+                if latest_version != current_version and latest_version != "Unknown":
+                    # Updates available - highlight button and show notification
+                    print("FDMA 2530 Updater: Update available! {} -> {}".format(current_version, latest_version))
+                    _update_button_visual_status('updates_available')
+                    _show_update_notification()
+                else:
+                    # Up to date - set button to normal
+                    print("FDMA 2530 Updater: Up to date ({})".format(current_version))
+                    _update_button_visual_status('up_to_date')
+                    
+            except Exception as e:
+                print("FDMA 2530 Updater: Deferred update check failed: {}".format(e))
+        
+        # Use Maya's executeDeferred to run update check safely after Maya is fully loaded
+        try:
+            import maya.utils as mu
+            mu.executeDeferred(_deferred_update_check)
+        except Exception:
+            # If executeDeferred fails, skip the update check to avoid crashes
+            pass
+            
+    except Exception as e:
+        print("FDMA 2530 Updater: Startup check failed: {}".format(e))
+
+
+def _update_button_visual_status(status):
+    """Update the visual status of the update button."""
+    try:
+        # Button colors (Maya RGB values)
+        BUTTON_COLORS = {
+            'up_to_date': [0.5, 0.5, 0.5],        # Gray
+            'updates_available': [0.2, 0.8, 0.2], # Green
+            'update_failed': [0.8, 0.2, 0.2],     # Red
+            'checking': [0.8, 0.8, 0.2]           # Yellow
+        }
+        
+        SHELF_NAME = "FDMA_2530"
+        
+        # Check if shelf exists
+        if not cmds.shelfLayout(SHELF_NAME, exists=True):
+            return
+        
+        # Find and update the update button
+        buttons = cmds.shelfLayout(SHELF_NAME, query=True, childArray=True) or []
+        
+        for btn in buttons:
+            try:
+                if cmds.objectTypeUI(btn) == 'shelfButton':
+                    label = cmds.shelfButton(btn, query=True, label=True)
+                    if label == "Update":
+                        color = BUTTON_COLORS.get(status, BUTTON_COLORS['up_to_date'])
+                        cmds.shelfButton(btn, edit=True, backgroundColor=color)
+                        print("FDMA 2530 Updater: Button status set to {}".format(status))
+                        break
+            except Exception:
+                continue
+                
+    except Exception as e:
+        print("FDMA 2530 Updater: Button status update failed: {}".format(e))
+
+
+def _show_update_notification():
+    """Show non-intrusive viewport message about available updates."""
+    try:
+        cmds.inViewMessage(
+            amg='<span style="color:#00FF00">FDMA 2530 shelf update available!</span>',
+            pos='botLeft',
+            fade=True,
+            alpha=0.9,
+            dragKill=False,
+            fadeStayTime=4000
+        )
+    except Exception as e:
+        print("FDMA 2530 Updater: Could not show notification: {}".format(e))
