@@ -26,7 +26,7 @@ from fdma_shelf.utils.version_utils import get_fdma2530_version
 # ==============================================================================
 
 # Tool version (independent of package)
-__tool_version__ = "2.0.4"
+__tool_version__ = "2.0.5"
 
 # Package version
 __package_version__ = get_fdma2530_version()
@@ -62,6 +62,7 @@ PASS_COLOR = (0.17, 1.0, 0.17)
 WARNING_COLOR = (1.0, 1.0, 0.17)
 ERROR_COLOR = (1.0, 0.17, 0.17)
 EXCEPTION_COLOR = (0.2, 0.2, 0.2)
+LIGHT_GREEN_COLOR = (0.65, 0.8, 0.33)  # Lighter green for turntable-only scenarios
 
 # Legacy variable names for compatibility
 script_name = SCRIPT_NAME
@@ -72,6 +73,7 @@ pass_color = PASS_COLOR
 warning_color = WARNING_COLOR
 error_color = ERROR_COLOR
 exception_color = EXCEPTION_COLOR
+light_green_color = LIGHT_GREEN_COLOR
 
 # Checklist Items - Sequential numbering with new items
 CHECKLIST_ITEMS = {
@@ -2368,7 +2370,7 @@ def check_frozen_transforms():
             cmds.button(
                 "status_" + item_id,
                 e=True,
-                bgc=warning_color,
+                bgc=error_color,
                 l='?',
                 c=lambda args: warning_frozen_transforms()
             )
@@ -2510,7 +2512,7 @@ def check_animated_visibility():
             cmds.button(
                 "status_" + item_id,
                 e=True,
-                bgc=warning_color,
+                bgc=light_green_color,
                 l='',
                 c=lambda args: warning_animated_visibility()
             )

@@ -1,6 +1,6 @@
 {
   "tool_name": "FDMA2530-Modeling",
-  "current_version": "2.0.16",
+  "current_version": "2.0.17",
   "latest_test_version": "2.0.15.1",
   "description": "Maya shelf tools for FDMA 2530 - Introduction to 3D Modeling course at NMSU's Creative Media Institute",
   "author": "Alexander T. Santiago",
@@ -23,6 +23,34 @@
     }
   },
   "releases": [
+    {
+      "version": "2.0.17",
+      "date": "2025-10-15",
+      "commit_hash": "master",
+      "description": "UI FIXES: Improved checklist visual feedback consistency",
+      "features": [
+        "Fixed Frozen Transforms validation to show red (error) instead of yellow (warning)",
+        "Added light green color for turntable animated visibility scenarios",
+        "Improved visual feedback for zero-tolerance validation items",
+        "Enhanced UI consistency with prof-tools checklist behavior",
+        "Updated checklist tool version to 2.0.5 for UI improvements",
+        "Better color-coded feedback for students during model validation"
+      ],
+      "download_url": "https://github.com/Atsantiago/NMSU_Scripts/archive/refs/heads/master.zip",
+      "directory_path": "cmi-tools/FDMA2530-Modeling",
+      "breaking_changes": false,
+      "requirements": {
+        "maya_version": "2020+",
+        "python_version": "3.x",
+        "platforms": ["Windows", "macOS", "Linux"]
+      },
+      "installation": {
+        "method": "drag_and_drop",
+        "installer_file": "setup_drag_drop_fdma2530.py",
+        "target_location": "Maya shelf",
+        "shelf_name": "FDMA_2530"
+      }
+    },
     {
       "version": "2.0.16",
       "date": "2025-09-19",
