@@ -37,7 +37,9 @@ if sys.version_info.major < 3:
 
 # Simple fallback version for reliable import
 __version_tuple__ = (0, 3, 10)   # MAJOR, MINOR, PATCH
-__version__ = '.'.join(map(str, __version_tuple__))
+from prof.core.version_utils import get_version
+
+__version__ = get_version(fallback=(0, 3, 11))
 
 # Try to get dynamic version from manifest, but don't fail import if it doesn't work
 try:

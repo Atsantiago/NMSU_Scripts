@@ -1,6 +1,6 @@
 {
   "tool_name": "FDMA2530-Modeling",
-  "current_version": "2.0.19",
+  "current_version": "2.0.20",
   "latest_test_version": "2.0.15.1",
   "description": "Maya shelf tools for FDMA 2530 - Introduction to 3D Modeling course at NMSU's Creative Media Institute",
   "author": "Alexander T. Santiago",
@@ -23,6 +23,12 @@
     }
   },
   "releases": [
+    {
+      "version": "2.0.20",
+      "date": "2025-10-15",
+      "commit_hash": "master",
+      "description": "UI FIX: Fixed frozen transforms validation color persistence. Implemented deferred UI updates to prevent Maya's internal refresh cycle from overriding the red error color, ensuring proper visual feedback when unfrozen transforms are detected."
+    },
     {
       "version": "2.0.19",
       "date": "2025-10-15",
