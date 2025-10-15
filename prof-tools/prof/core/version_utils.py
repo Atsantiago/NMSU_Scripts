@@ -447,6 +447,29 @@ def get_version_tuple():
         return (parsed['major'], parsed['minor'], parsed['patch'])
 
 
+def get_version(fallback=None):
+    """
+    Get the current version as a tuple of integers with fallback support.
+    
+    Args:
+        fallback (tuple, optional): Fallback version tuple if manifest read fails
+    
+    Returns:
+        tuple: Version as (major, minor, patch) integers
+    """
+    try:
+        version_string = get_prof_tools_version()
+        parsed = parse_semantic_version(version_string)
+        return (parsed['major'], parsed['minor'], parsed['patch'])
+    except Exception as e:
+        logger.debug("Error getting version: {0}".format(e))
+        if fallback:
+            return fallback
+        # Parse fallback version string
+        parsed = parse_semantic_version(DEFAULT_FALLBACK_VERSION)
+        return (parsed['major'], parsed['minor'], parsed['patch'])
+
+
 def get_tool_info():
     """
     Get comprehensive tool information from the manifest.
