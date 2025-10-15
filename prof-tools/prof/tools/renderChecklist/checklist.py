@@ -2355,27 +2355,39 @@ def check_frozen_transforms():
                                     objects_no_frozen_transforms.append(transform)
             except Exception:
                 continue
-                           
-        if len(objects_no_frozen_transforms) == 0:
-            cmds.button(
-                "status_" + item_id,
-                e=True,
-                bgc=pass_color,
-                l='',
-                c=lambda args: print_message(
-                    'All transforms appear to be frozen.'
+        
+        # Update UI and handle button color - separate try block for UI updates
+        try:           
+            if len(objects_no_frozen_transforms) == 0:
+                cmds.button(
+                    "status_" + item_id,
+                    e=True,
+                    bgc=pass_color,
+                    l='',
+                    c=lambda args: print_message(
+                        'All transforms appear to be frozen.'
+                    )
                 )
-            )
-            issues_found = 0
-        else: 
-            cmds.button(
-                "status_" + item_id,
-                e=True,
-                bgc=error_color,
-                l='?',
-                c=lambda args: warning_frozen_transforms()
-            )
-            issues_found = len(objects_no_frozen_transforms)
+                issues_found = 0
+            else: 
+                button_name = "status_" + item_id
+                cmds.button(
+                    button_name,
+                    e=True,
+                    bgc=error_color,
+                    l='?',
+                    c=lambda args: warning_frozen_transforms()
+                )
+                # Force color update with a slight delay to override Maya's UI refresh
+                def force_red_color():
+                    if cmds.button(button_name, exists=True):
+                        cmds.button(button_name, e=True, bgc=error_color)
+                
+                cmds.evalDeferred(force_red_color)
+                issues_found = len(objects_no_frozen_transforms)
+        except Exception as ui_error:
+            # If UI update fails, still fall through to the outer exception handler
+            raise ui_error
             
         cmds.text("output_" + item_id, e=True, l=len(objects_no_frozen_transforms))
         
