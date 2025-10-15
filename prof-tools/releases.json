@@ -1,6 +1,6 @@
 {
   "tool_name": "prof-tools",
-  "current_version": "0.3.9",
+  "current_version": "0.3.10",
   "latest_test_version": "0.3.6.1",
   "description": "Maya instructor tools for grading and managing student assignments across NMSU's FDMA courses for the Creative Media Institute (CMI)",
   "author": "Alexander T. Santiago",
@@ -36,6 +36,12 @@
       "description": "TEST: updating rubrics for 2530 U01_SS01",
       "test_version": true,
       "testing_notes": "WARNING: This is a test version for development purposes."
+    },
+    {
+      "version": "0.3.10",
+      "date": "2025-10-15",
+      "commit_hash": "master",
+      "description": "CRITICAL FIX: Resolved auto-updater dialog not appearing issue. Fixed circular import between updater.py and update_dialog.py that was preventing the professional update dialog from loading. Now properly shows 'Update Now' dialog instead of just opening releases page."
     },
     {
       "version": "0.3.9",

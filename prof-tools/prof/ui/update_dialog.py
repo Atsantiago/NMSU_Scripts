@@ -22,7 +22,6 @@ except ImportError:
 
 # Import version utilities
 from ..core.version_utils import get_prof_tools_version, get_stable_version_string
-from ..core.updater import get_latest_version, compare_versions
 from ..core.tools.dev_prefs import get_prefs
 
 # Configure logging
@@ -159,6 +158,9 @@ def show_update_dialog():
     if not MAYA_AVAILABLE:
         print("Prof-Tools Update Dialog requires Maya environment")
         return
+    
+    # Import updater functions here to avoid circular imports
+    from ..core.updater import get_latest_version, compare_versions
     
     # Close existing window if it exists
     if cmds.window(WINDOW_NAME, exists=True):

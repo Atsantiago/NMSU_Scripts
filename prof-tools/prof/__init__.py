@@ -36,7 +36,7 @@ if sys.version_info.major < 3:
     raise ImportError(error)
 
 # Simple fallback version for reliable import
-__version_tuple__ = (0, 3, 9)   # MAJOR, MINOR, PATCH
+__version_tuple__ = (0, 3, 10)   # MAJOR, MINOR, PATCH
 __version__ = '.'.join(map(str, __version_tuple__))
 
 # Try to get dynamic version from manifest, but don't fail import if it doesn't work
