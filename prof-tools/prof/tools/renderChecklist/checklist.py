@@ -2371,7 +2371,7 @@ def check_frozen_transforms():
             cmds.button(
                 "status_" + item_id,
                 e=True,
-                bgc=warning_color,
+                bgc=error_color,
                 l='?',
                 c=lambda args: warning_frozen_transforms()
             )
